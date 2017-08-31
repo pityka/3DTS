@@ -1,0 +1,16 @@
+target
+*pdf
+*png
+
+*bed.gz
+*tsv
+*bed
+sizeofcoding
+
+tmp
+stderr
+snpEff_summary.html
+save.txt
+snpEff_genes.txt
+src/main/scala/old.txt
+tmp.post.txt

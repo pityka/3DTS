@@ -1,0 +1,13 @@
+.DS_Store
+.history
+project/boot
+*.tmproj
+target/
+lib_managed/*
+.pversion
+.ensime
+ensime_port
+cache.dump
+tmp
+run.log
+GITCOMMITHASH
