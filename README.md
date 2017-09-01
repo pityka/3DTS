@@ -10,7 +10,7 @@ described in detail in the manuscript listed below (see Citation).
 Quick Start Using AWS EC2
 -------------------------
 1. Launch an r4.4xlarge EC2 instance (Amazon Linux AMI) with a 600GB EBS volume.
-2. Download install.then.run.sh and run from the EBS volume.
+2. Download install.then.run.sh and run from the EBS volume. Please note that EC2/ftp issues may require manual download of files from GenCode (see Comments in install.then.run.sh).
 ~~~
 ./install.then.run.sh > log
 ~~~
