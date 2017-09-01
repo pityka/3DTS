@@ -30,8 +30,11 @@ gencodeGTF = input/gencode.v26lift37.annotation.gtf.gz
 gencodeTranscripts = input/gencode.v26lift37.pc_transcripts.fa.gz 
 gencodeMetadataXrefUniprot = input/gencode.v26lift37.metadata.SwissProt.gz 
 
-gnomadGenome = "https://storage.googleapis.com/gnomad-public/release-170228/vcf/genomes/gnomad.genomes.r2.0.1.sites.coding.autosomes.vcf.gz"
-gnomadExome = "https://storage.googleapis.com/gnomad-public/release-170228/vcf/exomes/gnomad.exomes.r2.0.1.sites.vcf.gz"
+# Server issues with storage.googleapis.com
+#gnomadGenome = "https://storage.googleapis.com/gnomad-public/release-170228/vcf/genomes/gnomad.genomes.r2.0.1.sites.coding.autosomes.vcf.gz"
+gnomadGenome = "https://data.broadinstitute.org/gnomAD/release-170228/genomes/vcf/gnomad.genomes.r2.0.1.sites.coding.autosomes.vcf.gz"
+#gnomadExome = "https://storage.googleapis.com/gnomad-public/release-170228/vcf/exomes/gnomad.exomes.r2.0.1.sites.vcf.gz"
+gnomadExome = "https://data.broadinstitute.org/gnomAD/release-170228/exomes/vcf/gnomad.exomes.r2.0.1.sites.vcf.gz"
 
 gnomadExomeCoverage = input/exome.coverage.concat.txt
 gnomadGenomeCoverage = input/genome.coverage.concat.txt
