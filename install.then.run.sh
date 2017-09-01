@@ -5,7 +5,8 @@ curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm
 sudo yum -y install sbt git java-1.8.0
 echo -e "2" | sudo /usr/sbin/alternatives --config java # configure to run on newer java-1.8.0 install
 
-git clone git@github.com:humanlongevity/3DTS.git 
+#git clone git@github.com:humanlongevity/3DTS.git 
+git clone https://github.com/humanlongevity/3DTS.git
 cd 3DTS 
 dep=$(ls dependencies/) 
 for i in $dep; do cd dependencies/$i && sbt -batch publishLocal && cd ../../ ; done 
@@ -38,9 +39,15 @@ EOF
 
 wget -O input/uniprot.gz  'http://www.uniprot.org/uniprot/?sort=&desc=&compress=yes&query=proteome:UP000005640%20reviewed:yes&fil=&force=yes&format=txt' 
 
+# The following three gencode files may need to be downloaded manually and transferred to the instance
+# If they are downloaded manually, put them in the same directory as the install.then.run.sh
 wget -O input/gencode.v26lift37.annotation.gtf.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.annotation.gtf.gz 
 wget -O input/gencode.v26lift37.pc_transcripts.fa.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.pc_transcripts.fa.gz 
 wget -O input/gencode.v26lift37.metadata.SwissProt.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.metadata.SwissProt.gz 
+mv ../gencode.v26lift37.annotation.gtf.gz input/gencode.v26lift37.annotation.gtf.gz
+mv ../gencode.v26lift37.pc_transcripts.fa.gz input/gencode.v26lift37.pc_transcripts.fa.gz
+mv ../gencode.v26lift37.metadata.SwissProt.gz input/gencode.v26lift37.metadata.SwissProt.gz
+
 
 wget -O input/genome.coverage.all.tar https://data.broadinstitute.org/gnomAD/release-170228/genomes/coverage/genome.coverage.all.tar 
 wget -O input/exome.coverage.all.tar  https://data.broadinstitute.org/gnomAD/release-170228/exomes/coverage/exome.coverage.all.tar
