@@ -14,3 +14,5 @@ save.txt
 snpEff_genes.txt
 src/main/scala/old.txt
 tmp.post.txt
+lib
+dependencies
