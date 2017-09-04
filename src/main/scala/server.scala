@@ -13,6 +13,7 @@ import scala.concurrent.duration._
 import java.io.File
 import SharedTypes._
 import com.bluelabs.s3stream._
+import tasks.util.TempFile
 
 object Server {
 
@@ -46,22 +47,25 @@ object Server {
     import system.dispatcher
     val log = akka.event.Logging(system.eventStream, "http-server")
     log.info("Fetching index files..")
+    val linkFolder = TempFile.createTempFile("links")
+    linkFolder.delete
+    linkFolder.mkdirs
     Future
       .sequence((scoresIndex.files ++ cppdbIndex.files).map { sf =>
         sf.file.map { file =>
           val filelinkpath =
-            new java.io.File(file.getParentFile, sf.name)
-          if (!filelinkpath.canRead){
-              java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
+            new java.io.File(linkFolder, sf.name)
+
+          java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
                                                  file.toPath)
-          }
+
           log.info(
             "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
           filelinkpath
         }
       })
       .flatMap { files =>
-        log.info("Index files downloaded. ")
+        log.info(s"Index files downloaded. $files")
         implicit val logging = log
         val indexFolder = files.head.getParentFile
         httpFromFolder(indexFolder, port)

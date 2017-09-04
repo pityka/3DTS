@@ -176,13 +176,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         Depletion2Pdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
       }
 
-     // var server = if (startServer) indexedScores.flatMap { index =>
-     //   cppdbindex.flatMap { cppdb =>
-     //     Server.start(8080, index, cppdb)
-     //   }
-     // } else Future.successful(())
+      var server = indexedScores.flatMap { index =>
+        cppdbindex.flatMap { cppdb =>
+          Server.start(8080, index, cppdb)
+        }
+      }
 
-      List(indexedScores)
+      List(indexedScores, server)
     }
 
     Future.sequence(
@@ -220,14 +220,13 @@ object ProteinDepletion extends App {
 
   withTaskSystem { implicit ts =>
     val result =
-      Await.result(new TaskRunner().run(config),
-                   atMost = 168 hours)
+      Await.result(new TaskRunner().run(config), atMost = 168 hours)
     //if (startServer) {
-    //  println("Pipeline done. Blocking indefinitely to keep the server up.")
-    //  while (true) {
-    //    Thread.sleep(Long.MaxValue)
-    //  }
-    //}
+    println("Pipeline done. Blocking indefinitely to keep the server up.")
+    while (true) {
+      Thread.sleep(Long.MaxValue)
+    }
+  //}
   }
 
 }
