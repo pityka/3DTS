@@ -35,7 +35,7 @@ object ConvertGenomeCoverage {
                                    maximumFrameLength = Int.MaxValue))
             .map { frame =>
               val spl = frame.utf8String.split1('\t')
-              val chr = "chr"+spl(0)
+              val chr = "chr" + spl(0)
               val bp = spl(1).toInt
               val histColumns: List[Int] = List(6)
               val callsAtLeast10x = (histColumns

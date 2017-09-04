@@ -51,7 +51,7 @@ object ConvertGnomad2HLI {
           val males = allele_counts(anno, allele_position, "Male")
 
           if (females.isDefined && males.isDefined)
-            GnomadLine("chr"+chr,
+            GnomadLine("chr" + chr,
                        position,
                        ref,
                        alt,
