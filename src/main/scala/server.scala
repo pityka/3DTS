@@ -1,5 +1,7 @@
 import akka.actor._
 import akka.stream._
+import akka.stream.scaladsl._
+import akka.util._
 import akka.http.scaladsl._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
@@ -72,6 +74,12 @@ object Server {
       }
   }
 
+  def getData(pdb: String): Source[ByteString, _] = {
+    val folder = tasks.util.config.global.storageURI.getPath
+    val file = new File(folder + "/pdbassembly/" + pdb + ".assembly.pdb")
+    akka.stream.scaladsl.FileIO.fromFile(file)
+  }
+
   def httpFromFolder(indexFolder: File, port: Int)(
       implicit log: akka.event.LoggingAdapter,
       as: ActorSystem,
@@ -121,6 +129,18 @@ object Server {
         path(RemainingPath) { segment =>
           logRequest("other", Logging.InfoLevel) {
             Route.seal(getFromResource("public/" + segment))
+          }
+        } ~
+        path("pdb" / Segment) { segment =>
+          logRequest("pdb", Logging.InfoLevel) {
+            complete {
+              HttpResponse(
+                entity = HttpEntity.CloseDelimited(
+                  ContentTypes.`text/plain(UTF-8)`,
+                  getData(segment)
+                )
+              )
+            }
           }
         }
 
