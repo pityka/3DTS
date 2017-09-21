@@ -66,19 +66,17 @@ object Ensembl2Uniprot {
       m1 ++ ensembleXRefUniProt.filterNot(x => m1.contains(x._1))
     }
 
-    transcripts
-      .filter(x => gencode.contains(x._1) && gencode(x._1)._2.v <= 3)
-      .map {
-        case (enst, transcript) =>
-          val uni = enst2uni.get(enst)
-          uni.map { uni =>
-            mapTranscript(enst,
-                          gencode(enst)._1,
-                          uni,
-                          uniprotKb(uni).sequence,
-                          transcript)
-          }.getOrElse(Enst2UniFailed(enst))
-      }
+    transcripts.filter(x => gencode.contains(x._1)).map {
+      case (enst, transcript) =>
+        val uni = enst2uni.get(enst)
+        uni.map { uni =>
+          mapTranscript(enst,
+                        gencode(enst)._1,
+                        uni,
+                        uniprotKb(uni).sequence,
+                        transcript)
+        }.getOrElse(Enst2UniFailed(enst))
+    }
   }
 
   def mapTranscript(enst: EnsT,
