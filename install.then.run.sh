@@ -5,8 +5,7 @@ curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm
 sudo yum -y install sbt git java-1.8.0
 echo -e "2" | sudo /usr/sbin/alternatives --config java # configure to run on newer java-1.8.0 install
 
-#git clone git@github.com:humanlongevity/3DTS.git
-git clone https://github.com/humanlongevity/3DTS.git
+git clone https://github.com/pityka/3DTS.git
 cd 3DTS
 dep=$(ls dependencies/)
 for i in $dep; do cd dependencies/$i && sbt -batch publishLocal && cd ../../ ; done
