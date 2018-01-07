@@ -69,12 +69,18 @@ object Ensembl2Uniprot {
     transcripts.filter(x => gencode.contains(x._1)).map {
       case (enst, transcript) =>
         val uni = enst2uni.get(enst)
-        uni.map { uni =>
-          mapTranscript(enst,
-                        gencode(enst)._1,
-                        uni,
-                        uniprotKb(uni).sequence,
-                        transcript)
+        uni.flatMap { uni =>
+          uniprotKb.get(uni).map { unikb =>
+            mapTranscript(enst,
+                          gencode(enst)._1,
+                          uni,
+                          unikb.sequence,
+                          transcript)
+          } match {
+            case None => println(s"Uni $uni not found in uniprotKb"); None
+            case x => x
+
+          }
         }.getOrElse(Enst2UniFailed(enst))
     }
   }
