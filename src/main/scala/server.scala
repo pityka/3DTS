@@ -82,9 +82,9 @@ object Server {
 
   def httpFromFolder(indexFolder: File, port: Int)(
       implicit log: akka.event.LoggingAdapter,
-      as: ActorSystem,
+      acs: ActorSystem,
       mat: Materializer) = {
-    import as.dispatcher
+    import acs.dispatcher
 
     // val s3Stream = new S3StreamQueued(
     //   Await.result(com.bluelabs.akkaaws.AWSCredentials.default, 5 seconds).get,
@@ -136,6 +136,24 @@ object Server {
                 )
               )
             }
+          }
+        } ~
+        path("feedback") {
+          post {
+            logRequest("feedback", Logging.InfoLevel) {
+              entity(as[String]) { data =>
+                if (data.size < 10000) {
+                  fileutils.writeToFile(
+                    new java.io.File(java.util.UUID.randomUUID.toString),
+                    data)
+                  complete((StatusCodes.OK, "Thanks"))
+                } else {
+                  complete((StatusCodes.BadRequest, "Too large"))
+                }
+              }
+
+            }
+
           }
         } ~
         path(RemainingPath) { segment =>

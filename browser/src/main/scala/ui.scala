@@ -209,7 +209,8 @@ class ProteinUI(
   def renderTable(click: String, scores: Seq[DepletionRow]) =
     table(
       `class` := "uk-table uk-table-striped uk-table-hover uk-table-small")(
-      thead(td("click"),
+      thead(td("clicked"),
+            td("remarks"),
             td("feature"),
             td("obsNS"),
             td("expNs"),
@@ -233,8 +234,51 @@ class ProteinUI(
                         NsPostMean2D(postMean2d),
                         _,
                         unis) =>
+        val btn = button(
+          `class` := "uk-button uk-button-default uk-button-small uk-button-primary",
+          `type` := "button")("Send").render
+        val txt = textarea(`class` := "uk-textarea",
+                           placeholder := "Your feedback..",
+                           cols := 50,
+                           rows := 8).render
+        val toggle =
+          button(`class` := "uk-button uk-button-default uk-button-small",
+                 `type` := "button")("Feedback").render
+        val formElem = form(style := "display:none")(
+          txt,
+          btn
+        ).render
+        var shown = false
+        toggle.onclick = { (e: Event) =>
+          if (shown == true) {
+            shown = false
+            formElem.style.display = "none"
+            toggle.innerHTML = "Feedback"
+          } else {
+            shown = true
+            formElem.style.display = "block"
+            toggle.innerHTML = "close"
+          }
+        }
+
+        btn.onclick = { (e: Event) =>
+          Server.post(txt.value).onComplete {
+            case _ =>
+              shown = false
+              formElem.style.display = "none"
+              toggle.innerHTML = "Feedback"
+          }
+        }
+
+        val featureElem = td(feature.toString).render
+
         val row = tr(td(click),
-                     td(feature.toString),
+                     td(
+                       div(
+                         toggle,
+                         formElem
+                       )),
+                     featureElem,
                      td(obsns),
                      td(expns),
                      td(obss),
@@ -243,7 +287,7 @@ class ProteinUI(
                      td(postmean),
                      td(postMean2d),
                      unis.map(_.s).mkString(",")).render
-        row.onclick = {
+        featureElem.onclick = {
           (e: Event) =>
             println("clicked " + feature)
             import js.JSConverters._
@@ -335,7 +379,7 @@ class ProteinUI(
                PdbResidueNumberUnresolved(residueNumber.toString)))
           })
 
-        div(style := "border:1px solid #ddd")(viewContainer)
+        div(style := "border:1px solid #ddd;")(viewContainer)
       }
       .getOrElse(div())
 
@@ -345,11 +389,13 @@ class ProteinUI(
     div(
       // renderProtein("3DZY"),
       div(queryBox, waitIndicator),
-      h3(`class` := "uk-heading")("Protein view"),
-      div(proteinView),
-      h4("Depletion scores in the protein"),
-      resetClickButton,
-      clickedTable,
+      div(style := "display:flex; flex-direction: column")(
+        h3(`class` := "uk-heading")("Protein view"),
+        div(style := "width: 80%")(div(proteinView), resetClickButton),
+        div(
+          h3(`class` := "uk-heading")("Depletion scores in the protein"),
+          clickedTable
+        )),
       h3(`class` := "uk-heading-divider")("Genome - Uniprot - Pdb mapping"),
       mappingTable
     ).render

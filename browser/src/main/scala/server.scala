@@ -27,4 +27,8 @@ object Server {
       r
     }
 
+  def post(data: String) = {
+    Ajax.post("/feedback", data = data)
+  }
+
 }
