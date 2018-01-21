@@ -86,9 +86,9 @@ object Server {
       mat: Materializer) = {
     import as.dispatcher
 
-    val s3Stream = new S3StreamQueued(
-      Await.result(com.bluelabs.akkaaws.AWSCredentials.default, 5 seconds).get,
-      "us-west-2")
+    // val s3Stream = new S3StreamQueued(
+    //   Await.result(com.bluelabs.akkaaws.AWSCredentials.default, 5 seconds).get,
+    //   "us-west-2")
 
     val tableManager = TableManager(indexFolder)
     val scoresReader =
@@ -126,11 +126,6 @@ object Server {
             Route.seal(getFromResource("browser-fastopt.js"))
           }
         } ~
-        path(RemainingPath) { segment =>
-          logRequest("other", Logging.InfoLevel) {
-            Route.seal(getFromResource("public/" + segment))
-          }
-        } ~
         path("pdb" / Segment) { segment =>
           logRequest("pdb", Logging.InfoLevel) {
             complete {
@@ -141,6 +136,11 @@ object Server {
                 )
               )
             }
+          }
+        } ~
+        path(RemainingPath) { segment =>
+          logRequest("other", Logging.InfoLevel) {
+            Route.seal(getFromResource("public/" + segment))
           }
         }
 
