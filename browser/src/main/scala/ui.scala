@@ -217,8 +217,8 @@ class ProteinUI(
             td("obsS"),
             td("expS"),
             td("size"),
-            td("postmean"),
-            td("postmean_2"),
+            td("score"),
+            // td("postmean_2"),
             td("uniprot")))(scores.map {
       case DepletionRow(feature,
                         ObsNs(obsns),
@@ -262,7 +262,7 @@ class ProteinUI(
         }
 
         btn.onclick = { (e: Event) =>
-          Server.post(txt.value).onComplete {
+          Server.post(txt.value, feature.toString).onComplete {
             case _ =>
               shown = false
               formElem.style.display = "none"
@@ -280,12 +280,12 @@ class ProteinUI(
                        )),
                      featureElem,
                      td(obsns),
-                     td(expns),
+                     td(f"$expns%1.2f"),
                      td(obss),
-                     td(exps),
+                     td(f"$exps%1.2f"),
                      td(size),
-                     td(postmean),
-                     td(postMean2d),
+                     td(f"$postmean%1.2f"),
+                     //  td(f"$postmean2d%1.2f"),
                      unis.map(_.s).mkString(",")).render
         featureElem.onclick = {
           (e: Event) =>

@@ -138,14 +138,15 @@ object Server {
             }
           }
         } ~
-        path("feedback") {
+        path("feedback" / Segment) { segment =>
           post {
             logRequest("feedback", Logging.InfoLevel) {
               entity(as[String]) { data =>
                 if (data.size < 10000) {
                   fileutils.writeToFile(
-                    new java.io.File(java.util.UUID.randomUUID.toString),
-                    data)
+                    new java.io.File(
+                      "feedback_" + java.util.UUID.randomUUID.toString),
+                    segment + "\n" + data)
                   complete((StatusCodes.OK, "Thanks"))
                 } else {
                   complete((StatusCodes.BadRequest, "Too large"))

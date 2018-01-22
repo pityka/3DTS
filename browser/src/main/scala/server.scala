@@ -27,8 +27,8 @@ object Server {
       r
     }
 
-  def post(data: String) = {
-    Ajax.post("/feedback", data = data)
+  def post(data: String, topic: String) = {
+    Ajax.post("/feedback/" + topic, data = data)
   }
 
 }
