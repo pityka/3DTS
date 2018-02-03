@@ -124,6 +124,8 @@ class ProteinUI(
 
     val waitState = Var(false)
 
+    val lastQuery: Var[Option[String]] = Var(None)
+
     val viewerAndStructure =
       Var[Option[(js.Dynamic, js.Dynamic, Map[String, Seq[String]])]](None)
 
@@ -141,12 +143,22 @@ class ProteinUI(
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
       UIState.waitState() = true
+      UIState.lastQuery() = Some(queryBox.value)
       Server.query(queryBox.value).map { data =>
         UIState.waitState() = false
         println("Received data " + data._1.size + " " + data._2.size)
         UIState.currentData() = data
         UIState.clicked() = None
       }
+    }
+  }
+
+  val downloadLink = Rx {
+    if (UIState.currentData()._2.isEmpty || UIState.lastQuery().isEmpty) div()
+    else {
+      div(
+        a(href := "/query?format=csv&q=" + UIState.lastQuery().get)(
+          "Download as csv"))
     }
   }
 
@@ -403,6 +415,7 @@ class ProteinUI(
       div(resolvedPDBs),
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),
+        downloadLink,
         div(style := "width: 80%")(div(proteinView), resetClickButton),
         div(
           h3(`class` := "uk-heading")("Depletion scores in the protein"),

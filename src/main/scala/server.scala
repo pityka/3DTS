@@ -95,6 +95,39 @@ object Server {
     akka.stream.scaladsl.FileIO.fromFile(file)
   }
 
+  def csvRow(e: DepletionScoresByResidue) = {
+    List(e.pdbId,
+         e.pdbChain,
+         e.pdbResidue,
+         e.featureScores._2.v,
+         e.featureScores._3.v,
+         e.featureScores._4.v,
+         e.featureScores._5.v,
+         e.featureScores._6.v,
+         e.featureScores._9.v,
+         e.featureScores._12.v).map(_.toString).mkString(",")
+  }
+
+  def asCSV(data: ServerReturn) = {
+    val scores = data._2
+    val rows = scores
+      .map(
+        csvRow
+      )
+      .mkString("\n")
+    val header = List("PDB",
+                      "CHAIN",
+                      "PDBRES",
+                      "OBSNS",
+                      "EXPNS",
+                      "OBSS",
+                      "EXPS",
+                      "NUMLOCI",
+                      "SCORE",
+                      "SCORE_alt").mkString(",")
+    header + "\n" + rows
+  }
+
   def httpFromFolder(indexFolder: File, port: Int)(
       implicit log: akka.event.LoggingAdapter,
       acs: ActorSystem,
@@ -115,18 +148,22 @@ object Server {
     val route =
       path("query") {
         get {
-          parameters("q") { queryTerm =>
-            logRequest("query", Logging.InfoLevel) {
-              respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
-                complete {
-                  val res = makeQuery(scoresReader,
-                                      cppdbReadr,
-                                      geneNameReader,
-                                      queryTerm)
-                  HttpEntity(upickle.default.write(res))
+          parameters("q", "format".?) {
+            case (queryTerm, format) =>
+              logRequest("query", Logging.InfoLevel) {
+                respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
+                  complete {
+                    val res = makeQuery(scoresReader,
+                                        cppdbReadr,
+                                        geneNameReader,
+                                        queryTerm)
+                    if (format.contains("csv"))
+                      HttpEntity(asCSV(res))
+                    else
+                      HttpEntity(upickle.default.write(res))
+                  }
                 }
               }
-            }
           }
         }
       } ~
