@@ -22,7 +22,7 @@ import SharedTypes._
 
 object UniprotKb2Js {
   val task =
-    AsyncTask[SharedFile, JsDump[UniProtEntry]]("uniprotkb2js", 1) {
+    AsyncTask[SharedFile, JsDump[UniProtEntry]]("uniprotkb2js", 2) {
       uniprotkb => implicit ctx =>
         log.info("start converting uniprot kb to js " + uniprotkb)
         implicit val mat = ctx.components.actorMaterializer

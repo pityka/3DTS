@@ -576,7 +576,7 @@ object IOHelpers {
       val geneNames = lines
         .filter(_.startsWith("GN"))
         .flatMap { gnLine =>
-          gnLine.trim.split1(';').map(_.trim).flatMap { record =>
+          gnLine.trim.split1(';').map(_.drop(2).trim).flatMap { record =>
             if (record.startsWith("Name=")) {
               List(record.drop(5))
             } else if (record.startsWith("Synonyms=")) {
