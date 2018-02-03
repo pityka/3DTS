@@ -233,6 +233,6 @@ object SharedTypes {
                            IndexInCds,
                            Boolean)
 
-  type ServerReturn = (Seq[PdbUniGencodeRow], Seq[DepletionScoresByResidue])
+  type ServerReturn = (Seq[PdbId], Seq[DepletionScoresByResidue])
 
 }

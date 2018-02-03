@@ -17,6 +17,8 @@ object PdbMethod {
   implicit val pickler = AnyValPicklers(PdbMethod.unapply, PdbMethod.apply)
 }
 
+case class GeneName(value: String)
+
 case class UniProtEntry(
     accessions: Seq[UniId],
     seqLength: Option[Int],
@@ -24,7 +26,8 @@ case class UniProtEntry(
       (PdbId, PdbMethod, Option[Double], Seq[(PdbChain, List[(Int, Int)])])],
     sequence: UniSeq,
     ensts: Seq[EnsT],
-    features: List[(String, UniNumber, UniNumber)])
+    features: List[(String, UniNumber, UniNumber)],
+    geneNames: List[GeneName])
 
 object ProteinJoin {
 

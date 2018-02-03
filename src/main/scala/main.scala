@@ -18,6 +18,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val uniprotKbOriginal = importFile(config.getString("uniprotKb"))
 
+    val uniprotKbAsJS =
+      UniprotKb2Js.task(uniprotKbOriginal)(CPUMemoryRequest(1, 5000))
+
+    val uniprotByGene = uniprotKbAsJS.flatMap { uniprotKbAsJS =>
+      IndexUniByGeneName.task(uniprotKbAsJS)(CPUMemoryRequest(1, 5000))
+    }
+
     val gencodeGtf = importFile(config.getString("gencodeGTF"))
 
     val gencodeTranscripts = importFile(config.getString("gencodeTranscripts"))
@@ -178,7 +185,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
       var server = indexedScores.flatMap { index =>
         cppdbindex.flatMap { cppdb =>
-          Server.start(8080, index, cppdb)
+          uniprotByGene.flatMap { uniprotByGene =>
+            Server.start(8080, index, cppdb, uniprotByGene)
+          }
         }
       }
 

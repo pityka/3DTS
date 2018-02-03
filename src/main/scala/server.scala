@@ -21,28 +21,41 @@ object Server {
 
   def makeQuery(scoresReader: IndexReader,
                 cpPdbReader: IndexReader,
+                geneNameReader: IndexReader,
                 q: String): ServerReturn = {
+
+    val pdbs: Seq[PdbId] = (if (q.isEmpty) Vector[Doc]()
+                            else geneNameReader.getDocs(q)).flatMap {
+      case Doc(str) =>
+        upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
+    }
+
     val scores =
       if (q.isEmpty) Vector[Doc]()
       else scoresReader.getDocs(q)
 
-    val cppdb =
-      if (q.isEmpty) Vector[Doc]()
-      else cpPdbReader.getDocs(q)
+    // val cppdb =
+    //   if (q.isEmpty) Vector[Doc]()
+    //   else cpPdbReader.getDocs(q)
 
-    (cppdb.map {
-      case Doc(str) =>
-        upickle.default.read[PdbUniGencodeRow](str)
-    }, scores.map {
-      case Doc(str) =>
-        upickle.default.read[DepletionScoresByResidue](str)
-    })
+    (
+     //cppdb.map {
+     //case Doc(str) =>
+     //  upickle.default.read[PdbUniGencodeRow](str)
+     //},
+     pdbs,
+     scores.map {
+       case Doc(str) =>
+         upickle.default.read[DepletionScoresByResidue](str)
+     })
 
   }
 
   def start(port: Int,
             scoresIndex: ScoresIndexedByPdbId,
-            cppdbIndex: CpPdbIndex)(implicit tsc: TaskSystemComponents) = {
+            cppdbIndex: CpPdbIndex,
+            geneNameIndex: UniprotIndexedByGene)(
+      implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
     implicit val mat = tsc.actorMaterializer
@@ -53,19 +66,21 @@ object Server {
     linkFolder.delete
     linkFolder.mkdirs
     Future
-      .sequence((scoresIndex.files ++ cppdbIndex.files).map { sf =>
-        sf.file.map { file =>
-          val filelinkpath =
-            new java.io.File(linkFolder, sf.name)
+      .sequence(
+        (scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files).map {
+          sf =>
+            sf.file.map { file =>
+              val filelinkpath =
+                new java.io.File(linkFolder, sf.name)
 
-          java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
-                                                 file.toPath)
+              java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
+                                                     file.toPath)
 
-          log.info(
-            "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
-          filelinkpath
-        }
-      })
+              log.info(
+                "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
+              filelinkpath
+            }
+        })
       .flatMap { files =>
         log.info(s"Index files downloaded. $files")
         implicit val logging = log
@@ -94,6 +109,7 @@ object Server {
     val scoresReader =
       tableManager.reader(Depletion2Pdb.ScoresByPdbIdTable)
     val cppdbReadr = tableManager.reader(JoinCPWithPdb.CpPdbTable)
+    val geneNameReader = tableManager.reader(IndexUniByGeneName.UniEntryByGene)
 
     log.info("Reader ok")
     val route =
@@ -103,7 +119,10 @@ object Server {
             logRequest("query", Logging.InfoLevel) {
               respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
                 complete {
-                  val res = makeQuery(scoresReader, cppdbReadr, queryTerm)
+                  val res = makeQuery(scoresReader,
+                                      cppdbReadr,
+                                      geneNameReader,
+                                      queryTerm)
                   HttpEntity(upickle.default.write(res))
                 }
               }

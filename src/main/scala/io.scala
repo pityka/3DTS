@@ -573,13 +573,28 @@ object IOHelpers {
           } else Nil
         }
 
+      val geneNames = lines
+        .filter(_.startsWith("GN"))
+        .flatMap { gnLine =>
+          gnLine.trim.split1(';').map(_.trim).flatMap { record =>
+            if (record.startsWith("Name=")) {
+              List(record.drop(5))
+            } else if (record.startsWith("Synonyms=")) {
+              record.drop("Synonyms=".size).split1(',').map(_.trim).toList
+            } else Nil
+          }
+        }
+        .map(GeneName(_))
+        .toList
+
       UniProtEntry(
         accessions,
         sqSize,
         pdbs,
         UniSeq(sequence.map(c => if (c == 'U') 'C' else c)), // that is an aa code, not uracil
         ensts,
-        features.toList)
+        features.toList,
+        geneNames)
 
     }
   }

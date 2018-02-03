@@ -107,7 +107,7 @@ class ProteinUI(
 
   class UIState(implicit ctx: Ctx.Owner) {
     val currentData =
-      Var[(Seq[PdbUniGencodeRow], Seq[DepletionScoresByResidue])]((Nil, Nil))
+      Var[(Seq[PdbId], Seq[DepletionScoresByResidue])]((Nil, Nil))
 
     val byResidue: Rx[
       Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]]] =
@@ -155,56 +155,67 @@ class ProteinUI(
     if (w) div("Wait..") else div()
   }
 
-  val mappingTable = Rx {
+  val resolvedPDBs = Rx {
     val data = UIState.currentData()._1
-    println("update mapping table")
-
-    table(`class` := "uk-table")(
-      thead(td("PDB"),
-            td("chain"),
-            td("Res."),
-            td("Pdb aa"),
-            td("UniProt"),
-            td("Uni.offset"),
-            td("Uni aa"),
-            td("ENST"),
-            td("locus"),
-            td("idx codon"),
-            td("idx trscpt"),
-            td("cons"),
-            td("ref")))(data.sortBy(_._9.s.split("\\t").last.toInt).map {
-      case (PdbId(pdbid),
-            PdbChain(chain),
-            PdbResidueNumberUnresolved(pdbres),
-            PdbSeq(pdbaa),
-            UniId(uniid),
-            UniNumber(uninum),
-            UniSeq(uniaa),
-            EnsT(enst),
-            ChrPos(cp),
-            IndexInCodon(idxCod),
-            IndexInTranscript(idxtr),
-            MissenseConsequences(cons),
-            _,
-            RefNuc(ref),
-            _,
-            _) =>
-        tr(td(pdbid),
-           td(chain),
-           td(pdbres),
-           td(pdbaa),
-           td(uniid),
-           td(uninum),
-           td(uniaa),
-           td(enst),
-           td(cp),
-           td(idxCod),
-           td(idxtr),
-           td(cons.map(x => x._1 + ":" + x._2).mkString("|")),
-           td(ref.toString))
-    })
+    if (data.nonEmpty)
+      span(
+        "Your query (also) returned the following pdb identifiers: " + data
+          .map(_.s)
+          .mkString(", "))
+    else span()
 
   }
+
+  // val mappingTable = Rx {
+  //   val data = UIState.currentData()._1
+  //   println("update mapping table")
+
+  //   table(`class` := "uk-table")(
+  //     thead(td("PDB"),
+  //           td("chain"),
+  //           td("Res."),
+  //           td("Pdb aa"),
+  //           td("UniProt"),
+  //           td("Uni.offset"),
+  //           td("Uni aa"),
+  //           td("ENST"),
+  //           td("locus"),
+  //           td("idx codon"),
+  //           td("idx trscpt"),
+  //           td("cons"),
+  //           td("ref")))(data.sortBy(_._9.s.split("\\t").last.toInt).map {
+  //     case (PdbId(pdbid),
+  //           PdbChain(chain),
+  //           PdbResidueNumberUnresolved(pdbres),
+  //           PdbSeq(pdbaa),
+  //           UniId(uniid),
+  //           UniNumber(uninum),
+  //           UniSeq(uniaa),
+  //           EnsT(enst),
+  //           ChrPos(cp),
+  //           IndexInCodon(idxCod),
+  //           IndexInTranscript(idxtr),
+  //           MissenseConsequences(cons),
+  //           _,
+  //           RefNuc(ref),
+  //           _,
+  //           _) =>
+  //       tr(td(pdbid),
+  //          td(chain),
+  //          td(pdbres),
+  //          td(pdbaa),
+  //          td(uniid),
+  //          td(uninum),
+  //          td(uniaa),
+  //          td(enst),
+  //          td(cp),
+  //          td(idxCod),
+  //          td(idxtr),
+  //          td(cons.map(x => x._1 + ":" + x._2).mkString("|")),
+  //          td(ref.toString))
+  //   })
+
+  // }
 
   def renderTable(click: String, scores: Seq[DepletionRow]) =
     table(
@@ -389,15 +400,14 @@ class ProteinUI(
     div(
       // renderProtein("3DZY"),
       div(queryBox, waitIndicator),
+      div(resolvedPDBs),
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),
         div(style := "width: 80%")(div(proteinView), resetClickButton),
         div(
           h3(`class` := "uk-heading")("Depletion scores in the protein"),
           clickedTable
-        )),
-      h3(`class` := "uk-heading-divider")("Genome - Uniprot - Pdb mapping"),
-      mappingTable
+        ))
     ).render
 
   parentNode.appendChild(ui)
