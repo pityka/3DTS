@@ -16,6 +16,15 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
   def run(config: Config) = {
 
+    val ligandability = importFile(config.getString("ligandability"))
+
+    val ligandabilityJs =
+      LigandabilityCsvToJs.task(ligandability)(CPUMemoryRequest(1, 5000))
+
+    val indexedLigandability = ligandabilityJs.flatMap { ligandabilityJs =>
+      IndexLigandability.task(ligandabilityJs)(CPUMemoryRequest(1, 5000))
+    }
+
     val uniprotKbOriginal = importFile(config.getString("uniprotKb"))
 
     val uniprotKbAsJS =
@@ -186,7 +195,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       var server = indexedScores.flatMap { index =>
         cppdbindex.flatMap { cppdb =>
           uniprotByGene.flatMap { uniprotByGene =>
-            Server.start(8080, index, cppdb, uniprotByGene)
+            indexedLigandability.flatMap { indexedLigandability =>
+              Server.start(8080,
+                           index,
+                           cppdb,
+                           uniprotByGene,
+                           indexedLigandability)
+            }
           }
         }
       }

@@ -19,7 +19,8 @@ libraryDependencies ++= Seq(
   "org.scalaj" %% "scalaj-http" % "2.3.0",
   "com.thesamet" %% "kdtree" % "1.0.6-hli1",
   "org.jzy3d" % "jzy3d-api" % "1.0.0" % "test",
-  "indexlib" %% "indexlib" % "1.2.0"
+  "indexlib" %% "indexlib" % "1.2.0",
+  "com.github.tototoshi" %% "scala-csv" % "1.3.5"
 ).map(
   x =>
     // x.exclude("log4j", "log4j")

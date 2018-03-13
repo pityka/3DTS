@@ -10,7 +10,7 @@ import akka.http.scaladsl.marshalling._
 import akka.event.Logging
 import tasks._
 import index2._
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Future, Await, ExecutionContext}
 import scala.concurrent.duration._
 import java.io.File
 import SharedTypes._
@@ -51,10 +51,91 @@ object Server {
 
   }
 
+  def asCSV(
+      triples: Seq[(DepletionScoresByResidue,
+                    PdbUniGencodeRow,
+                    LigandabilityRow)]): String = {
+    def asCSVRow(
+        triple: (DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow))
+      : String = {
+      val (scores, pdbuni, ligand) = triple
+      (List(scores.pdbId,
+            scores.pdbChain,
+            scores.pdbResidue,
+            pdbuni._5.s,
+            pdbuni._6.i + 1,
+            pdbuni._7.s) ++ List(scores.featureScores._1.toString,
+                                 scores.featureScores._2.v,
+                                 scores.featureScores._3.v,
+                                 scores.featureScores._4.v,
+                                 scores.featureScores._5.v,
+                                 scores.featureScores._6.v,
+                                 scores.featureScores._9.v,
+                                 scores.featureScores._12.v) ++ ligand.data
+        .map(x => x._1 + ":" + x._2)).mkString(",")
+    }
+
+    val header =
+      "PDBID,PDBCHAIN,PDBRES,UNIID,UNINUM,UNIAA,FEATURE,OBSNS,EXPNS,OBSS,EXPS,NUMLOCI,SCORE_global_rate,SCORE_local_rate,LIGANDABILITY"
+
+    header + "\n" + triples.map(asCSVRow).distinct.mkString("\n")
+
+  }
+
+  def makeLigandibilityQuery(scoresReader: IndexReader,
+                             cpPdbReader: IndexReader,
+                             ligandabilityReader: IndexReader,
+                             pdbQuery: String)
+    : Seq[(DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow)] = {
+
+    val scores: Seq[DepletionScoresByResidue] =
+      if (pdbQuery.isEmpty) Vector()
+      else
+        scoresReader.getDocs(pdbQuery).map {
+          case Doc(str) =>
+            upickle.default.read[DepletionScoresByResidue](str)
+        }
+
+    val pdbUni: Seq[PdbUniGencodeRow] =
+      if (pdbQuery.isEmpty) Vector()
+      else
+        cpPdbReader.getDocs(pdbQuery).map {
+          case Doc(str) =>
+            upickle.default.read[PdbUniGencodeRow](str)
+        }
+
+    val uniId: Option[UniId] = pdbUni.headOption.map(_._5)
+
+    val ligandabilityRows: Seq[LigandabilityRow] = uniId match {
+      case None => Vector()
+      case Some(uni) =>
+        ligandabilityReader.getDocs(uni.s).map {
+          case Doc(str) =>
+            upickle.default.read[LigandabilityRow](str)
+        }
+    }
+
+    (scores.iterator.flatMap { scores =>
+      pdbUni.iterator.flatMap { pdbUni =>
+        ligandabilityRows.flatMap { ligandability =>
+          if ((scores.pdbId: String) == pdbUni._1.s &&
+              (scores.pdbChain: String) == pdbUni._2.s &&
+              (scores.pdbResidue: String) == pdbUni._3.s &&
+              (pdbUni._5: UniId) == ligandability.uniid &&
+              (pdbUni._6: UniNumber) == ligandability.uninum)
+            List((scores, pdbUni, ligandability)).iterator
+          else Iterator.empty
+        }
+      }
+    } toList).distinct
+
+  }
+
   def start(port: Int,
             scoresIndex: ScoresIndexedByPdbId,
             cppdbIndex: CpPdbIndex,
-            geneNameIndex: UniprotIndexedByGene)(
+            geneNameIndex: UniprotIndexedByGene,
+            ligandabilityByUniId: LigandabilityIndexedByUniId)(
       implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
@@ -67,7 +148,7 @@ object Server {
     linkFolder.mkdirs
     Future
       .sequence(
-        (scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files).map {
+        (scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files ++ ligandabilityByUniId.files).map {
           sf =>
             sf.file.map { file =>
               val filelinkpath =
@@ -93,6 +174,27 @@ object Server {
     val folder = tasks.util.config.global.storageURI.getPath
     val file = new File(folder + "/pdbassembly/" + pdb + ".assembly.pdb")
     akka.stream.scaladsl.FileIO.fromFile(file)
+
+  }
+
+  def getFullDepletionScoresAsCSVStream(
+      implicit ec: ExecutionContext): Source[ByteString, _] = {
+    val folder = tasks.util.config.global.storageURI.getPath
+
+    val file = new File(
+      folder + "/depletion2pdb/full.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.variationdata.json.gz.5.0.2142306777..json.gz.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.-620945037.json.gz.back2pdb.json.gz")
+
+    Source.single(ByteString(csvHeader + "\n")) ++ akka.stream.scaladsl.FileIO
+      .fromFile(file)
+      .via(Compression.gunzip())
+      .via(Framing.delimiter(ByteString("\n"),
+                             maximumFrameLength = Int.MaxValue,
+                             allowTruncation = true))
+      .map(_.utf8String)
+      .map { elem =>
+        ByteString(
+          csvRow(upickle.default.read[DepletionScoresByResidue](elem)) + "\n")
+      }
   }
 
   def csvRow(e: DepletionScoresByResidue) = {
@@ -108,6 +210,17 @@ object Server {
          e.featureScores._12.v).map(_.toString).mkString(",")
   }
 
+  val csvHeader = List("PDB",
+                       "CHAIN",
+                       "PDBRES",
+                       "OBSNS",
+                       "EXPNS",
+                       "OBSS",
+                       "EXPS",
+                       "NUMLOCI",
+                       "SCORE_global_rate",
+                       "SCORE_local_rate").mkString(",")
+
   def asCSV(data: ServerReturn) = {
     val scores = data._2
     val rows = scores
@@ -115,17 +228,8 @@ object Server {
         csvRow
       )
       .mkString("\n")
-    val header = List("PDB",
-                      "CHAIN",
-                      "PDBRES",
-                      "OBSNS",
-                      "EXPNS",
-                      "OBSS",
-                      "EXPS",
-                      "NUMLOCI",
-                      "SCORE",
-                      "SCORE_alt").mkString(",")
-    header + "\n" + rows
+
+    csvHeader + "\n" + rows
   }
 
   def httpFromFolder(indexFolder: File, port: Int)(
@@ -143,6 +247,8 @@ object Server {
       tableManager.reader(Depletion2Pdb.ScoresByPdbIdTable)
     val cppdbReadr = tableManager.reader(JoinCPWithPdb.CpPdbTable)
     val geneNameReader = tableManager.reader(IndexUniByGeneName.UniEntryByGene)
+    val ligandabilityReader =
+      tableManager.reader(IndexLigandability.LigandabilityByUniId)
 
     log.info("Reader ok")
     val route =
@@ -167,6 +273,27 @@ object Server {
           }
         }
       } ~
+        path("queryligandability") {
+          get {
+            parameters("q", "format".?) {
+              case (queryTerm, format) =>
+                logRequest("query", Logging.InfoLevel) {
+                  respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
+                    complete {
+                      val res = makeLigandibilityQuery(scoresReader,
+                                                       cppdbReadr,
+                                                       ligandabilityReader,
+                                                       queryTerm)
+                      if (format.contains("csv"))
+                        HttpEntity(asCSV(res))
+                      else
+                        HttpEntity(upickle.default.write(res))
+                    }
+                  }
+                }
+            }
+          }
+        } ~
         pathSingleSlash {
           logRequest("index", Logging.InfoLevel) {
             Route.seal(getFromResource("public/index.html"))
@@ -211,6 +338,18 @@ object Server {
 
             }
 
+          }
+        } ~
+        path("depletionscores") {
+          logRequest("depletionscores", Logging.InfoLevel) {
+            complete {
+              HttpResponse(
+                entity = HttpEntity.CloseDelimited(
+                  ContentTypes.`text/plain(UTF-8)`,
+                  getFullDepletionScoresAsCSVStream
+                )
+              )
+            }
           }
         } ~
         path(RemainingPath) { segment =>

@@ -133,6 +133,17 @@ class ProteinUI(
 
   private val UIState = new UIState
 
+  def makeQuery(q: String) = {
+    UIState.waitState() = true
+    UIState.lastQuery() = Some(q)
+    Server.query(q).map { data =>
+      UIState.waitState() = false
+      println("Received data " + data._1.size + " " + data._2.size)
+      UIState.currentData() = data
+      UIState.clicked() = None
+    }
+  }
+
   val queryBox = input(
     `class` := "uk-search-input",
     style := "border: 1px solid #ddd",
@@ -142,14 +153,7 @@ class ProteinUI(
     placeholder := "Pdb, UniProt ID, Ensemble Transcript Id, hg38 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  ").render
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
-      UIState.waitState() = true
-      UIState.lastQuery() = Some(queryBox.value)
-      Server.query(queryBox.value).map { data =>
-        UIState.waitState() = false
-        println("Received data " + data._1.size + " " + data._2.size)
-        UIState.currentData() = data
-        UIState.clicked() = None
-      }
+      makeQuery(queryBox.value)
     }
   }
 
@@ -170,10 +174,11 @@ class ProteinUI(
   val resolvedPDBs = Rx {
     val data = UIState.currentData()._1
     if (data.nonEmpty)
-      span(
-        "Your query (also) returned the following pdb identifiers: " + data
-          .map(_.s)
-          .mkString(", "))
+      span("Your query (also) returned the following pdb identifiers: ")(
+        data.flatMap(pdb =>
+          List(a(onclick := { (event: Event) =>
+            makeQuery(pdb.s)
+          })(pdb.s), span(", "))))
     else span()
 
   }
@@ -293,7 +298,8 @@ class ProteinUI(
           }
         }
 
-        val featureElem = td(feature.toString).render
+        val featureElem =
+          td(feature.toString, small("(Click to center)")).render
 
         val row = tr(td(click),
                      td(
@@ -412,6 +418,7 @@ class ProteinUI(
     div(
       // renderProtein("3DZY"),
       div(queryBox, waitIndicator),
+      div(a(href := "/depletionscores")("or download all")),
       div(resolvedPDBs),
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),

@@ -1,6 +1,6 @@
 import fileutils._
 import stringsplit._
-import org.saddle._
+// import org.saddle._
 import java.io._
 
 case class Variant(locus: String,
@@ -759,5 +759,19 @@ object IOHelpers {
       (c, uni, uninum)
 
     }
+
+  def readLigandability(source: scala.io.Source): Iterator[LigandabilityRow] = {
+    import com.github.tototoshi.csv._
+    val reader = com.github.tototoshi.csv.CSVReader.open(source)
+    val lines = reader.iterator
+    val header = lines.next
+    lines.map { spl =>
+      val uniId = UniId(spl(0))
+      val uniNum = UniNumber(spl(2).split1('/').head.toInt - 1)
+      val rest = ((header zip spl) toMap).filter(_._2.nonEmpty)
+
+      LigandabilityRow(uniId, uniNum, rest)
+    }
+  }
 
 }

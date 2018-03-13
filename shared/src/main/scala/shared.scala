@@ -236,3 +236,7 @@ object SharedTypes {
   type ServerReturn = (Seq[PdbId], Seq[DepletionScoresByResidue])
 
 }
+
+case class LigandabilityRow(uniid: UniId,
+                            uninum: UniNumber,
+                            data: Map[String, String])
