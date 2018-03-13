@@ -1,7 +1,6 @@
 object MathHelpers {
 
   def makeColor(s: Seq[Double]) = {
-    import org.nspl._
     val cdf = cumulative(s)
     val colormap = RedBlue(min = 0d, max = 1d, mid = 0.5)
     (s: Double) =>
@@ -12,7 +11,6 @@ object MathHelpers {
   }
 
   def value2Color(s: Double) = {
-    import org.nspl._
     val colormap = RedBlue(min = 0d, max = 1d, mid = 0.5)
 
     val c = colormap.apply(s)

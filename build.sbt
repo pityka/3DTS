@@ -6,7 +6,6 @@ resolvers ++= Seq[Resolver](
 libraryDependencies ++= Seq(
   "io.github.pityka" %% "fileutils" % "1.1.0",
   "io.github.pityka" %% "stringsplit" % "1.0.0",
-  "io.github.pityka" %% "nspl-core" % "0.0.14-hli3",
   "io.github.pityka" %% "saddle-linalg" % "0.0.15",
   "io.github.pityka" %% "poibin" % "0.0.1",
   "io.github.pityka" %% "intervaltree" % "1.0.0",
