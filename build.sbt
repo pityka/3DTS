@@ -36,12 +36,11 @@ lazy val browser = (project in file("browser"))
   .settings(
     scalaVersion := "2.12.4",
     libraryDependencies ++= Seq(
-      "org.scala-js" %%% "scalajs-dom" % "0.9.0",
-      "com.lihaoyi" %%% "scalatags" % "0.5.5",
-      "com.lihaoyi" %%% "scalarx" % "0.3.1",
-      "be.doeraene" %%% "scalajs-jquery" % "0.9.0",
-      "com.lihaoyi" %%% "upickle" % "0.4.4",
-      "io.github.pityka" %%% "nspl-scalatags-js" % "0.0.12"
+      "org.scala-js" %%% "scalajs-dom" % "0.9.5",
+      "com.lihaoyi" %%% "scalatags" % "0.6.7",
+      "com.lihaoyi" %%% "scalarx" % "0.3.2",
+      "be.doeraene" %%% "scalajs-jquery" % "0.9.3",
+      "com.lihaoyi" %%% "upickle" % "0.4.4"
     )
   )
   .dependsOn(sharedJs)
