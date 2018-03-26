@@ -170,31 +170,33 @@ object Server {
       }
   }
 
+  val dataFolder = tasks.util.config.parse(com.typesafe.config.ConfigFactory.load).storageURI.getPath
+
   def getData(pdb: String): Source[ByteString, _] = {
-    val folder = tasks.util.config.global.storageURI.getPath
-    val file = new File(folder + "/pdbassembly/" + pdb + ".assembly.pdb")
+    
+    val file = new File(dataFolder + "/pdbassembly/" + pdb + ".assembly.pdb")
     akka.stream.scaladsl.FileIO.fromFile(file)
 
   }
 
   def getFullDepletionScoresAsCSVStream(
       implicit ec: ExecutionContext): Source[ByteString, _] = {
-    val folder = tasks.util.config.global.storageURI.getPath
+    
+        ???
+    // val file = new File(
+    //   dataFolder + "/depletion2pdb/full.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.variationdata.json.gz.5.0.2142306777..json.gz.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.-620945037.json.gz.back2pdb.json.gz")
 
-    val file = new File(
-      folder + "/depletion2pdb/full.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.variationdata.json.gz.5.0.2142306777..json.gz.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.-620945037.json.gz.back2pdb.json.gz")
-
-    Source.single(ByteString(csvHeader + "\n")) ++ akka.stream.scaladsl.FileIO
-      .fromFile(file)
-      .via(Compression.gunzip())
-      .via(Framing.delimiter(ByteString("\n"),
-                             maximumFrameLength = Int.MaxValue,
-                             allowTruncation = true))
-      .map(_.utf8String)
-      .map { elem =>
-        ByteString(
-          csvRow(upickle.default.read[DepletionScoresByResidue](elem)) + "\n")
-      }
+    // Source.single(ByteString(csvHeader + "\n")) ++ akka.stream.scaladsl.FileIO
+    //   .fromFile(file)
+    //   .via(Compression.gunzip())
+    //   .via(Framing.delimiter(ByteString("\n"),
+    //                          maximumFrameLength = Int.MaxValue,
+    //                          allowTruncation = true))
+    //   .map(_.utf8String)
+    //   .map { elem =>
+    //     ByteString(
+    //       csvRow(upickle.default.read[DepletionScoresByResidue](elem)) + "\n")
+    //   }
   }
 
   def csvRow(e: DepletionScoresByResidue) = {

@@ -3,6 +3,8 @@ import collection.JavaConversions._
 import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
+import tasks.upicklesupport._
+  
 import tasks._
 import tasks.queue.NodeLocalCache
 import tasks.util.TempFile

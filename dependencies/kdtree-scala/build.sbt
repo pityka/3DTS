@@ -6,6 +6,5 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
-scalaVersion := "2.11.11"
+scalaVersion := "2.12.4"
 
-crossScalaVersions := Seq("2.12.2", "2.11.11")

@@ -1,5 +1,5 @@
 val commonSettings = Seq(
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.12.4",
   version := "1.2.0"
 )
 
@@ -9,7 +9,7 @@ lazy val root = project
   .settings(
     name := "indexlib",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "2.1.5" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.0" % "test",
       "com.google.guava" % "guava" % "19.0",
       "org.xerial.snappy" % "snappy-java" % "1.1.2.1",
       "com.spotify.sparkey" % "sparkey" % "2.1.3"
