@@ -20,14 +20,24 @@ import akka.stream._
 import akka.stream.scaladsl._
 import SharedTypes._
 
+import htsjdk.samtools.reference._
+
 case class Depletion3dInputFull(
     locusDataFile: JsDump[LocusVariationCountAndNumNs],
-    featureFile: JsDump[Feature2CPSecond.MappedFeatures])
+    featureFile: JsDump[Feature2CPSecond.MappedFeatures],
+    fasta: SharedFile,
+    fai: SharedFile,
+    heptamerFrequencies: SharedFile,
+    numberOfIndividualsOfHeptamerFrequencies: Int)
 
 case class Depletion3dInput(
     locusDataFile: JsDump[LocusVariationCountAndNumNs],
     featureFile: JsDump[Feature2CPSecond.MappedFeatures],
-    pdbId: Int)
+    pdbId: Int,
+    fasta: SharedFile,
+    fai: SharedFile,
+    heptamerFrequencies: SharedFile,
+    numberOfIndividualsOfHeptamerFrequencies: Int)
 
 case class Depletion3dOutput(locusFile: SharedFile, js: JsDump[DepletionRow])
     extends ResultWithSharedFiles(js.sf, locusFile)
@@ -66,7 +76,10 @@ object depletion3d {
   def makeScores(lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs],
                  name: String,
                  features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
-                 pSyn: Double): (File, List[DepletionRow]) = {
+                 pSyn: Double,
+                 referenceSequence: IndexedFastaSequenceFile,
+                 heptamerFrequencies: Map[String,Double],
+                 heptamerNumberOfIndividuals: Int ): (File, List[DepletionRow]) = {
 
     val lociByPdbChain: Map[(PdbId, PdbChain), Vector[ChrPos]] = features
       .groupBy(x => x._2.pdbId -> x._2.pdbChain)
@@ -143,6 +156,19 @@ object depletion3d {
                                           sampleSizeNs,
                                           countNs,
                                           pSynInChain)
+
+              val pSynByHeptamer = loci.map{ locus =>
+                val cp = locus.locus
+                val heptamer = HeptamerHelpers.heptamerAt(cp,referenceSequence)
+                val numberOfChromosomes = heptamerNumberOfIndividuals*2 // wrong for X non-PAR!
+                
+                heptamerFrequencies(heptamer)/ numberOfChromosomes
+              }.toArray
+
+              val (postP1Hepta, postLessHepta, postMeanHepta) =posteriorUnderSelection1D(numNs,
+                                          sampleSizeNs,
+                                          countNs,
+                                          pSynByHeptamer)
 
               synchronized {
                 loci.foreach { locus =>
@@ -342,7 +368,7 @@ object depletion3d {
 
   val task =
     AsyncTask[Depletion3dInputFull, Depletion3dOutput]("depletion3d-7", 8) {
-      case Depletion3dInputFull(locusDataJsDump, myFeatureJsDump) =>
+      case Depletion3dInputFull(locusDataJsDump, myFeatureJsDump,fasta,fai, heptamerFrequencies, heptamerNumberOfIndividuals) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
 
@@ -353,7 +379,7 @@ object depletion3d {
               Source(groups.toList)
                 .mapAsync(1) {
                   case (idx, group) =>
-                    subtask(Depletion3dInput(locusDataJsDump, group, idx))(
+                    subtask(Depletion3dInput(locusDataJsDump, group, idx,fasta,fai, heptamerFrequencies, heptamerNumberOfIndividuals))(
                       CPUMemoryRequest(1, 20000))
                 }
                 .runWith(Sink.seq)
@@ -392,14 +418,21 @@ object depletion3d {
 
   val subtask =
     AsyncTask[Depletion3dInput, Depletion3dOutput]("scorebatch-1", 7) {
-      case Depletion3dInput(locusDataJsDump, myFeatureJsDump, idx) =>
+      case Depletion3dInput(locusDataJsDump, myFeatureJsDump, idx, fasta,fai, heptamerFrequenciesF, heptamerNumberOfIndividuals) =>
         implicit ctx =>
           log.info(
             s"Start scoring ${locusDataJsDump.sf.name} ${myFeatureJsDump.sf.name}")
           for {
             featureFileLocal <- myFeatureJsDump.sf.file
+            fastaLocal <- fasta.file
+            faiLocal <- fai.file
+            heptamerFrequenciesLocal <- heptamerFrequenciesF.file
             (lociByCpra, pSyn) <- cacheLocusData(locusDataJsDump)
             result <- {
+
+              val referenceSequence = HeptamerHelpers.openFasta(fastaLocal,faiLocal)
+
+              val heptamerFrequencies = openSource(heptamerFrequenciesLocal)(HeptamerHelpers.readFrequencies)
 
               val features: Seq[(ChrPos, FeatureKey, Seq[UniId])] =
                 myFeatureJsDump.iterator(featureFileLocal)(_.map(x =>
@@ -408,7 +441,7 @@ object depletion3d {
               log.info("pSyn: " + pSyn)
 
               val (locusFile, content) =
-                makeScores(lociByCpra, "3ds-all-proteomewide", features, pSyn)
+                makeScores(lociByCpra, "3ds-all-proteomewide", features, pSyn, referenceSequence, heptamerFrequencies, heptamerNumberOfIndividuals)
 
               log.info("Scores done")
               val jsdump = JsDump.fromIterator(

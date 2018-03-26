@@ -135,7 +135,7 @@ object Server {
             scoresIndex: ScoresIndexedByPdbId,
             cppdbIndex: CpPdbIndex,
             geneNameIndex: UniprotIndexedByGene,
-            ligandabilityByUniId: LigandabilityIndexedByUniId)(
+            ligandabilityByUniId: Option[LigandabilityIndexedByUniId])(
       implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
@@ -148,7 +148,7 @@ object Server {
     linkFolder.mkdirs
     Future
       .sequence(
-        (scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files ++ ligandabilityByUniId.files).map {
+        (scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files ++ ligandabilityByUniId.toList.flatMap(_.files)).map {
           sf =>
             sf.file.map { file =>
               val filelinkpath =

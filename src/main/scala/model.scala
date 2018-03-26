@@ -125,7 +125,7 @@ object Model {
   def likelihoodLoci(lociNumNs: Array[Int],
                      lociRounds: Array[Int],
                      successes: Int,
-                     p: Double,
+                     p: Array[Double],
                      selection: Double): Double = {
     val ps = {
       var s = 0d
@@ -133,7 +133,7 @@ object Model {
       while (i < lociRounds.size) {
         s += probabilityOfLocusHasAtLeast1(rounds = lociRounds(i),
                                            numNs = lociNumNs(i),
-                                           p = p,
+                                           p = p(i),
                                            selection = selection)
         i += 1
       }
@@ -144,10 +144,17 @@ object Model {
     jdistlib.Poisson.density(successes, ps, false)
   }
 
+ def posteriorUnderSelection1D(lociNumNs: Array[Int],
+                                lociRounds: Array[Int],
+                                successes: Int,
+                                p: Double) : (Double,Double,Double) = 
+                  posteriorUnderSelection1D(lociNumNs,lociRounds,successes,lociNumNs.map(_ => p))                
+  
+
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Double) = {
+                                p: Array[Double]) : (Double,Double,Double)  = {
 
     val `P(x|s)` =
       likelihoodLoci(lociNumNs, lociRounds, successes, p, _: Double)
