@@ -87,7 +87,7 @@ object JoinCPWithPdb {
           // implicit val mat = ActorMaterializer()
 
           val uniprot2Genome
-            : Future[collection.mutable.Map[String, List[String]]] =
+            : Future[scala.collection.mutable.Map[String, List[String]]] =
             gencodeUniprot.sf.file.map { localFile =>
               log.info(
                 "Reading UniProt -> genome map .." + gencodeUniprot.sf.name)

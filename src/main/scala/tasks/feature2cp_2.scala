@@ -40,7 +40,7 @@ object Feature2CPSecond {
           log.info("Start feature2cpsecond")
           featureContextJsDump.sf.file.flatMap { featureContextLocalFile =>
             cppdbJsDump.sf.file.flatMap { cppdb =>
-              val map: collection.mutable.Map[String, List[String]] =
+              val map: scala.collection.mutable.Map[String, List[String]] =
                 cppdbJsDump.iterator(cppdb) { iterator =>
                   val mmap =
                     scala.collection.mutable.AnyRefMap[String, List[String]]()

@@ -24,7 +24,9 @@ import scala.collection.mutable.ArrayBuffer
 
 case class GenomeCoverage(chromosome: String,
                           position: Int,
-                          numberOfWellSequencedIndividuals: Int)
+                          numberOfWellSequencedIndividuals: Int) {
+  def cp = chromosome + "\t" + position
+}
 
 case class FilterCoverageInput(coverage: JsDump[GenomeCoverage],
                                gencodeGtf: SharedFile)

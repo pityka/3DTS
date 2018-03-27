@@ -43,6 +43,7 @@ object JoinVariationsCore {
                         alt: String,
                         filter: String,
                         genders: GnomadGenders) {
+    def cp = chromosome + "\t" + position
     def pass = filter == "PASS"
     def chrpos =
       chromosome + "\t" + (position - 1).toString + "\t" + position
