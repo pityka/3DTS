@@ -90,165 +90,180 @@ object IOHelpers {
                               hliSampleSize: Int,
                               gnomadExomeSampleSize: Int,
                               gnomadGenomeSampleSize: Int) =
-    source.getLines.map { line =>
-      val spl = line.split1('\t')
-      if (spl.size >= 44) {
-        val cp = spl.take(4).mkString("\t")
-        val protein = spl(4)
-        val codonNumber = {
-          val s = spl(8)
-          if (s == "*") -1
-          else s.toInt
-        }
-        val features = spl(9).split1(',').toSet.filterNot(_ == "NO_FEATURE")
+    source.getLines
+      .map { line =>
+        val spl = line.split1('\t')
+        if (spl.size >= 44) {
+          val cp = spl.take(4).mkString("\t")
+          val protein = spl(4)
+          val codonNumber = {
+            val s = spl(8)
+            if (s == "*") -1
+            else s.toInt
+          }
+          val features = spl(9).split1(',').toSet.filterNot(_ == "NO_FEATURE")
 
-        def clz(s: String) = s.split1(',')
+          def clz(s: String) = s.split1(',')
 
-        def ac(s: String, mult: Int, hc: Boolean) =
-          if (!hc)
-            1 to mult map (_ => 0)
-          else
-            s match {
-              case "NaN" => 1 to mult map (_ => 0)
-              case x => x.split1(',').map(_.toInt)
-            }
-
-        def an(s: String, mult: Int, sampleSize: Int, hc: Boolean) =
-          if (!hc)
-            1 to mult map (_ => 0)
-          else
-            s match {
-              case "NaN" => 1 to mult map (_ => sampleSize)
-              case x => x.split1(',').map(_.toInt)
-            }
-
-        // (s,ns,sg,sample)
-        def zip(clz: Seq[String],
-                ac: Seq[Int],
-                an: Seq[Int]): (Int, Int, Int, Int) = {
-
-          val sampleSize = an.head / 2
-          val acs = clz zip ac map {
-            case (clz, ac) =>
-              clz match {
-                case "non-synonymous" => (0, ac, 0)
-                case "synonymous" => (ac, 0, 0)
-                case "stop-gained" | "start-lost" | "stop-lost" => (0, 0, ac)
-                case _ => (0, 0, 0)
+          def ac(s: String, mult: Int, hc: Boolean) =
+            if (!hc)
+              1 to mult map (_ => 0)
+            else
+              s match {
+                case "NaN" => 1 to mult map (_ => 0)
+                case x     => x.split1(',').map(_.toInt)
               }
-          } reduce ((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3))
-          (acs._1, acs._2, acs._3, sampleSize)
-        }
 
-        val hc = spl(42).split1(',').map(_.toInt)
+          def an(s: String, mult: Int, sampleSize: Int, hc: Boolean) =
+            if (!hc)
+              1 to mult map (_ => 0)
+            else
+              s match {
+                case "NaN" => 1 to mult map (_ => sampleSize)
+                case x     => x.split1(',').map(_.toInt)
+              }
 
-        val hliHc = hc(0) == 1
-        val gnomadExomeHc = hc(2) == 1
-        val gnomadGenomeHc = hc(1) == 1
+          // (s,ns,sg,sample)
+          def zip(clz: Seq[String],
+                  ac: Seq[Int],
+                  an: Seq[Int]): (Int, Int, Int, Int) = {
 
-        val hliMult = spl(10).split1(',').size
-        val gnomadExomeMult = spl(26).split1(',').size
-        val gnomadGenomeMult = spl(34).split1(',').size
+            val sampleSize = an.head / 2
+            val acs = clz zip ac map {
+              case (clz, ac) =>
+                clz match {
+                  case "non-synonymous"                           => (0, ac, 0)
+                  case "synonymous"                               => (ac, 0, 0)
+                  case "stop-gained" | "start-lost" | "stop-lost" => (0, 0, ac)
+                  case _                                          => (0, 0, 0)
+                }
+            } reduce ((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3))
+            (acs._1, acs._2, acs._3, sampleSize)
+          }
 
-        val hliClass = clz(spl(16))
-        val gnomadExomeClass = clz(spl(32))
-        val gnomadGenomeClass = clz(spl(40))
+          val hc = spl(42).split1(',').map(_.toInt)
 
-        val hliAc = ac(spl(13), hliMult, hliHc)
-        val gnomadExomeAc = ac(spl(29), gnomadExomeMult, gnomadExomeHc)
-        val gnomadGenomeAc = ac(spl(37), gnomadGenomeMult, gnomadGenomeHc)
+          val hliHc = hc(0) == 1
+          val gnomadExomeHc = hc(2) == 1
+          val gnomadGenomeHc = hc(1) == 1
 
-        val hliAn = an(spl(14), hliMult, hliSampleSize, hliHc)
-        val gnomadExomeAn =
-          an(spl(30), gnomadExomeMult, gnomadExomeSampleSize, gnomadExomeHc)
-        val gnomadGenomeAn =
-          an(spl(38), gnomadGenomeMult, gnomadGenomeSampleSize, gnomadGenomeHc)
+          val hliMult = spl(10).split1(',').size
+          val gnomadExomeMult = spl(26).split1(',').size
+          val gnomadGenomeMult = spl(34).split1(',').size
 
-        if (hliAn.distinct.size > 1 || gnomadExomeAn.distinct.size > 1 || gnomadGenomeAn.distinct.size > 1)
-          None
-        else {
+          val hliClass = clz(spl(16))
+          val gnomadExomeClass = clz(spl(32))
+          val gnomadGenomeClass = clz(spl(40))
 
-          val numNs = spl(43).toInt
+          val hliAc = ac(spl(13), hliMult, hliHc)
+          val gnomadExomeAc = ac(spl(29), gnomadExomeMult, gnomadExomeHc)
+          val gnomadGenomeAc = ac(spl(37), gnomadGenomeMult, gnomadGenomeHc)
 
-          val hliSum = zip(hliClass, hliAc, hliAn)
-          val gnomadExomeSum =
-            zip(gnomadExomeClass, gnomadExomeAc, gnomadExomeAn)
-          val gnomadGenomeSum =
-            zip(gnomadGenomeClass, gnomadGenomeAc, gnomadGenomeAn)
+          val hliAn = an(spl(14), hliMult, hliSampleSize, hliHc)
+          val gnomadExomeAn =
+            an(spl(30), gnomadExomeMult, gnomadExomeSampleSize, gnomadExomeHc)
+          val gnomadGenomeAn =
+            an(spl(38),
+               gnomadGenomeMult,
+               gnomadGenomeSampleSize,
+               gnomadGenomeHc)
 
-          val sum =
-            List(hliSum, gnomadExomeSum, gnomadGenomeSum).reduce((x, y) =>
-              (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
+          if (hliAn.distinct.size > 1 || gnomadExomeAn.distinct.size > 1 || gnomadGenomeAn.distinct.size > 1)
+            None
+          else {
 
-          Some(
-            Locus(locus = cp,
-                  numNs = numNs,
-                  features = features,
-                  protein = protein,
-                  codonNumber = codonNumber,
-                  alleleCountSyn = sum._1,
-                  alleleCountNonSyn = sum._2,
-                  alleleCountStopGain = sum._3,
-                  sampleSize = sum._4))
-        }
-      } else None
-    }.filter(_.isDefined).map(_.get).filter(_.sampleSize > 0)
+            val numNs = spl(43).toInt
+
+            val hliSum = zip(hliClass, hliAc, hliAn)
+            val gnomadExomeSum =
+              zip(gnomadExomeClass, gnomadExomeAc, gnomadExomeAn)
+            val gnomadGenomeSum =
+              zip(gnomadGenomeClass, gnomadGenomeAc, gnomadGenomeAn)
+
+            val sum =
+              List(hliSum, gnomadExomeSum, gnomadGenomeSum).reduce((x, y) =>
+                (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
+
+            Some(Locus(
+              locus = cp,
+              numNs = numNs,
+              features = features,
+              protein = protein,
+              codonNumber = codonNumber,
+              alleleCountSyn = sum._1,
+              alleleCountNonSyn = sum._2,
+              alleleCountStopGain = sum._3,
+              sampleSize = sum._4
+            ))
+          }
+        } else None
+      }
+      .filter(_.isDefined)
+      .map(_.get)
+      .filter(_.sampleSize > 0)
 
   def readPreJoinedLocusFile(f: String, sampleSize: Int) =
-    openSource(f)(_.getLines.map { line =>
-      val spl = line.split1('\t')
-      val cp = spl.take(4).mkString("\t")
-      val protein = spl(4)
-      val codonNumber = {
-        val s = spl(8)
-        if (s == "*") -1
-        else s.toInt
-      }
-      val hc = spl(9).toInt == 1
-      val features = spl(10).split1(',').toSet.filterNot(_ == "NO_FEATURE")
-      val variantClass = spl(11)
-        .split1(',')
-        .filterNot(_ == "NO_non-synonymous_OR_synonymous_OR_stop-gained")
-        .sortBy(_ match {
-          case "stop-gained" => 0
-          case "synonymous" => 2
-          case "non-synonymous" => 1
-        })
-        .headOption
+    openSource(f)(
+      _.getLines
+        .map { line =>
+          val spl = line.split1('\t')
+          val cp = spl.take(4).mkString("\t")
+          val protein = spl(4)
+          val codonNumber = {
+            val s = spl(8)
+            if (s == "*") -1
+            else s.toInt
+          }
+          val hc = spl(9).toInt == 1
+          val features = spl(10).split1(',').toSet.filterNot(_ == "NO_FEATURE")
+          val variantClass = spl(11)
+            .split1(',')
+            .filterNot(_ == "NO_non-synonymous_OR_synonymous_OR_stop-gained")
+            .sortBy(_ match {
+              case "stop-gained"    => 0
+              case "synonymous"     => 2
+              case "non-synonymous" => 1
+            })
+            .headOption
 
-      val ac = spl(12) match {
-        case "NO_AC" => 0
-        case x =>
-          x.split1(',')
-            .flatMap(_.split1(';'))
-            .filter(_.size > 0)
-            .map(_.toInt)
-            .sum
-      }
+          val ac = spl(12) match {
+            case "NO_AC" => 0
+            case x =>
+              x.split1(',')
+                .flatMap(_.split1(';'))
+                .filter(_.size > 0)
+                .map(_.toInt)
+                .sum
+          }
 
-      // number of good calls, not used at the moment
-      val an = spl(13) match {
-        case "NO_AN" => 0
-        case x =>
-          x.split1(',')
-            .flatMap(_.split1(';'))
-            .filter(_.size > 0)
-            .map(_.toInt)
-            .sum
-      }
+          // number of good calls, not used at the moment
+          val an = spl(13) match {
+            case "NO_AN" => 0
+            case x =>
+              x.split1(',')
+                .flatMap(_.split1(';'))
+                .filter(_.size > 0)
+                .map(_.toInt)
+                .sum
+          }
 
-      val numNs = spl(14).toInt
+          val numNs = spl(14).toInt
 
-      hc -> Locus(cp,
-                  numNs,
-                  features,
-                  protein,
-                  codonNumber,
-                  if (variantClass == Set("synonymous")) ac else 0,
-                  if (variantClass.contains("non-synonymous")) ac else 0,
-                  if (variantClass.contains("stop-gain")) ac else 0,
-                  sampleSize)
-    }.filter(_._1).map(_._2).toList)
+          hc -> Locus(
+            cp,
+            numNs,
+            features,
+            protein,
+            codonNumber,
+            if (variantClass == Set("synonymous")) ac else 0,
+            if (variantClass.contains("non-synonymous")) ac else 0,
+            if (variantClass.contains("stop-gain")) ac else 0,
+            sampleSize
+          )
+        }
+        .filter(_._1)
+        .map(_._2)
+        .toList)
 
   def joinVarianstAndNsLists(variants: List[Variant],
                              ns: List[LocusNsAndCodon],
@@ -259,73 +274,87 @@ object IOHelpers {
         loci.get(x.locus).map(_.variantClass).toSet
       val ac = loci.get(x.locus).map(_.alleleCount).getOrElse(0)
 
-      Locus(x.locus,
-            x.numNs,
-            loci.get(x.locus).map(_.features).getOrElse(Set()) + x.feature,
-            x.protein,
-            x.codon,
-            if (variantClass == Set("synonymous")) ac else 0,
-            if (variantClass.contains("non-synonymous")) ac else 0,
-            if (variantClass.contains("stop-gain")) ac else 0,
-            sampleSize)
+      Locus(
+        x.locus,
+        x.numNs,
+        loci.get(x.locus).map(_.features).getOrElse(Set()) + x.feature,
+        x.protein,
+        x.codon,
+        if (variantClass == Set("synonymous")) ac else 0,
+        if (variantClass.contains("non-synonymous")) ac else 0,
+        if (variantClass.contains("stop-gain")) ac else 0,
+        sampleSize
+      )
     }.toList
   }
 
   def readVariants(
       f: String): Seq[(String, Set[String], Set[String], Int, String)] =
-    openSource(f)(_.getLines.map { line =>
-      val spl = line.split1('\t')
-      val cpra = spl.take(4).mkString("\t")
-      val variantClass = spl(6)
-      val population = spl(7)
-      val ac = spl(8).toInt
-      val feature = spl(9)
-      (cpra, variantClass, population, feature, ac)
-    }.toList.groupBy(_._1).toSeq.map { x =>
-      (x._2.head._2,
-       x._2.map(_._3).toSet,
-       x._2.map(_._4).toSet,
-       x._2.head._5,
-       x._2.head._1)
-    })
+    openSource(f)(
+      _.getLines
+        .map { line =>
+          val spl = line.split1('\t')
+          val cpra = spl.take(4).mkString("\t")
+          val variantClass = spl(6)
+          val population = spl(7)
+          val ac = spl(8).toInt
+          val feature = spl(9)
+          (cpra, variantClass, population, feature, ac)
+        }
+        .toList
+        .groupBy(_._1)
+        .toSeq
+        .map { x =>
+          (x._2.head._2,
+           x._2.map(_._3).toSet,
+           x._2.map(_._4).toSet,
+           x._2.head._5,
+           x._2.head._1)
+        })
 
   def readFeatures(f: String) =
     openSource(f)(
-      _.getLines.map { line =>
-        line.split1('\t')
-      }.filter(_.size == 5)
+      _.getLines
+        .map { line =>
+          line.split1('\t')
+        }
+        .filter(_.size == 5)
         .map { spl =>
           (spl.take(3) :+ spl(4)).mkString("\t") -> spl(3)
         }
         .toList)
 
   def readLoci(f: String) =
-    openSource(f)(_.getLines.flatMap { line1 =>
-      val spl1 = line1.split1('\t')
-      line1.split1(';').map {
-        line =>
-          val spl = line.split1('\t')
-          if (spl.size == 4) {
+    openSource(f)(
+      _.getLines
+        .flatMap { line1 =>
+          val spl1 = line1.split1('\t')
+          line1.split1(';').map {
+            line =>
+              val spl = line.split1('\t')
+              if (spl.size == 4) {
 
-            val cp = spl1.take(4).mkString("\t")
-            val numNS = spl1(7).toInt
-            val codon = spl1(6).toInt
-            val feature = if (spl.size < 4) "" else spl(3)
-            (cp, numNS, feature, codon)
-          } else {
-            val cp = spl.take(4).mkString("\t")
-            val numNS = spl(7).toInt
-            val codon = spl(6).toInt
-            val feature = if (spl.size < 9) "" else spl(8)
-            (cp, numNS, feature, codon)
+                val cp = spl1.take(4).mkString("\t")
+                val numNS = spl1(7).toInt
+                val codon = spl1(6).toInt
+                val feature = if (spl.size < 4) "" else spl(3)
+                (cp, numNS, feature, codon)
+              } else {
+                val cp = spl.take(4).mkString("\t")
+                val numNS = spl(7).toInt
+                val codon = spl(6).toInt
+                val feature = if (spl.size < 9) "" else spl(8)
+                (cp, numNS, feature, codon)
+              }
           }
-      }
-    }.toList.foldLeft(List[(String, Int, String, Int, Int)]()) { (acc, elem) =>
-      if (acc.isEmpty) (elem._1, elem._2, elem._3, elem._4, 0) :: acc
-      else if (acc.head._4 <= elem._4)
-        (elem._1, elem._2, elem._3, elem._4, acc.head._5) :: acc
-      else (elem._1, elem._2, elem._3, elem._4, acc.head._5 + 1) :: acc
-    }).map(x => LocusNsAndCodon(x._1, x._2, x._3, x._4.toString, x._5))
+        }
+        .toList
+        .foldLeft(List[(String, Int, String, Int, Int)]()) { (acc, elem) =>
+          if (acc.isEmpty) (elem._1, elem._2, elem._3, elem._4, 0) :: acc
+          else if (acc.head._4 <= elem._4)
+            (elem._1, elem._2, elem._3, elem._4, acc.head._5) :: acc
+          else (elem._1, elem._2, elem._3, elem._4, acc.head._5 + 1) :: acc
+        }).map(x => LocusNsAndCodon(x._1, x._2, x._3, x._4.toString, x._5))
 
   def read5AngstromFile(f: String) =
     openSource(f)(_.getLines.flatMap { line =>
@@ -339,12 +368,17 @@ object IOHelpers {
     }.toList)
 
   def readHighConfidenceRegion(f: String) =
-    openSource(f)(_.getLines.map { line =>
-      val spl = line.split1('\t')
-      val cpra = spl.take(4).mkString("\t")
-      val hc = spl(5) == "1"
-      (cpra, hc)
-    }.filter(_._2).map(_._1).toSet)
+    openSource(f)(
+      _.getLines
+        .map { line =>
+          val spl = line.split1('\t')
+          val cpra = spl.take(4).mkString("\t")
+          val hc = spl(5) == "1"
+          (cpra, hc)
+        }
+        .filter(_._2)
+        .map(_._1)
+        .toSet)
 
   def readGnomadFile(f: String) =
     openSource(f)(_.getLines.map { line =>
@@ -404,7 +438,7 @@ object IOHelpers {
     // iterates over entries in the zip file
     while (entry != null) {
       val filePath = destDir.getAbsolutePath + File.separator + entry
-          .getName();
+        .getName();
       if (!entry.isDirectory()) {
         // if the entry is a file, extracts it
         extractFile(zipIn, filePath);
@@ -690,17 +724,20 @@ object IOHelpers {
         (header, seq)
       }
 
-    fastaIterator(s).map {
-      case (headerLine, sequence) =>
-        val spl = headerLine.split1('|')
-        val id = spl(0).split1Iter('.').next
-        val cds = spl.find(_.startsWith("CDS:")).get.drop(4).split1('-')
-        val start1 = cds(0).toInt
-        val to1 = cds(1).toInt
-        (id.startsWith("ENST"),
-         EnsT(id),
-         Transcript(start1 - 1, sequence.substring(start1 - 1, to1)))
-    }.filter(_._1).map(x => (x._2, x._3))
+    fastaIterator(s)
+      .map {
+        case (headerLine, sequence) =>
+          val spl = headerLine.split1('|')
+          val id = spl(0).split1Iter('.').next
+          val cds = spl.find(_.startsWith("CDS:")).get.drop(4).split1('-')
+          val start1 = cds(0).toInt
+          val to1 = cds(1).toInt
+          (id.startsWith("ENST"),
+           EnsT(id),
+           Transcript(start1 - 1, sequence.substring(start1 - 1, to1)))
+      }
+      .filter(_._1)
+      .map(x => (x._2, x._3))
 
   }
 

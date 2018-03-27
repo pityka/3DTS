@@ -26,34 +26,36 @@ object ProjectCpPdb {
 
     cppdb => implicit ctx =>
       implicit val mat = ctx.components.actorMaterializer
-      cppdb.source.map {
-        case (PdbId(pdbid),
-              PdbChain(pdbch),
-              PdbResidueNumberUnresolved(pdbres),
-              _,
-              _,
-              _,
-              _,
-              EnsT(enst),
-              ChrPos(chrpos),
-              _,
-              _,
-              _,
-              _,
-              RefNuc(ref),
-              _,
-              _) =>
-          val spl = chrpos.split('\t')
+      cppdb.source
+        .map {
+          case (PdbId(pdbid),
+                PdbChain(pdbch),
+                PdbResidueNumberUnresolved(pdbres),
+                _,
+                _,
+                _,
+                _,
+                EnsT(enst),
+                ChrPos(chrpos),
+                _,
+                _,
+                _,
+                _,
+                RefNuc(ref),
+                _,
+                _) =>
+            val spl = chrpos.split('\t')
 
-          SimplePdbUniGencodeRow(pdbid,
-                                 pdbch,
-                                 pdbres,
-                                 enst,
-                                 spl(0),
-                                 spl(2).toInt,
-                                 ref.toString)
-      }.runWith(JsDump.sink[SimplePdbUniGencodeRow](
-        name = cppdb.sf.name + ".projected.json.gz"))
+            SimplePdbUniGencodeRow(pdbid,
+                                   pdbch,
+                                   pdbres,
+                                   enst,
+                                   spl(0),
+                                   spl(2).toInt,
+                                   ref.toString)
+        }
+        .runWith(JsDump.sink[SimplePdbUniGencodeRow](
+          name = cppdb.sf.name + ".projected.json.gz"))
 
   }
 

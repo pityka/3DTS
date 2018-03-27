@@ -8,7 +8,6 @@ import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import tasks.upicklesupport._
 
-
 import fileutils._
 import stringsplit._
 
@@ -43,9 +42,9 @@ case class Assembly2PdbOutput(pdbFiles: Map[PdbId, SharedFile])
 object Assembly2Pdb {
 
   def retry[A](i: Int)(f: => A): A = Try(f) match {
-    case Success(x) => x
+    case Success(x)          => x
     case Failure(x) if i > 0 => retry(i - 1)(f)
-    case Failure(e) => throw e
+    case Failure(e)          => throw e
   }
 
   val fetchCif =
@@ -77,8 +76,8 @@ object Assembly2Pdb {
 
                     Try(retry(3)(ProteinJoin.fetchCif(pdbId))) match {
                       case Success(cifString) =>
-                        SharedFile(writeToTempFile(cifString),
-                                   pdbId.s + ".cif").map(s => Some(pdbId -> s))
+                        SharedFile(writeToTempFile(cifString), pdbId.s + ".cif")
+                          .map(s => Some(pdbId -> s))
                       case Failure(e) =>
                         log.error(e, "Failed fetch cif " + pdbId)
                         Future.successful(None)

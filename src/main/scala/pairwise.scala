@@ -32,10 +32,7 @@ case class MutableMatrix[@specialized(Int) T](rows: Int,
   }
   override def toString =
     "MutableMatrix(" + rows + "," + cols + ",\n" + (0 until rows map (i =>
-                                                                        0 until cols map (j =>
-                                                                                            this(
-                                                                                              i,
-                                                                                              j)) mkString (" ")) mkString ("\n")) + ")"
+      0 until cols map (j => this(i, j)) mkString (" ")) mkString ("\n")) + ")"
 
   def copy(implicit ct: scala.reflect.ClassTag[T]) = {
     val d2 = Array.ofDim[T](rows * cols)
@@ -86,11 +83,14 @@ object OverlapPairwiseAlignment {
 
     }
     s(n, m) = (0 until m map (i => s(n, i)) max)
-    val (mi, mj) = ((0 until s.rows).iterator.flatMap { i =>
-      (0 until s.cols).iterator.map { j =>
-        (i, j)
-      }
-    }).find(x => s(x._1, x._2) == s(n, m) && x._1 == n).get
+    val (mi, mj) = ((0 until s.rows).iterator
+      .flatMap { i =>
+        (0 until s.cols).iterator.map { j =>
+          (i, j)
+        }
+      })
+      .find(x => s(x._1, x._2) == s(n, m) && x._1 == n)
+      .get
 
     (b, s(n, m), mi - 1, mj - 1)
   }
@@ -214,11 +214,14 @@ object FittingPairwiseAlignment {
     }
 
     middle(n, m) = (0 until n map (i => middle(i, m)) max)
-    val (mi, mj) = ((0 until middle.rows).iterator.flatMap { i =>
-      (0 until middle.cols).iterator.map { j =>
-        (i, j)
-      }
-    }).find(x => middle(x._1, x._2) == middle(n, m) && x._2 == m).get
+    val (mi, mj) = ((0 until middle.rows).iterator
+      .flatMap { i =>
+        (0 until middle.cols).iterator.map { j =>
+          (i, j)
+        }
+      })
+      .find(x => middle(x._1, x._2) == middle(n, m) && x._2 == m)
+      .get
 
     (blower, bmiddle, bupper, middle(n, m), mi - 1, mj - 1)
   }
@@ -296,11 +299,14 @@ object FittingPairwiseAlignment {
 
     }
     s(n, m) = (0 until n map (i => s(i, m)) max)
-    val (mi, mj) = ((0 until s.rows).iterator.flatMap { i =>
-      (0 until s.cols).iterator.map { j =>
-        (i, j)
-      }
-    }).find(x => s(x._1, x._2) == s(n, m) && x._2 == m).get
+    val (mi, mj) = ((0 until s.rows).iterator
+      .flatMap { i =>
+        (0 until s.cols).iterator.map { j =>
+          (i, j)
+        }
+      })
+      .find(x => s(x._1, x._2) == s(n, m) && x._2 == m)
+      .get
 
     (b, s(n, m), mi - 1, mj - 1)
   }
@@ -394,11 +400,14 @@ object LocalPairwiseAlignment {
 
     }
     s(n, m) = s.data.max
-    val (mi, mj) = ((0 until s.rows).iterator.flatMap { i =>
-      (0 until s.cols).iterator.map { j =>
-        (i, j)
-      }
-    }).find(x => s(x._1, x._2) == s(n, m)).get
+    val (mi, mj) = ((0 until s.rows).iterator
+      .flatMap { i =>
+        (0 until s.cols).iterator.map { j =>
+          (i, j)
+        }
+      })
+      .find(x => s(x._1, x._2) == s(n, m))
+      .get
     (b, s(n, m), mi - 1, mj - 1)
   }
 
@@ -460,11 +469,10 @@ object PenaltyHelper {
 
 object GlobalPairwiseAlignment {
 
-  def globalAlignmentBacktrack(
-      v: String,
-      w: String,
-      scores: Map[(Char, Char), Int],
-      indelpenalty: Int): (MutableMatrix[Int], Int) = {
+  def globalAlignmentBacktrack(v: String,
+                               w: String,
+                               scores: Map[(Char, Char), Int],
+                               indelpenalty: Int): (MutableMatrix[Int], Int) = {
     val (vInt, wInt, scoresInt, char2int) = PenaltyHelper(v, w, scores)
 
     val n = v.size

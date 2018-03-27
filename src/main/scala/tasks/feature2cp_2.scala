@@ -52,7 +52,7 @@ object Feature2CPSecond {
                     val k = pdbId.s + "_" + pdbChain.s + "_" + pdbres.s
 
                     mmap.get(k) match {
-                      case None => mmap.update(k, List(cp.s))
+                      case None    => mmap.update(k, List(cp.s))
                       case Some(l) => mmap.update(k, cp.s :: l)
                     }
                   }

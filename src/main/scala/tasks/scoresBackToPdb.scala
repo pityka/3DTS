@@ -39,18 +39,21 @@ object Depletion2Pdb {
 
       val writer = tableManager.writer(ScoresByPdbIdTable)
 
-      scoresOnPdb.source.runForeach { scoreByResidue =>
-        val pdbId = scoreByResidue.pdbId
-        val js = upickle.default.write(scoreByResidue)
-        writer.add(Doc(js), List(pdbId))
-      }.map { done =>
-        writer.makeIndex(1000000, 50)
-      }.flatMap { _ =>
-        Future
-          .sequence(tmpFolder.listFiles.toList.map(f =>
-            SharedFile(f, name = f.getName)))
-          .map(x => ScoresIndexedByPdbId(x.toSet))
-      }
+      scoresOnPdb.source
+        .runForeach { scoreByResidue =>
+          val pdbId = scoreByResidue.pdbId
+          val js = upickle.default.write(scoreByResidue)
+          writer.add(Doc(js), List(pdbId))
+        }
+        .map { done =>
+          writer.makeIndex(1000000, 50)
+        }
+        .flatMap { _ =>
+          Future
+            .sequence(tmpFolder.listFiles.toList.map(f =>
+              SharedFile(f, name = f.getName)))
+            .map(x => ScoresIndexedByPdbId(x.toSet))
+        }
     }
 
   val task =

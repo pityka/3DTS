@@ -51,10 +51,8 @@ object Server {
 
   }
 
-  def asCSV(
-      triples: Seq[(DepletionScoresByResidue,
-                    PdbUniGencodeRow,
-                    LigandabilityRow)]): String = {
+  def asCSV(triples: Seq[
+    (DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow)]): String = {
     def asCSVRow(
         triple: (DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow))
       : String = {
@@ -64,14 +62,16 @@ object Server {
             scores.pdbResidue,
             pdbuni._5.s,
             pdbuni._6.i + 1,
-            pdbuni._7.s) ++ List(scores.featureScores._1.toString,
-                                 scores.featureScores._2.v,
-                                 scores.featureScores._3.v,
-                                 scores.featureScores._4.v,
-                                 scores.featureScores._5.v,
-                                 scores.featureScores._6.v,
-                                 scores.featureScores._9.v,
-                                 scores.featureScores._12.v) ++ ligand.data
+            pdbuni._7.s) ++ List(
+        scores.featureScores._1.toString,
+        scores.featureScores._2.v,
+        scores.featureScores._3.v,
+        scores.featureScores._4.v,
+        scores.featureScores._5.v,
+        scores.featureScores._6.v,
+        scores.featureScores._9.v,
+        scores.featureScores._12.v
+      ) ++ ligand.data
         .map(x => x._1 + ":" + x._2)).mkString(",")
     }
 
@@ -115,19 +115,21 @@ object Server {
         }
     }
 
-    (scores.iterator.flatMap { scores =>
-      pdbUni.iterator.flatMap { pdbUni =>
-        ligandabilityRows.flatMap { ligandability =>
-          if ((scores.pdbId: String) == pdbUni._1.s &&
-              (scores.pdbChain: String) == pdbUni._2.s &&
-              (scores.pdbResidue: String) == pdbUni._3.s &&
-              (pdbUni._5: UniId) == ligandability.uniid &&
-              (pdbUni._6: UniNumber) == ligandability.uninum)
-            List((scores, pdbUni, ligandability)).iterator
-          else Iterator.empty
+    (scores.iterator
+      .flatMap { scores =>
+        pdbUni.iterator.flatMap { pdbUni =>
+          ligandabilityRows.flatMap { ligandability =>
+            if ((scores.pdbId: String) == pdbUni._1.s &&
+                (scores.pdbChain: String) == pdbUni._2.s &&
+                (scores.pdbResidue: String) == pdbUni._3.s &&
+                (pdbUni._5: UniId) == ligandability.uniid &&
+                (pdbUni._6: UniNumber) == ligandability.uninum)
+              List((scores, pdbUni, ligandability)).iterator
+            else Iterator.empty
+          }
         }
-      }
-    } toList).distinct
+      } toList)
+      .distinct
 
   }
 
@@ -147,21 +149,20 @@ object Server {
     linkFolder.delete
     linkFolder.mkdirs
     Future
-      .sequence(
-        (scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files ++ ligandabilityByUniId.toList.flatMap(_.files)).map {
-          sf =>
-            sf.file.map { file =>
-              val filelinkpath =
-                new java.io.File(linkFolder, sf.name)
+      .sequence((scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files ++ ligandabilityByUniId.toList
+        .flatMap(_.files)).map { sf =>
+        sf.file.map { file =>
+          val filelinkpath =
+            new java.io.File(linkFolder, sf.name)
 
-              java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
-                                                     file.toPath)
+          java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
+                                                 file.toPath)
 
-              log.info(
-                "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
-              filelinkpath
-            }
-        })
+          log.info(
+            "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
+          filelinkpath
+        }
+      })
       .flatMap { files =>
         log.info(s"Index files downloaded. $files")
         implicit val logging = log
@@ -170,10 +171,13 @@ object Server {
       }
   }
 
-  val dataFolder = tasks.util.config.parse(com.typesafe.config.ConfigFactory.load).storageURI.getPath
+  val dataFolder = tasks.util.config
+    .parse(com.typesafe.config.ConfigFactory.load)
+    .storageURI
+    .getPath
 
   def getData(pdb: String): Source[ByteString, _] = {
-    
+
     val file = new File(dataFolder + "/pdbassembly/" + pdb + ".assembly.pdb")
     akka.stream.scaladsl.FileIO.fromFile(file)
 
@@ -181,8 +185,8 @@ object Server {
 
   def getFullDepletionScoresAsCSVStream(
       implicit ec: ExecutionContext): Source[ByteString, _] = {
-    
-        ???
+
+    ???
     // val file = new File(
     //   dataFolder + "/depletion2pdb/full.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.variationdata.json.gz.5.0.2142306777..json.gz.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.-620945037.json.gz.back2pdb.json.gz")
 
@@ -200,16 +204,18 @@ object Server {
   }
 
   def csvRow(e: DepletionScoresByResidue) = {
-    List(e.pdbId,
-         e.pdbChain,
-         e.pdbResidue,
-         e.featureScores._2.v,
-         e.featureScores._3.v,
-         e.featureScores._4.v,
-         e.featureScores._5.v,
-         e.featureScores._6.v,
-         e.featureScores._9.v,
-         e.featureScores._12.v).map(_.toString).mkString(",")
+    List(
+      e.pdbId,
+      e.pdbChain,
+      e.pdbResidue,
+      e.featureScores._2.v,
+      e.featureScores._3.v,
+      e.featureScores._4.v,
+      e.featureScores._5.v,
+      e.featureScores._6.v,
+      e.featureScores._9.v,
+      e.featureScores._12.v
+    ).map(_.toString).mkString(",")
   }
 
   val csvHeader = List("PDB",

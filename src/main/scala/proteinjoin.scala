@@ -53,12 +53,11 @@ object ProteinJoin {
     *   where list is (idx1,idx2,mismatch)
     *    where idx1 and idx2 is Option[Int] and mismatch is a Boolean indicating match
     */
-  def align(
-      pdb: PdbSeq,
-      uni: UniSeq): (Seq[(Option[PdbNumber], Option[UniNumber], Boolean)],
-                     Int,
-                     PdbSeq,
-                     UniSeq) = {
+  def align(pdb: PdbSeq,
+            uni: UniSeq): (Seq[(Option[PdbNumber], Option[UniNumber], Boolean)],
+                           Int,
+                           PdbSeq,
+                           UniSeq) = {
     val chars = "ACDEFGHIKLMNPQRSTVWY".toList
     val penalties: Map[(Char, Char), Int] = blosum
     val gapOpen = 5
@@ -72,9 +71,9 @@ object ProteinJoin {
                              acc: List[Option[Int]],
                              i: Int): List[Option[Int]] =
       s match {
-        case Nil => acc
+        case Nil                 => acc
         case x :: xs if x == '-' => zipWithOriginalIndex(xs, None :: acc, i)
-        case x :: xs => zipWithOriginalIndex(xs, Some(i) :: acc, i + 1)
+        case x :: xs             => zipWithOriginalIndex(xs, Some(i) :: acc, i + 1)
       }
 
     val pdbOrig = zipWithOriginalIndex(pdbAl.toList, Nil, 0).reverse
@@ -110,9 +109,10 @@ object ProteinJoin {
       .flatMap { entry =>
         val seqLength = entry.seqLength.get
         entry.pdbs
-          .filter(x =>
-            (x._2 == PdbMethod.XRay && x._3.isDefined) || x._1 == PdbId(
-              "1JM7")) //let the BRCA nmr structure through
+          .filter(
+            x =>
+              (x._2 == PdbMethod.XRay && x._3.isDefined) || x._1 == PdbId(
+                "1JM7")) //let the BRCA nmr structure through
           .flatMap(pdb =>
             pdb._4
               .filter(chain => chain._2.map(x => x._2 - x._1 + 1).sum > 10)
@@ -120,8 +120,8 @@ object ProteinJoin {
 
       }
 
-  def indexByPdbChain(uniprotKb: Seq[UniProtEntry])
-    : Map[(PdbId, PdbChain), Seq[UniProtEntry]] =
+  def indexByPdbChain(
+      uniprotKb: Seq[UniProtEntry]): Map[(PdbId, PdbChain), Seq[UniProtEntry]] =
     uniprotKb
       .flatMap(u =>
         u.pdbs.flatMap(pdb => pdb._4.map(chain => (pdb._1, chain._1) -> u)))
@@ -142,8 +142,7 @@ object ProteinJoin {
       // .Http(
       // s"http://www.ebi.ac.uk/pdbe/entry-files/download/${id.s.toLowerCase}.cif")
         .Http(s"https://files.rcsb.org/download/${id.s}.cif.gz")
-        .timeout(connTimeoutMs = 1000 * 60 * 10,
-                 readTimeoutMs = 1000 * 60 * 10)
+        .timeout(connTimeoutMs = 1000 * 60 * 10, readTimeoutMs = 1000 * 60 * 10)
         .asBytes
         .body)
   }
@@ -195,10 +194,8 @@ object ProteinJoin {
                           PdbSeq,
                           UniSeq) =
             align(pdbSeq, uniSeq)
-          val mappedPdbNumbers: Seq[(PdbNumber,
-                                     UniNumber,
-                                     PdbResidueNumber,
-                                     Boolean)] =
+          val mappedPdbNumbers
+            : Seq[(PdbNumber, UniNumber, PdbResidueNumber, Boolean)] =
             alignment._1.filter(x => x._1.isDefined && x._2.isDefined).map {
               case (pdb, uni, matching) =>
                 (pdb.get, uni.get, pdbResidueList(pdb.get.i)._2, matching)

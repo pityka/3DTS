@@ -5,7 +5,7 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
 import tasks.upicklesupport._
-  
+
 import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 

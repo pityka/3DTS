@@ -8,7 +8,6 @@ import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import tasks.upicklesupport._
 
-
 import fileutils._
 import stringsplit._
 
@@ -73,13 +72,14 @@ object depletion3d {
        NsPostMean2D(spl(15).toDouble))
     }
 
-  def makeScores(lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs],
-                 name: String,
-                 features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
-                 pSyn: Double,
-                 referenceSequence: IndexedFastaSequenceFile,
-                 heptamerFrequencies: Map[String,Double],
-                 heptamerNumberOfIndividuals: Int ): (File, List[DepletionRow]) = {
+  def makeScores(
+      lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs],
+      name: String,
+      features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
+      pSyn: Double,
+      referenceSequence: IndexedFastaSequenceFile,
+      heptamerFrequencies: Map[String, Double],
+      heptamerNumberOfIndividuals: Int): (File, List[DepletionRow]) = {
 
     val lociByPdbChain: Map[(PdbId, PdbChain), Vector[ChrPos]] = features
       .groupBy(x => x._2.pdbId -> x._2.pdbChain)
@@ -157,15 +157,16 @@ object depletion3d {
                                           countNs,
                                           pSynInChain)
 
-              val pSynByHeptamer = loci.map{ locus =>
+              val pSynByHeptamer = loci.map { locus =>
                 val cp = locus.locus
-                val heptamer = HeptamerHelpers.heptamerAt(cp,referenceSequence)
-                val numberOfChromosomes = heptamerNumberOfIndividuals*2 // wrong for X non-PAR!
-                
-                heptamerFrequencies(heptamer)/ numberOfChromosomes
+                val heptamer = HeptamerHelpers.heptamerAt(cp, referenceSequence)
+                val numberOfChromosomes = heptamerNumberOfIndividuals * 2 // wrong for X non-PAR!
+
+                heptamerFrequencies(heptamer) / numberOfChromosomes
               }.toArray
 
-              val (postP1Hepta, postLessHepta, postMeanHepta) =posteriorUnderSelection1D(numNs,
+              val (postP1Hepta, postLessHepta, postMeanHepta) =
+                posteriorUnderSelection1D(numNs,
                                           sampleSizeNs,
                                           countNs,
                                           pSynByHeptamer)
@@ -234,12 +235,14 @@ object depletion3d {
 
           features.map { x =>
             val colors =
-              Map("PP1_1d_local" -> localColorPostP1(x._7.v),
-                  "PLess10_1d_local" -> localColorPostLess10(x._8.v),
-                  "PMean_1d_local" -> value2Color(1 - x._9.v),
-                  "PP1_2d_local" -> localColorPostP12d(x._10.v),
-                  "PLess10_2d_local" -> localColorPostLess102d(x._11.v),
-                  "PMean_2d_local" -> value2Color(1 - x._12.v))
+              Map(
+                "PP1_1d_local" -> localColorPostP1(x._7.v),
+                "PLess10_1d_local" -> localColorPostLess10(x._8.v),
+                "PMean_1d_local" -> value2Color(1 - x._9.v),
+                "PP1_2d_local" -> localColorPostP12d(x._10.v),
+                "PLess10_2d_local" -> localColorPostLess102d(x._11.v),
+                "PMean_2d_local" -> value2Color(1 - x._12.v)
+              )
             DepletionRow(x._1,
                          x._2,
                          x._3,
@@ -281,7 +284,7 @@ object depletion3d {
             val numS = locus.numS
             val sampleSize = locus.sampleSize
             mmap.get((numS, sampleSize)) match {
-              case None => mmap.update((numS, sampleSize), 1)
+              case None    => mmap.update((numS, sampleSize), 1)
               case Some(x) => mmap.update((numS, sampleSize), x + 1)
             }
 
@@ -315,8 +318,7 @@ object depletion3d {
               val (sorted: Iterator[T1], closeable) =
                 iterator.sortAsJson(featureIter, 5000000)
               JsDump
-                .fromIterator(sorted,
-                              myFeatureJsDump.sf.name + ".sorted.js.gz")
+                .fromIterator(sorted, myFeatureJsDump.sf.name + ".sorted.js.gz")
                 .andThen { case _ => closeable.close }
           }
         }
@@ -368,57 +370,76 @@ object depletion3d {
 
   val task =
     AsyncTask[Depletion3dInputFull, Depletion3dOutput]("depletion3d-7", 8) {
-      case Depletion3dInputFull(locusDataJsDump, myFeatureJsDump,fasta,fai, heptamerFrequencies, heptamerNumberOfIndividuals) =>
+      case Depletion3dInputFull(locusDataJsDump,
+                                myFeatureJsDump,
+                                fasta,
+                                fai,
+                                heptamerFrequencies,
+                                heptamerNumberOfIndividuals) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
 
           releaseResources
           val f1 = groupByPdbId(myFeatureJsDump)(CPUMemoryRequest(1, 60000))
           f1.flatMap {
-            (groups: Set[(Int, JsDump[Feature2CPSecond.MappedFeatures])]) =>
-              Source(groups.toList)
-                .mapAsync(1) {
-                  case (idx, group) =>
-                    subtask(Depletion3dInput(locusDataJsDump, group, idx,fasta,fai, heptamerFrequencies, heptamerNumberOfIndividuals))(
-                      CPUMemoryRequest(1, 20000))
-                }
-                .runWith(Sink.seq)
-          }.flatMap { (groups: Seq[Depletion3dOutput]) =>
-            log.info("Subtasks done. Start concatenating.")
-            val cattedLocusFile = Future
-              .sequence(groups.map(_.locusFile.file))
-              .map(files =>
-                openFileWriter { writer =>
-                  files.foreach { locusFile =>
-                    openSource(locusFile)(_.getLines.foreach { line =>
-                      writer.write(line + "\n")
-                    })
+              (groups: Set[(Int, JsDump[Feature2CPSecond.MappedFeatures])]) =>
+                Source(groups.toList)
+                  .mapAsync(1) {
+                    case (idx, group) =>
+                      subtask(
+                        Depletion3dInput(locusDataJsDump,
+                                         group,
+                                         idx,
+                                         fasta,
+                                         fai,
+                                         heptamerFrequencies,
+                                         heptamerNumberOfIndividuals))(
+                        CPUMemoryRequest(1, 20000))
                   }
+                  .runWith(Sink.seq)
+            }
+            .flatMap { (groups: Seq[Depletion3dOutput]) =>
+              log.info("Subtasks done. Start concatenating.")
+              val cattedLocusFile = Future
+                .sequence(groups.map(_.locusFile.file))
+                .map(files =>
+                  openFileWriter { writer =>
+                    files.foreach { locusFile =>
+                      openSource(locusFile)(_.getLines.foreach { line =>
+                        writer.write(line + "\n")
+                      })
+                    }
 
-                }._1)
+                  }._1)
 
-            val cattedJsDump = Source(groups.map(_.js).toList)
-              .flatMapConcat(_.source)
-              .runWith(JsDump.sink[DepletionRow](
-                name = "full." + locusDataJsDump.sf.name + "." + myFeatureJsDump.sf.name + ".json.gz"))
+              val cattedJsDump = Source(groups.map(_.js).toList)
+                .flatMapConcat(_.source)
+                .runWith(JsDump.sink[DepletionRow](
+                  name = "full." + locusDataJsDump.sf.name + "." + myFeatureJsDump.sf.name + ".json.gz"))
 
-            cattedJsDump.flatMap { f1 =>
-              cattedLocusFile.flatMap { f2 =>
-                SharedFile(
-                  f2,
-                  name = "full." + locusDataJsDump.sf.name + "." + myFeatureJsDump.sf.name + ".loci.tsv").map {
-                  f2 =>
-                    Depletion3dOutput(f2, f1)
+              cattedJsDump.flatMap { f1 =>
+                cattedLocusFile.flatMap { f2 =>
+                  SharedFile(
+                    f2,
+                    name = "full." + locusDataJsDump.sf.name + "." + myFeatureJsDump.sf.name + ".loci.tsv")
+                    .map { f2 =>
+                      Depletion3dOutput(f2, f1)
+                    }
                 }
               }
             }
-          }
 
     }
 
   val subtask =
     AsyncTask[Depletion3dInput, Depletion3dOutput]("scorebatch-1", 7) {
-      case Depletion3dInput(locusDataJsDump, myFeatureJsDump, idx, fasta,fai, heptamerFrequenciesF, heptamerNumberOfIndividuals) =>
+      case Depletion3dInput(locusDataJsDump,
+                            myFeatureJsDump,
+                            idx,
+                            fasta,
+                            fai,
+                            heptamerFrequenciesF,
+                            heptamerNumberOfIndividuals) =>
         implicit ctx =>
           log.info(
             s"Start scoring ${locusDataJsDump.sf.name} ${myFeatureJsDump.sf.name}")
@@ -430,9 +451,11 @@ object depletion3d {
             (lociByCpra, pSyn) <- cacheLocusData(locusDataJsDump)
             result <- {
 
-              val referenceSequence = HeptamerHelpers.openFasta(fastaLocal,faiLocal)
+              val referenceSequence =
+                HeptamerHelpers.openFasta(fastaLocal, faiLocal)
 
-              val heptamerFrequencies = openSource(heptamerFrequenciesLocal)(HeptamerHelpers.readFrequencies)
+              val heptamerFrequencies = openSource(heptamerFrequenciesLocal)(
+                HeptamerHelpers.readFrequencies)
 
               val features: Seq[(ChrPos, FeatureKey, Seq[UniId])] =
                 myFeatureJsDump.iterator(featureFileLocal)(_.map(x =>
@@ -441,7 +464,13 @@ object depletion3d {
               log.info("pSyn: " + pSyn)
 
               val (locusFile, content) =
-                makeScores(lociByCpra, "3ds-all-proteomewide", features, pSyn, referenceSequence, heptamerFrequencies, heptamerNumberOfIndividuals)
+                makeScores(lociByCpra,
+                           "3ds-all-proteomewide",
+                           features,
+                           pSyn,
+                           referenceSequence,
+                           heptamerFrequencies,
+                           heptamerNumberOfIndividuals)
 
               log.info("Scores done")
               val jsdump = JsDump.fromIterator(

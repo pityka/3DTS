@@ -18,17 +18,26 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val referenceFasta = importFile(config.getString("fasta"))
     val referenceFai = importFile(config.getString("fai"))
-    val heptamerFrequencies = importFile(config.getString("heptamerFrequencies"))
-    val numberOfIndividualsOfHeptamerFrequencies = config.getInt("heptamerSampleSize")
+    val heptamerFrequencies = importFile(
+      config.getString("heptamerFrequencies"))
+    val numberOfIndividualsOfHeptamerFrequencies =
+      config.getInt("heptamerSampleSize")
 
-    val ligandability = if (config.hasPath("ligandability")) Some(importFile(config.getString("ligandability"))) else None
+    val ligandability =
+      if (config.hasPath("ligandability"))
+        Some(importFile(config.getString("ligandability")))
+      else None
 
     val ligandabilityJs =
       ligandability.map(LigandabilityCsvToJs.task(_)(CPUMemoryRequest(1, 5000)))
 
-    val indexedLigandability = ligandabilityJs.map(_.flatMap { ligandabilityJs =>
-      IndexLigandability.task(ligandabilityJs)(CPUMemoryRequest(1, 5000)).map(Some(_))
-    }).getOrElse(Future.successful(None))
+    val indexedLigandability = ligandabilityJs
+      .map(_.flatMap { ligandabilityJs =>
+        IndexLigandability
+          .task(ligandabilityJs)(CPUMemoryRequest(1, 5000))
+          .map(Some(_))
+      })
+      .getOrElse(Future.successful(None))
 
     val uniprotKbOriginal = importFile(config.getString("uniprotKb"))
 
@@ -59,8 +68,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     }
     val convertedGnomadExome = {
       val gnomadExome = importFile(config.getString("gnomadExome"))
-      ConvertGnomad2HLI.task(GnomadData(gnomadExome))(
-        CPUMemoryRequest(1, 5000))
+      ConvertGnomad2HLI.task(GnomadData(gnomadExome))(CPUMemoryRequest(1, 5000))
     }
 
     val gnomadExomeCoverage = ConvertGenomeCoverage.task(
@@ -123,9 +131,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val cppdb = uniprotgencodemap.flatMap { uniprotgencodemap =>
       uniprotpdbmap.flatMap { uniprotpdbmap =>
         JoinCPWithPdb.task(
-          JoinCPWithPdbInput(
-            uniprotgencodemap,
-            uniprotpdbmap.tables.map(_._2).sortBy(_.sf.name)))(
+          JoinCPWithPdbInput(uniprotgencodemap,
+                             uniprotpdbmap.tables.map(_._2).sortBy(_.sf.name)))(
           CPUMemoryRequest((1, 3), 60000))
       }
     }
@@ -180,9 +187,10 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
               locusDataFile = variationsJoined,
               featureFile = feature2cp,
               fasta = referenceFasta,
-    fai = referenceFai,
-    heptamerFrequencies = heptamerFrequencies,
-    numberOfIndividualsOfHeptamerFrequencies = numberOfIndividualsOfHeptamerFrequencies
+              fai = referenceFai,
+              heptamerFrequencies = heptamerFrequencies,
+              numberOfIndividualsOfHeptamerFrequencies =
+                numberOfIndividualsOfHeptamerFrequencies
             ))(CPUMemoryRequest(1, 1))
         }
       }

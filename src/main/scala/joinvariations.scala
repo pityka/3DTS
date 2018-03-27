@@ -8,7 +8,7 @@ object JoinVariationsCore {
       case (key, bval) =>
         val aval = a.get(key)
         val cval = aval match {
-          case None => bval
+          case None    => bval
           case Some(a) => fun((a), (bval))
         }
         (key, cval)
@@ -54,8 +54,7 @@ object JoinVariationsCore {
     implicit val readWriter: ReadWriter[Bean] =
       macroRW[MappedCP] merge macroRW[Data] merge macroRW[Coverage]
 
-    case class Data(gl: GnomadLine, source: String, chrpos: String)
-        extends Bean
+    case class Data(gl: GnomadLine, source: String, chrpos: String) extends Bean
 
     case class MappedCP(chrpos: String, consequence: Map[Char, Consequence])
         extends Bean
@@ -66,10 +65,14 @@ object JoinVariationsCore {
   import Bean._
 
   def readGnomad(s: scala.io.Source): Iterator[GnomadLine] =
-    s.getLines.map { line =>
-      val t = scala.util.Try(upickle.default.read[GnomadLine](line))
-      t.toOption
-    }.filter(_.isDefined).map(_.get).filter(_.pass)
+    s.getLines
+      .map { line =>
+        val t = scala.util.Try(upickle.default.read[GnomadLine](line))
+        t.toOption
+      }
+      .filter(_.isDefined)
+      .map(_.get)
+      .filter(_.pass)
 
   def readMappedFile(
       i: Iterator[Ensembl2Uniprot.MapResult]): Iterator[MappedCP] = i.flatMap {
@@ -130,71 +133,78 @@ object JoinVariationsCore {
       iterator.sortAsJson[Bean](databeans ++ mapped ++ covbeans, batchSize)
     val grouped: Iterator[Seq[Bean]] =
       iterator.spansByProjectionEquality(sorted)(_.chrpos)
-    val merged = grouped.map { group =>
-      val mappedTyped = group.collect {
-        case x: MappedCP => x
-      }
-      if (mappedTyped.size == 0) None
-      else {
-
-        val dataTyped = group.collect { case x: Data => x }
-        val coverageTyped = group.collect { case x: Coverage => x }
-
-        val chrpos = mappedTyped.head.chrpos
-
-        val consequence: Map[Char, Consequence] =
-          mappedTyped.map(_.consequence).reduce(mergeCons(_, _))
-
-        val coverageBySource: Map[String, GenomeCoverage] =
-          coverageTyped.map(x => x.source -> x.cov).toMap
-
-        val calls = dataTyped.map {
-          case Data(gl, source, chrpos) =>
-            val alt = gl.alt.head
-            val totalCount = gl.genders.male.total_count + gl.genders.female.total_count
-            val totalCall = gl.genders.male.total_calls + gl.genders.female
-                .total_calls
-
-            (alt, totalCount, totalCall, source)
-        }.groupBy(_._4).map {
-          case (source, alts) =>
-            val totalCall = alts.map(_._3).max
-            val alleleCounts: Seq[(Char, Int)] = alts.map(x => (x._1, x._2))
-
-            (source, totalCall, alleleCounts)
+    val merged = grouped
+      .map { group =>
+        val mappedTyped = group.collect {
+          case x: MappedCP => x
         }
+        if (mappedTyped.size == 0) None
+        else {
 
-        val totalSampleSize = sources.map { source =>
-          val wellSequenced = coverageBySource
-            .get(source)
-            .map(_.numberOfWellSequencedIndividuals)
-            .getOrElse(0)
-          calls.find(_._1 == source).map(_._2 / 2).getOrElse(wellSequenced)
-        }.sum
+          val dataTyped = group.collect { case x: Data         => x }
+          val coverageTyped = group.collect { case x: Coverage => x }
 
-        val alleleCallsByConsequence: Map[Consequence, Int] = calls
-          .flatMap(_._3.map(x => (x._1, x._2, consequence(x._1))))
-          .groupBy(_._3)
-          .map(x => x._1 -> x._2.map(_._2).sum)
+          val chrpos = mappedTyped.head.chrpos
 
-        val numNs = consequence.count(_._2 == NonSynonymous)
-        val numS = consequence.count(_._2 == Synonymous)
+          val consequence: Map[Char, Consequence] =
+            mappedTyped.map(_.consequence).reduce(mergeCons(_, _))
 
-        val synAc =
-          alleleCallsByConsequence.get(Synonymous).getOrElse(0)
-        val nonsynAc =
-          alleleCallsByConsequence.get(NonSynonymous).getOrElse(0)
+          val coverageBySource: Map[String, GenomeCoverage] =
+            coverageTyped.map(x => x.source -> x.cov).toMap
 
-        Some(
-          LocusVariationCountAndNumNs(locus = ChrPos(chrpos),
-                                      numNs = numNs,
-                                      alleleCountSyn = synAc,
-                                      alleleCountNonSyn = nonsynAc,
-                                      sampleSize = totalSampleSize,
-                                      numS = numS))
+          val calls = dataTyped
+            .map {
+              case Data(gl, source, chrpos) =>
+                val alt: Char = gl.alt.head
+                val totalCount = gl.genders.male.total_count + gl.genders.female.total_count
+                val totalCall = gl.genders.male.total_calls + gl.genders.female
+                  .total_calls
 
+                (alt, totalCount, totalCall, source)
+            }
+            .groupBy(_._4)
+            .map {
+              case (source, alts) =>
+                val totalCall = alts.map(_._3).max
+                val alleleCounts: Seq[(Char, Int)] = alts.map(x => (x._1, x._2))
+
+                (source, totalCall, alleleCounts)
+            }
+
+          val totalSampleSize = sources.map { source =>
+            val wellSequenced = coverageBySource
+              .get(source)
+              .map(_.numberOfWellSequencedIndividuals)
+              .getOrElse(0)
+            calls.find(_._1 == source).map(_._2 / 2).getOrElse(wellSequenced)
+          }.sum
+
+          val alleleCallsByConsequence: Map[Consequence, Int] = calls
+            .flatMap(_._3.map(x => (x._1, x._2, consequence(x._1))))
+            .groupBy(_._3)
+            .map(x => x._1 -> x._2.map(_._2).sum)
+
+          val numNs = consequence.count(_._2 == NonSynonymous)
+          val numS = consequence.count(_._2 == Synonymous)
+
+          val synAc =
+            alleleCallsByConsequence.get(Synonymous).getOrElse(0)
+          val nonsynAc =
+            alleleCallsByConsequence.get(NonSynonymous).getOrElse(0)
+
+          Some(
+            LocusVariationCountAndNumNs(locus = ChrPos(chrpos),
+                                        numNs = numNs,
+                                        alleleCountSyn = synAc,
+                                        alleleCountNonSyn = nonsynAc,
+                                        sampleSize = totalSampleSize,
+                                        numS = numS))
+
+        }
       }
-    }.filter(_.isDefined).map(_.get).filter(_.sampleSize > 0)
+      .filter(_.isDefined)
+      .map(_.get)
+      .filter(_.sampleSize > 0)
 
     (merged, closeable)
   }

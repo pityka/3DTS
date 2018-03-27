@@ -197,8 +197,8 @@ package object iterator {
         case (file) =>
           val source = fileutils.createSource(file)
           val it: Iterator[T] = source.getLines map (line =>
-                                                       upickle.default
-                                                         .read[T](line))
+            upickle.default
+              .read[T](line))
           (it, source, file)
       }
 

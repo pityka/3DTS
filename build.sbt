@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "intervaltree" % "1.0.0",
   "tasks-core" %% "tasks-core" % "0.0.10-SNAPSHOT",
   "tasks-upickle" %% "tasks-upickle" % "0.0.10-SNAPSHOT",
+  "tasks-collection" %% "tasks-collection" % "0.0.10-SNAPSHOT",
   "io.github.pityka" % "saddle-core-fork_2.12" % "1.3.4-fork1",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.spire-math" %% "spire" % "0.13.0",
@@ -65,3 +66,5 @@ lazy val sharedJVM = shared.jvm
 lazy val sharedJs = shared.js
 
 mainClass in Compile := Some("ProteinDepletion")
+
+scalafmtOnCompile in ThisBuild := true

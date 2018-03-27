@@ -143,66 +143,72 @@ case class CIFContents(
                       chain2: Option[String],
                       num2: Option[Int],
                       code2: Option[String]) =>
-          List("SHEET  ",
-               rightJustify(strand.toString, 3),
-               " ",
-               rightJustify(id, 3),
-               rightJustify(numberOfStrands.toString, 2),
-               " ",
-               rightJustify(initResName, 2),
-               " ",
-               rightJustify(initChain, 1),
-               rightJustify(initNum.toString, 4),
-               rightJustify(initCode, 1),
-               " ",
-               rightJustify(terminalResName, 2),
-               " ",
-               rightJustify(terminalChain, 1),
-               rightJustify(terminalNum.toString, 4),
-               rightJustify(terminalCode, 1),
-               rightJustify(sense.toString, 2),
-               " ",
-               leftJustify(atomName1.getOrElse(""), 4),
-               rightJustify(resName1.getOrElse(""), 3),
-               " ",
-               rightJustify(chain1.getOrElse(""), 1),
-               rightJustify(num1.getOrElse("").toString, 4),
-               rightJustify(code1.getOrElse(""), 1),
-               " ",
-               leftJustify(atomName2.getOrElse(""), 4),
-               rightJustify(resName2.getOrElse(""), 3),
-               " ",
-               rightJustify(chain2.getOrElse(""), 1),
-               rightJustify(num2.getOrElse("").toString, 4),
-               rightJustify(code2.getOrElse(""), 1)).mkString
+          List(
+            "SHEET  ",
+            rightJustify(strand.toString, 3),
+            " ",
+            rightJustify(id, 3),
+            rightJustify(numberOfStrands.toString, 2),
+            " ",
+            rightJustify(initResName, 2),
+            " ",
+            rightJustify(initChain, 1),
+            rightJustify(initNum.toString, 4),
+            rightJustify(initCode, 1),
+            " ",
+            rightJustify(terminalResName, 2),
+            " ",
+            rightJustify(terminalChain, 1),
+            rightJustify(terminalNum.toString, 4),
+            rightJustify(terminalCode, 1),
+            rightJustify(sense.toString, 2),
+            " ",
+            leftJustify(atomName1.getOrElse(""), 4),
+            rightJustify(resName1.getOrElse(""), 3),
+            " ",
+            rightJustify(chain1.getOrElse(""), 1),
+            rightJustify(num1.getOrElse("").toString, 4),
+            rightJustify(code1.getOrElse(""), 1),
+            " ",
+            leftJustify(atomName2.getOrElse(""), 4),
+            rightJustify(resName2.getOrElse(""), 3),
+            " ",
+            rightJustify(chain2.getOrElse(""), 1),
+            rightJustify(num2.getOrElse("").toString, 4),
+            rightJustify(code2.getOrElse(""), 1)
+          ).mkString
       }
       .mkString("\n")
 
-    val atomTable = assembly.atoms.map {
-      case (Atom(coords, atomId, name, symbol, residueName, temp),
-            _,
-            PdbResidueNumber(residue, maybeInsertionCode),
-            FakePdbChain(chain)) =>
-        List("ATOM  ",
-             rightJustify(atomId.toString, 5),
-             " ",
-             leftJustify(name, 4),
-             " ",
-             rightJustify(residueName.take(3), 3),
-             " " + rightJustify(chain, 1),
-             rightJustify(residue.toString, 4),
-             maybeInsertionCode.getOrElse(" "),
-             "   ",
-             rightJustify(coords.raw(0).toString.take(7), 8),
-             rightJustify(coords.raw(1).toString.take(7), 8),
-             rightJustify(coords.raw(2).toString.take(7), 8),
-             rightJustify("1.0", 6),
-             rightJustify(temp, 6),
-             "      ",
-             rightJustify("", 4),
-             rightJustify(symbol, 2),
-             " ").mkString
-    }.mkString("\n")
+    val atomTable = assembly.atoms
+      .map {
+        case (Atom(coords, atomId, name, symbol, residueName, temp),
+              _,
+              PdbResidueNumber(residue, maybeInsertionCode),
+              FakePdbChain(chain)) =>
+          List(
+            "ATOM  ",
+            rightJustify(atomId.toString, 5),
+            " ",
+            leftJustify(name, 4),
+            " ",
+            rightJustify(residueName.take(3), 3),
+            " " + rightJustify(chain, 1),
+            rightJustify(residue.toString, 4),
+            maybeInsertionCode.getOrElse(" "),
+            "   ",
+            rightJustify(coords.raw(0).toString.take(7), 8),
+            rightJustify(coords.raw(1).toString.take(7), 8),
+            rightJustify(coords.raw(2).toString.take(7), 8),
+            rightJustify("1.0", 6),
+            rightJustify(temp, 6),
+            "      ",
+            rightJustify("", 4),
+            rightJustify(symbol, 2),
+            " "
+          ).mkString
+      }
+      .mkString("\n")
     val helixTable = assembly.helix
       .filter(x =>
         x.initChain == x.terminalChain && fakePdbChainsReverse.contains(
@@ -228,28 +234,30 @@ case class CIFContents(
                       helixType,
                       comment,
                       helixLength) =>
-          List("HELIX  ",
-               rightJustify(serial.toString, 3),
-               " ",
-               rightJustify(id, 3),
-               " ",
-               rightJustify(initialResidueName, 3),
-               " ",
-               rightJustify(initChain, 1),
-               " ",
-               rightJustify(initResSeqNum.toString, 4),
-               rightJustify(initResInsertion, 1),
-               " ",
-               rightJustify(terminalResidueName, 3),
-               " ",
-               rightJustify(terminalChain, 1),
-               " ",
-               rightJustify(terminalResSeqNum.toString, 4),
-               rightJustify(terminalResInsertion, 1),
-               rightJustify(helixType.getOrElse("").toString, 2),
-               rightJustify(comment, 30),
-               " ",
-               rightJustify(helixLength.getOrElse("").toString, 5)).mkString
+          List(
+            "HELIX  ",
+            rightJustify(serial.toString, 3),
+            " ",
+            rightJustify(id, 3),
+            " ",
+            rightJustify(initialResidueName, 3),
+            " ",
+            rightJustify(initChain, 1),
+            " ",
+            rightJustify(initResSeqNum.toString, 4),
+            rightJustify(initResInsertion, 1),
+            " ",
+            rightJustify(terminalResidueName, 3),
+            " ",
+            rightJustify(terminalChain, 1),
+            " ",
+            rightJustify(terminalResSeqNum.toString, 4),
+            rightJustify(terminalResInsertion, 1),
+            rightJustify(helixType.getOrElse("").toString, 2),
+            rightJustify(comment, 30),
+            " ",
+            rightJustify(helixLength.getOrElse("").toString, 5)
+          ).mkString
       }
       .mkString("\n")
 
@@ -325,8 +333,7 @@ object CIFContents {
         fields: IndexedSeq[String]): (Seq[IndexedSeq[Option[String]]]) = {
       val loop = allLines
         .sliding(2)
-        .find(x =>
-          x(0).trim == "loop_" && x(1).trim.startsWith(category + "."))
+        .find(x => x(0).trim == "loop_" && x(1).trim.startsWith(category + "."))
         .isDefined
       val splitRegexp = "([^\'\"\\s][^\\s]*|\'.+?\'|\".+?\")".r
       val multiLineRegexp =
@@ -382,85 +389,98 @@ object CIFContents {
     }
 
     val helix: Seq[PdbHelix] =
-      parseTable("_struct_conf",
-                 Vector("id",
-                        "pdbx_PDB_helix_id",
-                        "beg_auth_comp_id",
-                        "beg_auth_asym_id",
-                        "beg_auth_seq_id",
-                        "pdbx_beg_PDB_ins_code",
-                        "end_auth_comp_id",
-                        "end_auth_asym_id",
-                        "end_auth_seq_id",
-                        "pdbx_end_PDB_ins_code",
-                        "pdbx_PDB_helix_class",
-                        "details",
-                        "pdbx_PDB_helix_length")).map { spl =>
-        PdbHelix(serial = spl(1).get,
-                 id = spl(1).get,
-                 initialResidueName = spl(2).get,
-                 initChain = spl(3).get,
-                 initResSeqNum = spl(4).get.toInt,
-                 initResInsertion = spl(5).filter(_ != "?").getOrElse(""),
-                 terminalResidueName = spl(6).get,
-                 terminalChain = spl(7).get,
-                 terminalResSeqNum = spl(8).get.toInt,
-                 terminalResInsertion = spl(9).filter(_ != "?").getOrElse(""),
-                 helixType = spl(10).filter(_ != "?").map(_.toInt),
-                 comment = spl(11).filter(_ != "?").getOrElse(""),
-                 helixLength = spl(12).filter(_ != "?").map(_.toInt))
+      parseTable(
+        "_struct_conf",
+        Vector(
+          "id",
+          "pdbx_PDB_helix_id",
+          "beg_auth_comp_id",
+          "beg_auth_asym_id",
+          "beg_auth_seq_id",
+          "pdbx_beg_PDB_ins_code",
+          "end_auth_comp_id",
+          "end_auth_asym_id",
+          "end_auth_seq_id",
+          "pdbx_end_PDB_ins_code",
+          "pdbx_PDB_helix_class",
+          "details",
+          "pdbx_PDB_helix_length"
+        )
+      ).map { spl =>
+        PdbHelix(
+          serial = spl(1).get,
+          id = spl(1).get,
+          initialResidueName = spl(2).get,
+          initChain = spl(3).get,
+          initResSeqNum = spl(4).get.toInt,
+          initResInsertion = spl(5).filter(_ != "?").getOrElse(""),
+          terminalResidueName = spl(6).get,
+          terminalChain = spl(7).get,
+          terminalResSeqNum = spl(8).get.toInt,
+          terminalResInsertion = spl(9).filter(_ != "?").getOrElse(""),
+          helixType = spl(10).filter(_ != "?").map(_.toInt),
+          comment = spl(11).filter(_ != "?").getOrElse(""),
+          helixLength = spl(12).filter(_ != "?").map(_.toInt)
+        )
       }
 
     val sheet: Seq[PdbSheet] = {
-      val structSheet = parseTable("_struct_sheet_range",
-                                   Vector("id",
-                                          "sheet_id",
-                                          "beg_auth_comp_id",
-                                          "beg_auth_asym_id",
-                                          "beg_auth_seq_id",
-                                          "pdbx_beg_PDB_ins_code",
-                                          "end_auth_comp_id",
-                                          "end_auth_asym_id",
-                                          "end_auth_seq_id",
-                                          "pdbx_end_PDB_ins_code")).map {
-        spl =>
-          val rangeId = spl(0).get.toInt
-          val sheetid = spl(1).get
-          val begComp = spl(2).get
-          val begChain = spl(3).get
-          val begNum = spl(4).get.toInt
-          val begCode = spl(5).filter(_ != "?").getOrElse("")
+      val structSheet = parseTable(
+        "_struct_sheet_range",
+        Vector(
+          "id",
+          "sheet_id",
+          "beg_auth_comp_id",
+          "beg_auth_asym_id",
+          "beg_auth_seq_id",
+          "pdbx_beg_PDB_ins_code",
+          "end_auth_comp_id",
+          "end_auth_asym_id",
+          "end_auth_seq_id",
+          "pdbx_end_PDB_ins_code"
+        )
+      ).map { spl =>
+        val rangeId = spl(0).get.toInt
+        val sheetid = spl(1).get
+        val begComp = spl(2).get
+        val begChain = spl(3).get
+        val begNum = spl(4).get.toInt
+        val begCode = spl(5).filter(_ != "?").getOrElse("")
 
-          val endComp = spl(6).get
-          val endChain = spl(7).get
-          val endNum = spl(8).get.toInt
-          val endCode = spl(9).filter(_ != "?").getOrElse("")
+        val endComp = spl(6).get
+        val endChain = spl(7).get
+        val endNum = spl(8).get.toInt
+        val endCode = spl(9).filter(_ != "?").getOrElse("")
 
-          ((rangeId, sheetid),
-           (begComp,
-            begChain,
-            begNum,
-            begCode,
-            endComp,
-            endChain,
-            endNum,
-            endCode))
+        ((rangeId, sheetid),
+         (begComp,
+          begChain,
+          begNum,
+          begCode,
+          endComp,
+          endChain,
+          endNum,
+          endCode))
 
       }.toMap
 
-      val bonds = parseTable("_pdbx_struct_sheet_hbond",
-                             Vector("range_id_2",
-                                    "sheet_id",
-                                    "range_2_auth_atom_id",
-                                    "range_2_auth_comp_id",
-                                    "range_2_auth_asym_id",
-                                    "range_2_auth_seq_id",
-                                    "range_2_PDB_ins_code",
-                                    "range_1_auth_atom_id",
-                                    "range_1_auth_comp_id",
-                                    "range_1_auth_asym_id",
-                                    "range_1_auth_seq_id",
-                                    "range_1_PDB_ins_code")).map { spl =>
+      val bonds = parseTable(
+        "_pdbx_struct_sheet_hbond",
+        Vector(
+          "range_id_2",
+          "sheet_id",
+          "range_2_auth_atom_id",
+          "range_2_auth_comp_id",
+          "range_2_auth_asym_id",
+          "range_2_auth_seq_id",
+          "range_2_PDB_ins_code",
+          "range_1_auth_atom_id",
+          "range_1_auth_comp_id",
+          "range_1_auth_asym_id",
+          "range_1_auth_seq_id",
+          "range_1_PDB_ins_code"
+        )
+      ).map { spl =>
         val rangeId = spl(0).get.toInt
         val sheetid = spl(1).get
         val curAtom = spl(2).get
@@ -495,17 +515,16 @@ object CIFContents {
           val sheetid = spl(1).get
           val sense = spl(2).get match {
             case "anti-parallel" => -1
-            case "parallel" => 1
+            case "parallel"      => 1
           }
           (rangeId -> sheetid) -> sense
       }.toMap
 
       val numberOfSheets =
-        parseTable("_struct_sheet", Vector("id", "number_strands")).map {
-          spl =>
-            val sheetid = spl(0).get
-            val num = spl(1).get.toInt
-            sheetid -> num
+        parseTable("_struct_sheet", Vector("id", "number_strands")).map { spl =>
+          val sheetid = spl(0).get
+          val num = spl(1).get.toInt
+          sheetid -> num
         }.toMap
 
       structSheet.map {
@@ -522,82 +541,94 @@ object CIFContents {
           val senseV = sense.get(rangeId -> sheetId).getOrElse(0)
           val num = numberOfSheets(sheetId)
 
-          PdbSheet(rangeId,
-                   sheetId,
-                   num,
-                   begComp,
-                   betChain,
-                   begNum,
-                   begCode,
-                   endComp,
-                   endChain,
-                   endNum,
-                   endCode,
-                   senseV,
-                   bonds1.map(_._1),
-                   bonds1.map(_._2),
-                   bonds1.map(_._3),
-                   bonds1.map(_._4),
-                   bonds1.map(_._5),
-                   bonds1.map(_._6),
-                   bonds1.map(_._7),
-                   bonds1.map(_._8),
-                   bonds1.map(_._9),
-                   bonds1.map(_._10))
+          PdbSheet(
+            rangeId,
+            sheetId,
+            num,
+            begComp,
+            betChain,
+            begNum,
+            begCode,
+            endComp,
+            endChain,
+            endNum,
+            endCode,
+            senseV,
+            bonds1.map(_._1),
+            bonds1.map(_._2),
+            bonds1.map(_._3),
+            bonds1.map(_._4),
+            bonds1.map(_._5),
+            bonds1.map(_._6),
+            bonds1.map(_._7),
+            bonds1.map(_._8),
+            bonds1.map(_._9),
+            bonds1.map(_._10)
+          )
       }.toList
 
     }
 
-    val _struct_ref_seq_dif: Map[(PdbChain, PdbResidueNumber), Option[String]] = {
+    val _struct_ref_seq_dif
+      : Map[(PdbChain, PdbResidueNumber), Option[String]] = {
       parseTable("_struct_ref_seq_dif",
                  Vector("pdbx_auth_seq_num",
                         "pdbx_pdb_strand_id",
                         "pdbx_seq_db_name",
                         "db_mon_id",
-                        "pdbx_pdb_ins_code")).map { spl =>
-        val pdbChain = PdbChain(spl(1).get)
-        val dbName = spl(2).get
-        val uniprotmonomer = {
-          val x = spl(3).getOrElse("?")
-          if (x == "?") None else Some(x)
-        }
-        val pdbResidue = {
-          val num = spl(0).filter(x => x != "?" && x != ".")
-          val ic = spl(4).filter(_ != "?")
-          num.map { num =>
-            PdbResidueNumber(num.toInt, ic)
+                        "pdbx_pdb_ins_code"))
+        .map { spl =>
+          val pdbChain = PdbChain(spl(1).get)
+          val dbName = spl(2).get
+          val uniprotmonomer = {
+            val x = spl(3).getOrElse("?")
+            if (x == "?") None else Some(x)
           }
+          val pdbResidue = {
+            val num = spl(0).filter(x => x != "?" && x != ".")
+            val ic = spl(4).filter(_ != "?")
+            num.map { num =>
+              PdbResidueNumber(num.toInt, ic)
+            }
+          }
+          ((pdbChain, pdbResidue), uniprotmonomer, dbName)
         }
-        ((pdbChain, pdbResidue), uniprotmonomer, dbName)
-      }.filter(x => x._3 == "UNP" && x._1._2.isDefined)
+        .filter(x => x._3 == "UNP" && x._1._2.isDefined)
         .map(x => (x._1._1 -> x._1._2.get) -> x._2)
         .toMap
 
     }
 
-    val parsedAtomTable = parseTable("_atom_site",
-                                     Vector("id",
-                                            "auth_asym_id",
-                                            "auth_seq_id",
-                                            "pdbx_PDB_ins_code",
-                                            "Cartn_x",
-                                            "Cartn_y",
-                                            "Cartn_z",
-                                            "occupancy",
-                                            "label_entity_id",
-                                            "pdbx_PDB_model_num",
-                                            "label_atom_id",
-                                            "type_symbol",
-                                            "auth_comp_id",
-                                            "label_asym_id",
-                                            "B_iso_or_equiv"))
+    val parsedAtomTable = parseTable(
+      "_atom_site",
+      Vector(
+        "id",
+        "auth_asym_id",
+        "auth_seq_id",
+        "pdbx_PDB_ins_code",
+        "Cartn_x",
+        "Cartn_y",
+        "Cartn_z",
+        "occupancy",
+        "label_entity_id",
+        "pdbx_PDB_model_num",
+        "label_atom_id",
+        "type_symbol",
+        "auth_comp_id",
+        "label_asym_id",
+        "B_iso_or_equiv"
+      )
+    )
 
     val representativeModelNumber: Option[Int] = {
       val nmr_rep =
-        parseTable("_pdbx_nmr_representative", Vector("conformer_id")).map {
-          spl =>
+        parseTable("_pdbx_nmr_representative", Vector("conformer_id"))
+          .map { spl =>
             spl(0)
-        }.filter(_.isDefined).map(_.get.toInt).headOption
+          }
+          .filter(_.isDefined)
+          .map(_.get.toInt)
+          .headOption
 
       val smallest =
         parsedAtomTable
@@ -613,9 +644,13 @@ object CIFContents {
     }
 
     val polyProteinEntities: Set[Int] =
-      parseTable("_entity_poly", Vector("entity_id", "type")).map { spl =>
-        spl(0).get -> spl(1).get
-      }.filter(_._2.contains("polypeptide")).map(_._1.toInt).toSet
+      parseTable("_entity_poly", Vector("entity_id", "type"))
+        .map { spl =>
+          spl(0).get -> spl(1).get
+        }
+        .filter(_._2.contains("polypeptide"))
+        .map(_._1.toInt)
+        .toSet
 
     // _pdbx_struct_assembly.id
     // _pdbx_struct_assembly.details
@@ -634,21 +669,24 @@ object CIFContents {
       .map(_._1)
 
     val baseOperations: Map[String, AffineTransformation] =
-      parseTable("_pdbx_struct_oper_list",
-                 Vector("id",
-                        "matrix[1][1]",
-                        "matrix[1][2]",
-                        "matrix[1][3]",
-                        "vector[1]",
-                        "matrix[2][1]",
-                        "matrix[2][2]",
-                        "matrix[2][3]",
-                        "vector[2]",
-                        "matrix[3][1]",
-                        "matrix[3][2]",
-                        "matrix[3][3]",
-                        "vector[3]"))
-        .filter(_.forall(_.isDefined))
+      parseTable(
+        "_pdbx_struct_oper_list",
+        Vector(
+          "id",
+          "matrix[1][1]",
+          "matrix[1][2]",
+          "matrix[1][3]",
+          "vector[1]",
+          "matrix[2][1]",
+          "matrix[2][2]",
+          "matrix[2][3]",
+          "vector[2]",
+          "matrix[3][1]",
+          "matrix[3][2]",
+          "matrix[3][3]",
+          "vector[3]"
+        )
+      ).filter(_.forall(_.isDefined))
         .map { spl =>
           val id = spl(0).get
           val m11 = spl(1).get.toDouble
@@ -677,11 +715,14 @@ object CIFContents {
         s.split(",")
           .flatMap { r =>
             val sp = r.split("-")
-            scala.util.Try {
-              val from = sp(0).toInt
-              val to = if (sp.size == 2) sp(1).toInt else from
-              (from to to).toList.map(_.toString)
-            }.toOption.getOrElse(List(sp(0)))
+            scala.util
+              .Try {
+                val from = sp(0).toInt
+                val to = if (sp.size == 2) sp(1).toInt else from
+                (from to to).toList.map(_.toString)
+              }
+              .toOption
+              .getOrElse(List(sp(0)))
           }
           .toList
 
@@ -708,8 +749,8 @@ object CIFContents {
 
     }
 
-    val operations: Map[PdbAsssemblyId,
-                        Map[CifChain, Seq[AffineTransformation]]] =
+    val operations
+      : Map[PdbAsssemblyId, Map[CifChain, Seq[AffineTransformation]]] =
       parseTable("_pdbx_struct_assembly_gen",
                  Vector("assembly_id", "asym_id_list", "oper_expression"))
         .filter(_.forall(_.isDefined))
@@ -769,9 +810,11 @@ object CIFContents {
              residueNumberIdx,
              insertionCodeIdx,
              polyseqNumIdx).max
-      atoms.map { line =>
-        line.splitM(' ')
-      }.filter(_.size >= mIdx)
+      atoms
+        .map { line =>
+          line.splitM(' ')
+        }
+        .filter(_.size >= mIdx)
         .filter(_(residueNumberIdx) != ".")
         .map { spl =>
           val entityId = spl(entityIdIdx).toInt
@@ -787,8 +830,8 @@ object CIFContents {
             else CifChain(ch.s)
           val threeLetterInUniProt =
             _struct_ref_seq_dif.get((ch -> pdbResidue)) match {
-              case None => Some(threeLetterInAtomTable) // no override
-              case Some(None) => None // override, remove
+              case None          => Some(threeLetterInAtomTable) // no override
+              case Some(None)    => None // override, remove
               case Some(Some(x)) => Some(x) // override change code
             }
 
@@ -819,39 +862,41 @@ object CIFContents {
     }
 
     val rawAtomList: Vector[(Atom, PdbChain, PdbResidueNumber, CifChain)] =
-      parsedAtomTable.map { spl =>
-        // println(spl)
-        val id = spl(0).get.toInt
-        val chain = PdbChain(spl(1).get)
-        val rn = spl(2).get.toInt
-        val insC = if (spl(3).isEmpty) "?" else spl(3).get
-        val pdbResidue =
-          PdbResidueNumber(rn, (if (insC == "?") None else Some(insC)))
-        val coord =
-          Vec(spl(4).get.toDouble, spl(5).get.toDouble, spl(6).get.toDouble)
-        val occ = spl(7).get.toDouble
-        val entityId = spl(8).get.toInt
-        val cifChain = CifChain(spl(13).getOrElse(chain.s))
-        val polyProtein = polyProteinEntities.contains(entityId)
-        val modelNumber: Option[Int] = spl(9).map(_.toInt).orElse(None)
+      parsedAtomTable
+        .map { spl =>
+          // println(spl)
+          val id = spl(0).get.toInt
+          val chain = PdbChain(spl(1).get)
+          val rn = spl(2).get.toInt
+          val insC = if (spl(3).isEmpty) "?" else spl(3).get
+          val pdbResidue =
+            PdbResidueNumber(rn, (if (insC == "?") None else Some(insC)))
+          val coord =
+            Vec(spl(4).get.toDouble, spl(5).get.toDouble, spl(6).get.toDouble)
+          val occ = spl(7).get.toDouble
+          val entityId = spl(8).get.toInt
+          val cifChain = CifChain(spl(13).getOrElse(chain.s))
+          val polyProtein = polyProteinEntities.contains(entityId)
+          val modelNumber: Option[Int] = spl(9).map(_.toInt).orElse(None)
 
-        // println(modelNumber == representativeModelNumber)
-        // println(polyProtein)
-        // println(occ)
+          // println(modelNumber == representativeModelNumber)
+          // println(polyProtein)
+          // println(occ)
 
-        (chain,
-         pdbResidue,
-         Atom(coord,
-              id,
-              spl(10).getOrElse(""),
-              spl(11).getOrElse(""),
-              spl(12).getOrElse(""),
-              spl(14).getOrElse("")),
-         occ,
-         polyProtein,
-         modelNumber == representativeModelNumber,
-         cifChain)
-      }.filter(x => x._4 > 0.0 && x._5 && x._6)
+          (chain,
+           pdbResidue,
+           Atom(coord,
+                id,
+                spl(10).getOrElse(""),
+                spl(11).getOrElse(""),
+                spl(12).getOrElse(""),
+                spl(14).getOrElse("")),
+           occ,
+           polyProtein,
+           modelNumber == representativeModelNumber,
+           cifChain)
+        }
+        .filter(x => x._4 > 0.0 && x._5 && x._6)
         .map(x => (x._3, x._1, x._2, x._7))
         .toVector
 
@@ -870,17 +915,21 @@ object CIFContents {
         var atomIdx = 0
         val atomsGroupedByChain = rawAtomList.groupBy(_._4: CifChain)
         val chains: Map[(CifChain, Int), String] =
-          atomsGroupedByChain.toSeq.flatMap {
-            case (cifChain, _) =>
-              assemblyOperations
-                .get(cifChain)
-                .toList
-                .flatten
-                .zipWithIndex
-                .map(o => (cifChain, o._2))
-          }.zipWithIndex.map {
-            case (k, i) => k -> (97 + i).toChar.toString.toUpperCase
-          }.toMap
+          atomsGroupedByChain.toSeq
+            .flatMap {
+              case (cifChain, _) =>
+                assemblyOperations
+                  .get(cifChain)
+                  .toList
+                  .flatten
+                  .zipWithIndex
+                  .map(o => (cifChain, o._2))
+            }
+            .zipWithIndex
+            .map {
+              case (k, i) => k -> (97 + i).toChar.toString.toUpperCase
+            }
+            .toMap
         val cif2pdbchain: Map[CifChain, PdbChain] =
           rawAtomList.map(x => x._4 -> x._2).distinct.toMap
 

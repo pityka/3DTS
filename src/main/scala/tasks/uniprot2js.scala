@@ -51,28 +51,31 @@ object IndexUniByGeneName {
                              compressedDocuments = true)
 
   val task =
-    AsyncTask[JsDump[UniProtEntry], UniprotIndexedByGene](
-      "indexpdbnamesbygene",
-      1) { uniprot => implicit ctx =>
-      log.info("start indexing " + uniprot)
-      implicit val mat = ctx.components.actorMaterializer
-      val tmpFolder = TempFile.createTempFile("indexunibygene")
-      tmpFolder.delete
-      tmpFolder.mkdirs
-      val tableManager = TableManager(tmpFolder)
+    AsyncTask[JsDump[UniProtEntry], UniprotIndexedByGene]("indexpdbnamesbygene",
+                                                          1) {
+      uniprot => implicit ctx =>
+        log.info("start indexing " + uniprot)
+        implicit val mat = ctx.components.actorMaterializer
+        val tmpFolder = TempFile.createTempFile("indexunibygene")
+        tmpFolder.delete
+        tmpFolder.mkdirs
+        val tableManager = TableManager(tmpFolder)
 
-      val writer = tableManager.writer(UniEntryByGene)
+        val writer = tableManager.writer(UniEntryByGene)
 
-      uniprot.source.runForeach { uniprotelem =>
-        val js = upickle.default.write(uniprotelem)
-        writer.add(Doc(js), uniprotelem.geneNames.map(_.value))
-      }.map { done =>
-        writer.makeIndex(100000, 50)
-      }.flatMap { _ =>
-        Future
-          .sequence(tmpFolder.listFiles.toList.map(f =>
-            SharedFile(f, name = f.getName)))
-          .map(x => UniprotIndexedByGene(x.toSet))
-      }
+        uniprot.source
+          .runForeach { uniprotelem =>
+            val js = upickle.default.write(uniprotelem)
+            writer.add(Doc(js), uniprotelem.geneNames.map(_.value))
+          }
+          .map { done =>
+            writer.makeIndex(100000, 50)
+          }
+          .flatMap { _ =>
+            Future
+              .sequence(tmpFolder.listFiles.toList.map(f =>
+                SharedFile(f, name = f.getName)))
+              .map(x => UniprotIndexedByGene(x.toSet))
+          }
     }
 }

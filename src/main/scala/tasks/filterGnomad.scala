@@ -49,10 +49,11 @@ object FilterGnomad {
               log.info("Interval trees done")
 
               val transformedSource = genome.source
-                .filter(gnomadLine =>
-                  !JoinVariationsCore
-                    .lookup(gnomadLine.chromosome, gnomadLine.position, exons)
-                    .isEmpty)
+                .filter(
+                  gnomadLine =>
+                    !JoinVariationsCore
+                      .lookup(gnomadLine.chromosome, gnomadLine.position, exons)
+                      .isEmpty)
                 .map { gl =>
                   ByteString(upickle.default.write(gl) + "\n")
                 }

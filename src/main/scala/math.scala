@@ -67,10 +67,10 @@ object MathHelpers {
     ): Either[(Int, Int), (Int, A)] = {
       def recurse(low: Int, high: Int): Either[(Int, Int), (Int, A)] =
         (low + high) / 2 match {
-          case _ if high < low => scala.util.Left(high, low)
+          case _ if high < low                      => scala.util.Left(high, low)
           case mid if greater(mapper(a.apply(mid))) => recurse(low, mid - 1)
-          case mid if less(mapper(a.apply(mid))) => recurse(mid + 1, high)
-          case mid => scala.util.Right((mid, a.apply(mid)))
+          case mid if less(mapper(a.apply(mid)))    => recurse(mid + 1, high)
+          case mid                                  => scala.util.Right((mid, a.apply(mid)))
         }
       recurse(0, a.size - 1)
     }
@@ -126,9 +126,9 @@ object MathHelpers {
         (x: (Double, Double)) => x._1 < loc,
         (x: (Double, Double)) => x._1 > loc
       ) match {
-        case scala.util.Right((idx, elem)) => cumulative(idx)._2
+        case scala.util.Right((idx, elem))              => cumulative(idx)._2
         case scala.util.Left((idx1, idx2)) if idx1 >= 0 => cumulative(idx1)._2
-        case scala.util.Left((idx1, idx2)) if idx1 < 0 => 0.0
+        case scala.util.Left((idx1, idx2)) if idx1 < 0  => 0.0
       }
   }
 
@@ -138,7 +138,7 @@ object MathHelpers {
       case ((last, count, map), elem) =>
         if (elem == last) {
           val nl = map.get(elem) match {
-            case None => map.updated(elem, count + 1)
+            case None    => map.updated(elem, count + 1)
             case Some(x) => map.updated(elem, x + 1)
           }
           (elem, count + 1, nl)
@@ -254,11 +254,7 @@ object MathHelpers {
 
     val `P(s<0.1|x,p2)` = integrate(`P(s|x,p2)`, 0.0, 0.1, 16 * nx, 1024 * nx)
     val `E(P(s|x,p2))` =
-      integrate((s: Double) => `P(s|x,p2)`(s) * s,
-                0.0,
-                1.0,
-                16 * nx,
-                1024 * nx)
+      integrate((s: Double) => `P(s|x,p2)`(s) * s, 0.0, 1.0, 16 * nx, 1024 * nx)
 
     Posteriors(`P(p1|x)`,
                `P(s|x,p1)`,

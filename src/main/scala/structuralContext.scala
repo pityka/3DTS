@@ -50,25 +50,29 @@ object StructureContext {
           } toList)
 
           val expandedAtoms2: Vector[T1] =
-            featureAtoms.flatMap { fa =>
-              val bbXTop = fa.coord.raw(0) + radius
-              val bbXBot = fa.coord.raw(0) - radius
-              val bbYTop = fa.coord.raw(1) + radius
-              val bbYBot = fa.coord.raw(1) - radius
-              val bbZTop = fa.coord.raw(2) + radius
-              val bbZBot = fa.coord.raw(2) - radius
-              val queryRegion = Region
-                .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
-                .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
-                .from(liftIntoFakeT1(Vec(0d, bbYBot, 0d)), 1)
-                .to(liftIntoFakeT1(Vec(0d, bbYTop, 0d)), 1)
-                .from(liftIntoFakeT1(Vec(0d, 0d, bbZBot)), 2)
-                .to(liftIntoFakeT1(Vec(0d, 0d, bbZTop)), 2)
+            featureAtoms
+              .flatMap { fa =>
+                val bbXTop = fa.coord.raw(0) + radius
+                val bbXBot = fa.coord.raw(0) - radius
+                val bbYTop = fa.coord.raw(1) + radius
+                val bbYBot = fa.coord.raw(1) - radius
+                val bbZTop = fa.coord.raw(2) + radius
+                val bbZBot = fa.coord.raw(2) - radius
+                val queryRegion = Region
+                  .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
+                  .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
+                  .from(liftIntoFakeT1(Vec(0d, bbYBot, 0d)), 1)
+                  .to(liftIntoFakeT1(Vec(0d, bbYTop, 0d)), 1)
+                  .from(liftIntoFakeT1(Vec(0d, 0d, bbZBot)), 2)
+                  .to(liftIntoFakeT1(Vec(0d, 0d, bbZTop)), 2)
 
-              kdtree
-                .regionQuery(queryRegion)
-                .filter(atomWithPdb => fa.within(radius, atomWithPdb._1.coord))
-            }.distinct.toVector
+                kdtree
+                  .regionQuery(queryRegion)
+                  .filter(atomWithPdb =>
+                    fa.within(radius, atomWithPdb._1.coord))
+              }
+              .distinct
+              .toVector
 
           val expandedResidues = expandedAtoms2.map(x => (x._2, x._3)).distinct
 
@@ -114,31 +118,34 @@ object StructureContext {
       .map {
         case (chain, featureName, residuesInFeature) =>
           println(pdbId, chain, featureName, residuesInFeature.size)
-          val featureAtoms: List[Atom] = (residuesInFeature flatMap {
-            residue =>
-              atomsByResidue.get(chain -> residue).toVector.flatten
+          val featureAtoms: List[Atom] = (residuesInFeature flatMap { residue =>
+            atomsByResidue.get(chain -> residue).toVector.flatten
           } toList)
 
           val expandedAtoms2: Vector[T1] =
-            featureAtoms.flatMap { fa =>
-              val bbXTop = fa.coord.raw(0) + radius
-              val bbXBot = fa.coord.raw(0) - radius
-              val bbYTop = fa.coord.raw(1) + radius
-              val bbYBot = fa.coord.raw(1) - radius
-              val bbZTop = fa.coord.raw(2) + radius
-              val bbZBot = fa.coord.raw(2) - radius
-              val queryRegion = Region
-                .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
-                .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
-                .from(liftIntoFakeT1(Vec(0d, bbYBot, 0d)), 1)
-                .to(liftIntoFakeT1(Vec(0d, bbYTop, 0d)), 1)
-                .from(liftIntoFakeT1(Vec(0d, 0d, bbZBot)), 2)
-                .to(liftIntoFakeT1(Vec(0d, 0d, bbZTop)), 2)
+            featureAtoms
+              .flatMap { fa =>
+                val bbXTop = fa.coord.raw(0) + radius
+                val bbXBot = fa.coord.raw(0) - radius
+                val bbYTop = fa.coord.raw(1) + radius
+                val bbYBot = fa.coord.raw(1) - radius
+                val bbZTop = fa.coord.raw(2) + radius
+                val bbZBot = fa.coord.raw(2) - radius
+                val queryRegion = Region
+                  .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
+                  .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
+                  .from(liftIntoFakeT1(Vec(0d, bbYBot, 0d)), 1)
+                  .to(liftIntoFakeT1(Vec(0d, bbYTop, 0d)), 1)
+                  .from(liftIntoFakeT1(Vec(0d, 0d, bbZBot)), 2)
+                  .to(liftIntoFakeT1(Vec(0d, 0d, bbZTop)), 2)
 
-              kdtree
-                .regionQuery(queryRegion)
-                .filter(atomWithPdb => fa.within(radius, atomWithPdb._1.coord))
-            }.distinct.toVector
+                kdtree
+                  .regionQuery(queryRegion)
+                  .filter(atomWithPdb =>
+                    fa.within(radius, atomWithPdb._1.coord))
+              }
+              .distinct
+              .toVector
 
           val expandedResidues = expandedAtoms2.map(x => (x._2, x._3)).distinct
 

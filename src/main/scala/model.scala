@@ -144,17 +144,19 @@ object Model {
     jdistlib.Poisson.density(successes, ps, false)
   }
 
- def posteriorUnderSelection1D(lociNumNs: Array[Int],
+  def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Double) : (Double,Double,Double) = 
-                  posteriorUnderSelection1D(lociNumNs,lociRounds,successes,lociNumNs.map(_ => p))                
-  
+                                p: Double): (Double, Double, Double) =
+    posteriorUnderSelection1D(lociNumNs,
+                              lociRounds,
+                              successes,
+                              lociNumNs.map(_ => p))
 
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Array[Double]) : (Double,Double,Double)  = {
+                                p: Array[Double]): (Double, Double, Double) = {
 
     val `P(x|s)` =
       likelihoodLoci(lociNumNs, lociRounds, successes, p, _: Double)

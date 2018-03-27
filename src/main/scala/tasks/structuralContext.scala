@@ -7,7 +7,7 @@ import tasks._
 import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import tasks.upicklesupport._
-  
+
 import fileutils._
 import stringsplit._
 

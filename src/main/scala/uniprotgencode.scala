@@ -71,13 +71,15 @@ object Ensembl2Uniprot {
       .map {
         case (enst, transcript) =>
           val uni = enst2uni.get(enst)
-          uni.map { uni =>
-            mapTranscript(enst,
-                          gencode(enst)._1,
-                          uni,
-                          uniprotKb(uni).sequence,
-                          transcript)
-          }.getOrElse(Enst2UniFailed(enst))
+          uni
+            .map { uni =>
+              mapTranscript(enst,
+                            gencode(enst)._1,
+                            uni,
+                            uniprotKb(uni).sequence,
+                            transcript)
+            }
+            .getOrElse(Enst2UniFailed(enst))
       }
   }
 
@@ -116,8 +118,7 @@ object Ensembl2Uniprot {
             .map(x => (x._1.get, x._2.get, x._3))
 
           val qc = alignment.size >= math
-              .min(translated.size, uniSeq.s.size) * 0.8 && alignment.count(
-              _._3) >= alignment.size * 0.8
+            .min(translated.size, uniSeq.s.size) * 0.8 && alignment.count(_._3) >= alignment.size * 0.8
           if (qc) Some(alignment.map(x => x._1.i -> x._2.i).toMap -> false)
           else None
 

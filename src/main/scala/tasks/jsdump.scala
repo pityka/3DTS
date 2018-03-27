@@ -4,6 +4,8 @@ import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
+import tasks.upicklesupport._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import fileutils._
@@ -46,6 +48,13 @@ case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
         upickle.default.read[T](line)(unpickler)
       }
   }
+
+  def toEColl(implicit ec: ExecutionContext,
+              ts: TaskSystemComponents,
+              r: upickle.default.Reader[T],
+              w: upickle.default.Writer[T],
+              key: flatjoin.StringKey[T]): Future[EColl[T]] =
+    EColl.partitionsFromSource(this.source, s"JsDump2toEColl_${sf.path}")
 }
 
 object JsDump {

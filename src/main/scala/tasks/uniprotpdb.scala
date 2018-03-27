@@ -8,7 +8,6 @@ import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import tasks.upicklesupport._
 
-
 import fileutils._
 import stringsplit._
 
@@ -20,11 +19,10 @@ import akka.stream.ActorMaterializer
 
 import akka.actor.Extension
 
-case class UniProtPdbInput(
-    uniprotKb: SharedFile,
-    uniProtId: List[UniId],
-    batchName: String,
-    genomeUniJoinFile: JsDump[Ensembl2Uniprot.MapResult])
+case class UniProtPdbInput(uniprotKb: SharedFile,
+                           uniProtId: List[UniId],
+                           batchName: String,
+                           genomeUniJoinFile: JsDump[Ensembl2Uniprot.MapResult])
 
 case class UniProtPdbFullInput(
     uniprotKb: SharedFile,
@@ -160,12 +158,15 @@ object UniProtPdb {
                     val ids: Seq[(UniId, PdbId, PdbChain, Int, Int)] =
                       flattened.flatMap(_._1)
 
-                    val qcfile = SharedFile(openFileWriter { writer =>
-                      ids.foreach(x =>
-                        writer.write(
-                          (x._1.s, x._2.s, x._3.s, x._4, x._5).productIterator
-                            .mkString("\t") + "\n"))
-                    }._1, name = "uni-pdb-chain-qc.tsv")
+                    val qcfile = SharedFile(
+                      openFileWriter { writer =>
+                        ids.foreach(x =>
+                          writer.write(
+                            (x._1.s, x._2.s, x._3.s, x._4, x._5).productIterator
+                              .mkString("\t") + "\n"))
+                      }._1,
+                      name = "uni-pdb-chain-qc.tsv"
+                    )
 
                     val uni = ids.map(_._1).distinct.size
                     log.info("Joined {} uniprot files  (total {} uni x pdbs)",

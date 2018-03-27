@@ -22,9 +22,8 @@ import akka.stream.ActorMaterializer
 import index2._
 import SharedTypes._
 
-case class JoinCPWithPdbInput(
-    gencodeUniprot: JsDump[Ensembl2Uniprot.MapResult],
-    pdbUniprot: List[JsDump[UniProtPdb.T1]])
+case class JoinCPWithPdbInput(gencodeUniprot: JsDump[Ensembl2Uniprot.MapResult],
+                              pdbUniprot: List[JsDump[UniProtPdb.T1]])
 
 case class CpPdbIndex(fs: Set[SharedFile])
     extends ResultWithSharedFiles(fs.toSeq: _*)
@@ -47,31 +46,34 @@ object JoinCPWithPdb {
 
         val writer = tableManager.writer(CpPdbTable)
 
-        pdbunigencode.source.runForeach { pdbunigencode =>
-          val pdbId = pdbunigencode._1.s
-          val enst = pdbunigencode._8.s
-          val uniid = pdbunigencode._5.s
-          val chrpos = pdbunigencode._9.s.split1('\t')
-          val pdbchain = pdbunigencode._2.s
-          val pdbres = pdbunigencode._3.s
+        pdbunigencode.source
+          .runForeach { pdbunigencode =>
+            val pdbId = pdbunigencode._1.s
+            val enst = pdbunigencode._8.s
+            val uniid = pdbunigencode._5.s
+            val chrpos = pdbunigencode._9.s.split1('\t')
+            val pdbchain = pdbunigencode._2.s
+            val pdbres = pdbunigencode._3.s
 
-          val cp = chrpos(0) + "_" + chrpos(2)
-          val js = upickle.default.write(pdbunigencode)
-          writer.add(Doc(js),
-                     List(enst,
-                          uniid,
-                          pdbId,
-                          cp,
-                          pdbId + "_" + pdbchain,
-                          pdbId + "_" + pdbchain + "_" + pdbres))
-        }.map { done =>
-          writer.makeIndex(1000000, 50)
-        }.flatMap { _ =>
-          Future
-            .sequence(tmpFolder.listFiles.toList.map(f =>
-              SharedFile(f, name = f.getName)))
-            .map(x => CpPdbIndex(x.toSet))
-        }
+            val cp = chrpos(0) + "_" + chrpos(2)
+            val js = upickle.default.write(pdbunigencode)
+            writer.add(Doc(js),
+                       List(enst,
+                            uniid,
+                            pdbId,
+                            cp,
+                            pdbId + "_" + pdbchain,
+                            pdbId + "_" + pdbchain + "_" + pdbres))
+          }
+          .map { done =>
+            writer.makeIndex(1000000, 50)
+          }
+          .flatMap { _ =>
+            Future
+              .sequence(tmpFolder.listFiles.toList.map(f =>
+                SharedFile(f, name = f.getName)))
+              .map(x => CpPdbIndex(x.toSet))
+          }
     }
 
   val task =
@@ -84,8 +86,8 @@ object JoinCPWithPdb {
         implicit ctx =>
           // implicit val mat = ActorMaterializer()
 
-          val uniprot2Genome: Future[
-            collection.mutable.Map[String, List[String]]] =
+          val uniprot2Genome
+            : Future[collection.mutable.Map[String, List[String]]] =
             gencodeUniprot.sf.file.map { localFile =>
               log.info(
                 "Reading UniProt -> genome map .." + gencodeUniprot.sf.name)
@@ -108,7 +110,7 @@ object JoinCPWithPdb {
                     .foreach {
                       case (k, line) =>
                         mmap.get(k) match {
-                          case None => mmap.update(k, List(line))
+                          case None    => mmap.update(k, List(line))
                           case Some(l) => mmap.update(k, line :: l)
                         }
                   })
@@ -130,14 +132,16 @@ object JoinCPWithPdb {
                 val iters = files.map(x => x._1.createIterator(x._2))
                 val iter: Iterator[PdbUniGencodeRow] =
                   iters.map(_._1).iterator.flatMap { iter =>
-                    iter.map {
-                      case unipdbline =>
-                        val uni: UniId = unipdbline._1
-                        val uninum: UniNumber = unipdbline._7
-                        val genomeLines =
-                          uniprot2Genome.get(uni.s + "_" + uninum.i)
-                        (genomeLines, unipdbline)
-                    }.filter(_._1.isDefined)
+                    iter
+                      .map {
+                        case unipdbline =>
+                          val uni: UniId = unipdbline._1
+                          val uninum: UniNumber = unipdbline._7
+                          val genomeLines =
+                            uniprot2Genome.get(uni.s + "_" + uninum.i)
+                          (genomeLines, unipdbline)
+                      }
+                      .filter(_._1.isDefined)
                       .map(x => (x._1.get -> x._2))
                       .flatMap {
                         case (genomeLines,

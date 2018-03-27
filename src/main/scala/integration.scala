@@ -269,7 +269,11 @@ object NewtonCotes {
         }
     }
 
-    def rec(a: Double, b: Double, eps: Double, whole: Double, n: Int): Double = {
+    def rec(a: Double,
+            b: Double,
+            eps: Double,
+            whole: Double,
+            n: Int): Double = {
       val c = (a + b) / 2
       val left = simpson(f, a, c, 2)
       val right = simpson(f, c, b, 2)
