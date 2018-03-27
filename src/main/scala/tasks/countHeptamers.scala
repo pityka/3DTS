@@ -56,7 +56,7 @@ object CountHeptamers {
                         fai: SharedFile,
                         gencode: SharedFile)(
       implicit tc: tasks.TaskSystemComponents,
-      ec: ExecutionContext): Future[EColl[(String, (Int, Int))]] = {
+      ec: ExecutionContext): Future[HeptamerFrequencies] = {
     for {
       filteredCoverage <- filterTask(coverage, gencode)(
         CPUMemoryRequest(1, 5000))
@@ -65,8 +65,8 @@ object CountHeptamers {
       mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
       grouped <- groupByTask(mapped)(CPUMemoryRequest(1, 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
-    } yield summed
-
+      file <- heptamerFrequenciesToFile(summed)(CPUMemoryRequest(1, 5000))
+    } yield file
   }
 
   val groupByTask =
@@ -133,6 +133,23 @@ object CountHeptamers {
 
           Source.fromFuture(countTable).flatMapConcat(list => Source(list))
 
+    }
+
+  case class HeptamerFrequencies(sf: SharedFile)
+
+  val heptamerFrequenciesToFile =
+    AsyncTask[EColl[(String, (Int, Int))], HeptamerFrequencies](
+      "writeHeptamerFrequences",
+      1) { ecoll => implicit ctx =>
+      implicit val mat = ctx.components.actorMaterializer
+      val f = fileutils.openFileWriter { writer =>
+        ecoll.source.runForeach {
+          case (hept, (calls, counts)) =>
+            writer.write(s"$hept\t$calls\t$counts\n")
+        }
+      }._1
+      SharedFile(f, "heptamerFrequencies." + ecoll.basename)
+        .map(HeptamerFrequencies.apply)
     }
 
 }

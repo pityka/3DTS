@@ -49,6 +49,12 @@ object JoinVariationsCore {
       chromosome + "\t" + (position - 1).toString + "\t" + position
   }
 
+  object GnomadLine {
+    implicit val sk = new flatjoin.StringKey[GnomadLine] {
+      def key(g: GnomadLine) = g.cp
+    }
+  }
+
   object Bean {
     import upickle.default.{ReadWriter, macroRW}
     implicit val ordering: Ordering[Bean] = Ordering.by(_.chrpos)

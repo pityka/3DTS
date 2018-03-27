@@ -28,6 +28,12 @@ case class GenomeCoverage(chromosome: String,
   def cp = chromosome + "\t" + position
 }
 
+object GenomeCoverage {
+  implicit val sk = new flatjoin.StringKey[GenomeCoverage] {
+    def key(g: GenomeCoverage) = g.cp
+  }
+}
+
 case class FilterCoverageInput(coverage: JsDump[GenomeCoverage],
                                gencodeGtf: SharedFile)
 

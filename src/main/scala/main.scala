@@ -86,6 +86,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         CPUMemoryRequest(1, 5000))
     }
 
+    val heptamerCounts = gnomadGenomeCoverage.flatMap(_.toEColl).flatMap {
+      coverage =>
+        convertedGnomadGenome.flatMap(_.toEColl).flatMap { calls =>
+          CountHeptamers.calculateHeptamer(coverage,
+                                           calls,
+                                           referenceFasta,
+                                           referenceFai,
+                                           gencodeGtf)
+        }
+    }
+
     val filteredGnomadGenome =
       convertedGnomadGenome.flatMap { gnomadGenome =>
         FilterGnomad.task(
@@ -234,7 +245,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
            uniprotpdbmap,
            variationsJoined,
            uniprotgencodemap,
-           assemblies) ++ scores)
+           assemblies,
+           heptamerCounts) ++ scores)
 
   }
 }
