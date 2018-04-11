@@ -23,8 +23,7 @@ class ProteinUI(
 
   def renderProtein(
       pdbId: String,
-      colors: Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] =
-        Map(),
+      colors: Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] = Map(),
       onClick: (String, String, Int, js.Dynamic, js.Dynamic, String) => Unit =
         (_, _, _, _, _, _) => ()) = {
 
@@ -32,15 +31,15 @@ class ProteinUI(
       (callback: (String, Int) => Array[Double]) => {
         js.Dynamic.newInstance(js.Dynamic.global.pv.color.ColorOp)(
           ((atom: js.Dynamic, out: Array[Double], index: Int) => {
-             val chainName =
-               atom.residue().chain().name().asInstanceOf[String]
-             val residueNumber = atom.residue().num().asInstanceOf[Int]
-             val rgb = callback(chainName, residueNumber)
-             out(index + 0) = rgb(0)
-             out(index + 1) = rgb(1)
-             out(index + 2) = rgb(2)
-             out(index + 3) = 1.0
-           }))
+            val chainName =
+              atom.residue().chain().name().asInstanceOf[String]
+            val residueNumber = atom.residue().num().asInstanceOf[Int]
+            val rgb = callback(chainName, residueNumber)
+            out(index + 0) = rgb(0)
+            out(index + 1) = rgb(1)
+            out(index + 2) = rgb(2)
+            out(index + 3) = 1.0
+          }))
       }
 
     val viewContainer = div().render
@@ -71,27 +70,30 @@ class ProteinUI(
       UIState.viewerAndStructure() =
         Some((viewer, fetchedStructure, chainRemapReverse))
 
-      viewer.addListener("click", (picked: js.Dynamic) => {
-        println("clicked on " + picked)
-        if (picked == null) ()
-        else {
-          val target = picked.target()
-          if (target.qualifiedName != ()) {
-            val structureChainName =
-              target.residue().chain().name().asInstanceOf[String]
-            val chainName: String =
-              chainRemap(structureChainName)
-            val residueNumber: Int =
-              target.residue().num().asInstanceOf[Int]
-            onClick(pdbId,
-                    chainName,
-                    residueNumber,
-                    viewer,
-                    fetchedStructure,
-                    structureChainName)
+      viewer.addListener(
+        "click",
+        (picked: js.Dynamic) => {
+          println("clicked on " + picked)
+          if (picked == null) ()
+          else {
+            val target = picked.target()
+            if (target.qualifiedName != ()) {
+              val structureChainName =
+                target.residue().chain().name().asInstanceOf[String]
+              val chainName: String =
+                chainRemap(structureChainName)
+              val residueNumber: Int =
+                target.residue().num().asInstanceOf[Int]
+              onClick(pdbId,
+                      chainName,
+                      residueNumber,
+                      viewer,
+                      fetchedStructure,
+                      structureChainName)
+            }
           }
         }
-      })
+      )
       renderedStructure.colorBy(colorByResidueIdentityRgb(
         (chain: String, res: Int) => {
           colors
@@ -109,8 +111,8 @@ class ProteinUI(
     val currentData =
       Var[(Seq[PdbId], Seq[DepletionScoresByResidue])]((Nil, Nil))
 
-    val byResidue: Rx[
-      Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]]] =
+    val byResidue
+      : Rx[Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]]] =
       currentData.map(
         _._2
           .groupBy(x =>
@@ -150,7 +152,8 @@ class ProteinUI(
     `type` := "text",
     height := "30",
     width := "100",
-    placeholder := "Pdb, UniProt ID, Ensemble Transcript Id, hg38 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  ").render
+    placeholder := "Pdb, UniProt ID, Ensemble Transcript Id, hg38 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
+  ).render
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
       makeQuery(queryBox.value)
@@ -235,8 +238,7 @@ class ProteinUI(
   // }
 
   def renderTable(click: String, scores: Seq[DepletionRow]) =
-    table(
-      `class` := "uk-table uk-table-striped uk-table-hover uk-table-small")(
+    table(`class` := "uk-table uk-table-striped uk-table-hover uk-table-small")(
       thead(td("clicked"),
             td("remarks"),
             td("feature"),
@@ -301,21 +303,23 @@ class ProteinUI(
         val featureElem =
           td(feature.toString, small("(Click to center)")).render
 
-        val row = tr(td(click),
-                     td(
-                       div(
-                         toggle,
-                         formElem
-                       )),
-                     featureElem,
-                     td(obsns),
-                     td(f"$expns%1.2f"),
-                     td(obss),
-                     td(f"$exps%1.2f"),
-                     td(size),
-                     td(f"$postmean%1.2f"),
-                     //  td(f"$postmean2d%1.2f"),
-                     unis.map(_.s).mkString(",")).render
+        val row = tr(
+          td(click),
+          td(
+            div(
+              toggle,
+              formElem
+            )),
+          featureElem,
+          td(obsns),
+          td(f"$expns%1.2f"),
+          td(obss),
+          td(f"$exps%1.2f"),
+          td(size),
+          td(f"$postmean%1.2f"),
+          //  td(f"$postmean2d%1.2f"),
+          unis.map(_.s).mkString(",")
+        ).render
         featureElem.onclick = {
           (e: Event) =>
             println("clicked " + feature)
@@ -341,8 +345,9 @@ class ProteinUI(
     })
 
   val clickedTable = Rx {
-    val byResidue: Map[(PdbChain, PdbResidueNumberUnresolved),
-                       Seq[DepletionRow]] = UIState.byResidue()
+    val byResidue
+      : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
+      UIState.byResidue()
     UIState
       .clicked()
       .map {
@@ -366,8 +371,9 @@ class ProteinUI(
   val proteinView = Rx {
     val data = UIState.currentData()
     println("update protein view")
-    val byResidue: Map[(PdbChain, PdbResidueNumberUnresolved),
-                       Seq[DepletionRow]] = UIState.byResidue()
+    val byResidue
+      : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
+      UIState.byResidue()
     data._2
       .groupBy(x =>
         (PdbChain(x.pdbChain) -> PdbResidueNumberUnresolved(x.pdbResidue)))
@@ -394,8 +400,11 @@ class ProteinUI(
         val viewContainer = renderProtein(
           pdbId,
           colorByResidue_Mean1DLocal,
-          onClick = (pdb: String, chainName: String, residueNumber: Int,
-                     viewer: js.Dynamic, structure: js.Dynamic,
+          onClick = (pdb: String,
+                     chainName: String,
+                     residueNumber: Int,
+                     viewer: js.Dynamic,
+                     structure: js.Dynamic,
                      structureChainName) => {
             // format: off
             val focusResidue = structure.select(js.Dynamic.literal( chain = structureChainName, rnum= residueNumber ))
@@ -406,7 +415,8 @@ class ProteinUI(
               (PdbId(pdb),
                PdbChain(chainName),
                PdbResidueNumberUnresolved(residueNumber.toString)))
-          })
+          }
+        )
 
         div(style := "border:1px solid #ddd;")(viewContainer)
       }
@@ -427,7 +437,8 @@ class ProteinUI(
         div(
           h3(`class` := "uk-heading")("Depletion scores in the protein"),
           clickedTable
-        ))
+        )
+      )
     ).render
 
   parentNode.appendChild(ui)
