@@ -4,6 +4,7 @@ import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
 
@@ -23,6 +24,15 @@ import akka.util._
 import scala.collection.mutable.ArrayBuffer
 
 object ConvertGenomeCoverage {
+
+  val toEColl =
+    AsyncTask[JsDump[GenomeCoverage], EColl[GenomeCoverage]](
+      "GenomeCoverageToEColl",
+      1) { js => implicit ctx =>
+      implicit val mat = ctx.components.actorMaterializer
+      log.info(s"Convert $js to ecoll.")
+      EColl.partitionsFromSource(js.source, js.sf.name, 8)
+    }
 
   val task =
     AsyncTask[(SharedFile, Int), JsDump[GenomeCoverage]](

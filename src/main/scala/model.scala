@@ -59,6 +59,13 @@ object Model {
     jdistlib.Poisson.density(successes, ps, false)
   }
 
+  def posteriorMeanOfNeutralRate(lociRounds: Array[Int],
+                                 successes: Int): Double =
+    posteriorUnderSelection1D(lociRounds.map(_ => 3),
+                              lociRounds,
+                              successes,
+                              lociRounds.map(_ => 1.0))._3
+
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,

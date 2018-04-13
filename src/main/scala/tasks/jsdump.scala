@@ -49,15 +49,10 @@ case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
       }
   }
 
-  def toEColl(implicit ec: ExecutionContext,
-              ts: TaskSystemComponents,
-              r: upickle.default.Reader[T],
-              w: upickle.default.Writer[T],
-              key: flatjoin.StringKey[T]): Future[EColl[T]] =
-    EColl.partitionsFromSource(this.source, s"JsDump2toEColl_${sf.path}")
 }
 
 object JsDump {
+
   def fromIterator[T: upickle.default.Reader: upickle.default.Writer](
       i: Iterator[T],
       name: String)(implicit ts: TaskSystemComponents): Future[JsDump[T]] = {
@@ -78,6 +73,7 @@ object JsDump {
 
     Flow[T]
       .map(x => ByteString(upickle.default.write(x)(pickler) + "\n"))
+      .batchWeighted(512 * 1024, _.size, identity)(_ ++ _)
       .via(Compression.gzip)
       .toMat(FileIO.toPath(tmp.toPath))(Keep.right)
       .mapMaterializedValue { futureIODone =>

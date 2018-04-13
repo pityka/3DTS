@@ -35,7 +35,10 @@ object JoinVariationsCore {
     def chrpos: String
   }
   case class GnomadGenders(female: GnomadPop, male: GnomadPop)
-  case class GnomadPop(total_count: Int, total_calls: Int)
+  case class GnomadPop(total_count: Int, total_calls: Int) {
+    def totalVariantAlleleCount = total_count
+    def totalChromosomeCount = total_calls
+  }
 
   case class GnomadLine(chromosome: String,
                         position: Int,
@@ -163,19 +166,19 @@ object JoinVariationsCore {
             .map {
               case Data(gl, source, chrpos) =>
                 val alt: Char = gl.alt.head
-                val totalCount = gl.genders.male.total_count + gl.genders.female.total_count
-                val totalCall = gl.genders.male.total_calls + gl.genders.female
-                  .total_calls
+                val totalVariantAlleleCount = gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount
+                val totalChromosomeCount = gl.genders.male.totalChromosomeCount + gl.genders.female
+                  .totalChromosomeCount
 
-                (alt, totalCount, totalCall, source)
+                (alt, totalVariantAlleleCount, totalChromosomeCount, source)
             }
             .groupBy(_._4)
             .map {
               case (source, alts) =>
-                val totalCall = alts.map(_._3).max
+                val totalChromosomeCount = alts.map(_._3).max
                 val alleleCounts: Seq[(Char, Int)] = alts.map(x => (x._1, x._2))
 
-                (source, totalCall, alleleCounts)
+                (source, totalChromosomeCount, alleleCounts)
             }
 
           val totalSampleSize = sources.map { source =>

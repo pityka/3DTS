@@ -4,6 +4,7 @@ import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
 
@@ -19,6 +20,14 @@ import JoinVariationsCore.{GnomadLine, GnomadGenders, GnomadPop}
 case class GnomadData(sf: SharedFile)
 
 object ConvertGnomad2HLI {
+
+  val toEColl =
+    AsyncTask[JsDump[GnomadLine], EColl[GnomadLine]]("GenomeCoverageToEColl", 1) {
+      js => implicit ctx =>
+        implicit val mat = ctx.components.actorMaterializer
+        log.info(s"Convert $js to ecoll.")
+        EColl.partitionsFromSource(js.source, js.sf.name, 8)
+    }
 
   def vcf2json(line: String): List[GnomadLine] =
     if (line.startsWith("#")) Nil
@@ -41,10 +50,11 @@ object ConvertGnomad2HLI {
                         population_key: String) =
         scala.util.Try {
 
-          val total_count = record("AC_" + population_key)(position).toInt
-          val total_calls = record("AN_" + population_key)(0).toInt
+          val totalVariantAlleleCount =
+            record("AC_" + population_key)(position).toInt
+          val totalChromosomeCount = record("AN_" + population_key)(0).toInt
 
-          GnomadPop(total_count, total_calls)
+          GnomadPop(totalVariantAlleleCount, totalChromosomeCount)
         }.toOption
 
       alts.zipWithIndex.flatMap {

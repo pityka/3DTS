@@ -26,8 +26,7 @@ case class Depletion3dInputFull(
     featureFile: JsDump[Feature2CPSecond.MappedFeatures],
     fasta: SharedFile,
     fai: SharedFile,
-    heptamerFrequencies: SharedFile,
-    numberOfIndividualsOfHeptamerFrequencies: Int)
+    heptamerNeutralRates: HeptamerRates)
 
 case class Depletion3dInput(
     locusDataFile: JsDump[LocusVariationCountAndNumNs],
@@ -35,8 +34,7 @@ case class Depletion3dInput(
     pdbId: Int,
     fasta: SharedFile,
     fai: SharedFile,
-    heptamerFrequencies: SharedFile,
-    numberOfIndividualsOfHeptamerFrequencies: Int)
+    heptamerNeutralRates: HeptamerRates)
 
 case class Depletion3dOutput(locusFile: SharedFile, js: JsDump[DepletionRow])
     extends ResultWithSharedFiles(js.sf, locusFile)
@@ -78,8 +76,7 @@ object depletion3d {
       features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
       pSyn: Double,
       referenceSequence: IndexedFastaSequenceFile,
-      heptamerFrequencies: Map[String, Double],
-      heptamerNumberOfIndividuals: Int): (File, List[DepletionRow]) = {
+      heptamerNeutralRates: Map[String, Double]): (File, List[DepletionRow]) = {
 
     val lociByPdbChain: Map[(PdbId, PdbChain), Vector[ChrPos]] = features
       .groupBy(x => x._2.pdbId -> x._2.pdbChain)
@@ -160,9 +157,8 @@ object depletion3d {
               val pSynByHeptamer = loci.map { locus =>
                 val cp = locus.locus
                 val heptamer = HeptamerHelpers.heptamerAt(cp, referenceSequence)
-                val numberOfChromosomes = heptamerNumberOfIndividuals * 2 // wrong for X non-PAR!
 
-                heptamerFrequencies(heptamer) / numberOfChromosomes
+                heptamerNeutralRates(heptamer)
               }.toArray
 
               val (postP1Hepta, postLessHepta, postMeanHepta) =
@@ -374,8 +370,7 @@ object depletion3d {
                                 myFeatureJsDump,
                                 fasta,
                                 fai,
-                                heptamerFrequencies,
-                                heptamerNumberOfIndividuals) =>
+                                heptamerFrequencies) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
 
@@ -392,8 +387,7 @@ object depletion3d {
                                          idx,
                                          fasta,
                                          fai,
-                                         heptamerFrequencies,
-                                         heptamerNumberOfIndividuals))(
+                                         heptamerFrequencies))(
                         CPUMemoryRequest(1, 20000))
                   }
                   .runWith(Sink.seq)
@@ -438,8 +432,7 @@ object depletion3d {
                             idx,
                             fasta,
                             fai,
-                            heptamerFrequenciesF,
-                            heptamerNumberOfIndividuals) =>
+                            heptamerRatesF) =>
         implicit ctx =>
           log.info(
             s"Start scoring ${locusDataJsDump.sf.name} ${myFeatureJsDump.sf.name}")
@@ -447,15 +440,15 @@ object depletion3d {
             featureFileLocal <- myFeatureJsDump.sf.file
             fastaLocal <- fasta.file
             faiLocal <- fai.file
-            heptamerFrequenciesLocal <- heptamerFrequenciesF.file
+            heptamerRatesLocal <- heptamerRatesF.sf.file
             (lociByCpra, pSyn) <- cacheLocusData(locusDataJsDump)
             result <- {
 
               val referenceSequence =
                 HeptamerHelpers.openFasta(fastaLocal, faiLocal)
 
-              val heptamerFrequencies = openSource(heptamerFrequenciesLocal)(
-                HeptamerHelpers.readFrequencies)
+              val heptamerRates =
+                openSource(heptamerRatesLocal)(HeptamerHelpers.readRates)
 
               val features: Seq[(ChrPos, FeatureKey, Seq[UniId])] =
                 myFeatureJsDump.iterator(featureFileLocal)(_.map(x =>
@@ -469,8 +462,7 @@ object depletion3d {
                            features,
                            pSyn,
                            referenceSequence,
-                           heptamerFrequencies,
-                           heptamerNumberOfIndividuals)
+                           heptamerRates)
 
               log.info("Scores done")
               val jsdump = JsDump.fromIterator(

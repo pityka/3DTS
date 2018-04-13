@@ -18,10 +18,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val referenceFasta = importFile(config.getString("fasta"))
     val referenceFai = importFile(config.getString("fai"))
-    val heptamerFrequencies = importFile(
-      config.getString("heptamerFrequencies"))
-    val numberOfIndividualsOfHeptamerFrequencies =
-      config.getInt("heptamerSampleSize")
 
     val ligandability =
       if (config.hasPath("ligandability"))
@@ -86,16 +82,26 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         CPUMemoryRequest(1, 5000))
     }
 
-    val heptamerCounts = gnomadGenomeCoverage.flatMap(_.toEColl).flatMap {
-      coverage =>
-        convertedGnomadGenome.flatMap(_.toEColl).flatMap { calls =>
+    val gnomadGenomeCoverageEcoll = gnomadGenomeCoverage.flatMap(
+      gnomadGenomeCoverage =>
+        ConvertGenomeCoverage
+          .toEColl(gnomadGenomeCoverage)(CPUMemoryRequest(1, 5000)))
+
+    val convertedGnomadGenomeEcoll = convertedGnomadGenome.flatMap(
+      convertedGnomadGenome =>
+        ConvertGnomad2HLI
+          .toEColl(convertedGnomadGenome)(CPUMemoryRequest(1, 5000)))
+
+    val heptamerRates =
+      gnomadGenomeCoverageEcoll.flatMap { coverage =>
+        convertedGnomadGenomeEcoll.flatMap { calls =>
           CountHeptamers.calculateHeptamer(coverage,
                                            calls,
                                            referenceFasta,
                                            referenceFai,
                                            gencodeGtf)
         }
-    }
+      }
 
     val filteredGnomadGenome =
       convertedGnomadGenome.flatMap { gnomadGenome =>
@@ -193,16 +199,16 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
       val depletionScores = feature2cp.flatMap { feature2cp =>
         variationsJoined.flatMap { variationsJoined =>
-          depletion3d.task(
-            Depletion3dInputFull(
-              locusDataFile = variationsJoined,
-              featureFile = feature2cp,
-              fasta = referenceFasta,
-              fai = referenceFai,
-              heptamerFrequencies = heptamerFrequencies,
-              numberOfIndividualsOfHeptamerFrequencies =
-                numberOfIndividualsOfHeptamerFrequencies
-            ))(CPUMemoryRequest(1, 1))
+          heptamerRates.flatMap { heptamerRates =>
+            depletion3d.task(
+              Depletion3dInputFull(
+                locusDataFile = variationsJoined,
+                featureFile = feature2cp,
+                fasta = referenceFasta,
+                fai = referenceFai,
+                heptamerNeutralRates = heptamerRates
+              ))(CPUMemoryRequest(1, 1))
+          }
         }
       }
 
@@ -246,7 +252,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
            variationsJoined,
            uniprotgencodemap,
            assemblies,
-           heptamerCounts) ++ scores)
+           heptamerRates) ++ scores)
 
   }
 }
