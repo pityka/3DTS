@@ -51,7 +51,7 @@ object CountHeptamers {
   val joinGnomadGenomeCoverageWithGnomadDataTask =
     EColl.outerJoinBy2[GenomeCoverage, GnomadLine](
       "joinGnomadCoverageWithData",
-      1)(1024 * 1024 * 100, _.cp, _.cp)
+      1)(1024 * 1024 * 10, _.cp, _.cp)
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
                         calls: EColl[GnomadLine],
@@ -77,7 +77,7 @@ object CountHeptamers {
   val groupByTask =
     EColl
       .groupBy[(String, (Seq[Int], Seq[Int], Int))]("groupHeptamer", 1)(
-        1024 * 1024 * 100,
+        1024 * 1024 * 10,
         _._1)
 
   val sum =
@@ -184,7 +184,7 @@ object CountHeptamers {
       1) { ecoll => implicit ctx =>
       implicit val mat = ctx.components.actorMaterializer
       val f = fileutils.openFileWriter { writer =>
-        ecoll.source.runForeach {
+        ecoll.source(resourceAllocated.cpu).runForeach {
           case (hept, rate, counts, calls) =>
             writer.write(s"$hept\t$rate\t$counts\t${calls.mkString(",")}\n")
         }

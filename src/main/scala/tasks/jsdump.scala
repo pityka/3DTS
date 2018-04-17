@@ -73,7 +73,8 @@ object JsDump {
 
     Flow[T]
       .map(x => ByteString(upickle.default.write(x)(pickler) + "\n"))
-      .batchWeighted(512 * 1024, _.size, identity)(_ ++ _)
+      .via(tasks.util.AkkaStreamComponents
+        .strictBatchWeighted[ByteString](512 * 1024, _.size)(_ ++ _))
       .via(Compression.gzip)
       .toMat(FileIO.toPath(tmp.toPath))(Keep.right)
       .mapMaterializedValue { futureIODone =>

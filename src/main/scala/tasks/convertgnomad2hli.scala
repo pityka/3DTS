@@ -26,7 +26,7 @@ object ConvertGnomad2HLI {
       js => implicit ctx =>
         implicit val mat = ctx.components.actorMaterializer
         log.info(s"Convert $js to ecoll.")
-        EColl.partitionsFromSource(js.source, js.sf.name, 8)
+        EColl.fromSource(js.source, js.sf.name, 1024 * 1024 * 10)
     }
 
   def vcf2json(line: String): List[GnomadLine] =

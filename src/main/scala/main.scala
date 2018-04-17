@@ -57,6 +57,10 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val gnomadGenomeCoverageFile: SharedFile = importFile(
       config.getString("gnomadGenomeCoverage"))
 
+
+    val gnomadWGSCoverage : List[SharedFile] = config.getStringList("gnomadWGSCoverage").map(importFile)
+    val gnomadWGSVCF : List[SharedFile] = config.getStringList("gnomadWGSVCF").map(importFile)
+
     val convertedGnomadGenome = {
       val gnomadGenome = importFile(config.getString("gnomadGenome"))
       ConvertGnomad2HLI.task(GnomadData(gnomadGenome))(
@@ -85,12 +89,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val gnomadGenomeCoverageEcoll = gnomadGenomeCoverage.flatMap(
       gnomadGenomeCoverage =>
         ConvertGenomeCoverage
-          .toEColl(gnomadGenomeCoverage)(CPUMemoryRequest(1, 5000)))
+          .toEColl(gnomadGenomeCoverage)(CPUMemoryRequest(6, 5000)))
 
     val convertedGnomadGenomeEcoll = convertedGnomadGenome.flatMap(
       convertedGnomadGenome =>
         ConvertGnomad2HLI
-          .toEColl(convertedGnomadGenome)(CPUMemoryRequest(1, 5000)))
+          .toEColl(convertedGnomadGenome)(CPUMemoryRequest(6, 5000)))
 
     val heptamerRates =
       gnomadGenomeCoverageEcoll.flatMap { coverage =>
