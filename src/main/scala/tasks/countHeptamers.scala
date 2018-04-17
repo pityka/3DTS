@@ -62,9 +62,9 @@ object CountHeptamers {
       ec: ExecutionContext): Future[HeptamerRates] = {
     for {
       filteredCoverage <- filterTask(coverage, gencode)(
-        CPUMemoryRequest(6, 5000))
+        CPUMemoryRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (filteredCoverage, calls))(CPUMemoryRequest(6, 5000))
+        (filteredCoverage, calls))(CPUMemoryRequest(12, 5000))
       mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
       grouped <- groupByTask(mapped)(CPUMemoryRequest(1, 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))

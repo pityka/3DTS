@@ -12,6 +12,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import java.net._
 import com.typesafe.config._
 
+import scala.collection.JavaConverters._
+
 class TaskRunner(implicit ts: TaskSystemComponents) {
 
   def run(config: Config) = {
@@ -57,9 +59,19 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val gnomadGenomeCoverageFile: SharedFile = importFile(
       config.getString("gnomadGenomeCoverage"))
 
-
-    val gnomadWGSCoverage : List[SharedFile] = config.getStringList("gnomadWGSCoverage").map(importFile)
-    val gnomadWGSVCF : List[SharedFile] = config.getStringList("gnomadWGSVCF").map(importFile)
+    val gnomadWGSCoverage: List[SharedFile] =
+      config
+        .getStringList("gnomadWGSCoverage")
+        .asScala
+        .toList
+        .map(importFile.apply)
+    val gnomadWGSVCF: List[GnomadData] =
+      config
+        .getStringList("gnomadWGSVCF")
+        .asScala
+        .toList
+        .map(s => importFile(s))
+        .map(GnomadData(_))
 
     val convertedGnomadGenome = {
       val gnomadGenome = importFile(config.getString("gnomadGenome"))
@@ -86,19 +98,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         CPUMemoryRequest(1, 5000))
     }
 
-    val gnomadGenomeCoverageEcoll = gnomadGenomeCoverage.flatMap(
-      gnomadGenomeCoverage =>
-        ConvertGenomeCoverage
-          .toEColl(gnomadGenomeCoverage)(CPUMemoryRequest(6, 5000)))
+    val gnomadWGSConvertedCoverage =
+      ConvertGenomeCoverage
+        .gnomadToEColl(gnomadWGSCoverage -> 15496)(CPUMemoryRequest(12, 5000))
 
-    val convertedGnomadGenomeEcoll = convertedGnomadGenome.flatMap(
-      convertedGnomadGenome =>
-        ConvertGnomad2HLI
-          .toEColl(convertedGnomadGenome)(CPUMemoryRequest(6, 5000)))
+    val gnomadWGSConvertedVCF =
+      ConvertGnomad2HLI
+        .gnomadToEColl(gnomadWGSVCF)(CPUMemoryRequest(12, 5000))
 
     val heptamerRates =
-      gnomadGenomeCoverageEcoll.flatMap { coverage =>
-        convertedGnomadGenomeEcoll.flatMap { calls =>
+      gnomadWGSConvertedCoverage.flatMap { coverage =>
+        gnomadWGSConvertedVCF.flatMap { calls =>
           CountHeptamers.calculateHeptamer(coverage,
                                            calls,
                                            referenceFasta,
