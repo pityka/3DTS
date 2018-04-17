@@ -65,8 +65,8 @@ object CountHeptamers {
         CPUMemoryRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
         (filteredCoverage, calls))(CPUMemoryRequest(12, 5000))
-      mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
-      grouped <- groupByTask(mapped)(CPUMemoryRequest(1, 5000))
+      mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(12, 5000))
+      grouped <- groupByTask(mapped)(CPUMemoryRequest(12, 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
       _ <- heptamerCounts(summed)(CPUMemoryRequest(1, 5000))
       rates <- heptamerNeutralRates(summed)(CPUMemoryRequest(1, 5000))
