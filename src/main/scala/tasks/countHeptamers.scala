@@ -51,7 +51,7 @@ object CountHeptamers {
   val joinGnomadGenomeCoverageWithGnomadDataTask =
     EColl.outerJoinBy2[GenomeCoverage, GnomadLine](
       "joinGnomadCoverageWithData",
-      1)(1024 * 1024 * 10, _.cp, _.cp)
+      1)(1024 * 1024 * 50, _.cp, _.cp)
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
                         calls: EColl[GnomadLine],
@@ -77,7 +77,7 @@ object CountHeptamers {
   val groupByTask =
     EColl
       .groupBy[(String, (Seq[Int], Seq[Int], Int))]("groupHeptamer", 1)(
-        1024 * 1024 * 10,
+        1024 * 1024 * 50,
         _._1)
 
   val sum =
@@ -143,29 +143,36 @@ object CountHeptamers {
                             gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount)
                           .getOrElse(0)
 
-                        val heptamer =
+                        val mayHeptamer =
                           HeptamerHelpers.heptamerAt(coverage.chromosome,
                                                      coverage.position,
                                                      reference)
-                        if (!heptamer.contains('N')) {
 
-                          passSNP.foreach { passSNP =>
-                            assert(passSNP.ref == heptamer(3).toString)
-                          }
-                          mutable.get(heptamer) match {
-                            case None =>
-                              mutable.update(
-                                heptamer,
-                                (List(sampleSize), List(variantAlleleCount), 1))
-                            case Some(
-                                (sampleSizes,
-                                 variantAlleleCounts,
-                                 heptamerCount)) =>
-                              mutable.update(
-                                heptamer,
-                                (sampleSize :: sampleSizes,
-                                 variantAlleleCount :: variantAlleleCounts,
-                                 heptamerCount + 1))
+                        mayHeptamer.failed.foreach { e =>
+                          log.warning(s"Heptamer retrieval failed $coverage $e")
+                        }
+                        mayHeptamer.foreach { heptamer =>
+                          if (!heptamer.contains('N')) {
+
+                            passSNP.foreach { passSNP =>
+                              assert(passSNP.ref == heptamer(3).toString)
+                            }
+                            mutable.get(heptamer) match {
+                              case None =>
+                                mutable.update(heptamer,
+                                               (List(sampleSize),
+                                                List(variantAlleleCount),
+                                                1))
+                              case Some(
+                                  (sampleSizes,
+                                   variantAlleleCounts,
+                                   heptamerCount)) =>
+                                mutable.update(
+                                  heptamer,
+                                  (sampleSize :: sampleSizes,
+                                   variantAlleleCount :: variantAlleleCounts,
+                                   heptamerCount + 1))
+                            }
                           }
                         }
                         mutable

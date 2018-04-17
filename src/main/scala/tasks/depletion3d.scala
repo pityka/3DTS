@@ -156,7 +156,8 @@ object depletion3d {
 
               val pSynByHeptamer = loci.map { locus =>
                 val cp = locus.locus
-                val heptamer = HeptamerHelpers.heptamerAt(cp, referenceSequence)
+                val heptamer =
+                  HeptamerHelpers.heptamerAt(cp, referenceSequence).get
 
                 heptamerNeutralRates(heptamer)
               }.toArray

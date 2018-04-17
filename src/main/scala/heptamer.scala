@@ -1,20 +1,22 @@
 import htsjdk.samtools.reference._
 import stringsplit._
 import java.io.File
+import scala.util.Try
 
 object HeptamerHelpers {
 
-  def heptamerAt(cp: ChrPos, genome: IndexedFastaSequenceFile): String = {
-    val Seq(chr, bp0, _) = cp.s.split1('\t')
-    genome
-      .getSubsequenceAt(chr.drop(3), bp0.toLong - 2, bp0.toLong + 4)
-      .getBaseString()
-      .toUpperCase
-  }
+  def heptamerAt(cp: ChrPos, genome: IndexedFastaSequenceFile): Try[String] =
+    Try {
+      val Seq(chr, bp0, _) = cp.s.split1('\t')
+      genome
+        .getSubsequenceAt(chr.drop(3), bp0.toLong - 2, bp0.toLong + 4)
+        .getBaseString()
+        .toUpperCase
+    }
 
   def heptamerAt(chromosome: String,
                  bp1: Int,
-                 genome: IndexedFastaSequenceFile): String = {
+                 genome: IndexedFastaSequenceFile): Try[String] = Try {
     genome
       .getSubsequenceAt(chromosome.drop(3), bp1.toLong - 3, bp1.toLong + 3)
       .getBaseString()

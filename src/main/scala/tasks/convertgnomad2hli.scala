@@ -46,7 +46,7 @@ object ConvertGnomad2HLI {
         .filter(_.startsWith("A"))
         .map(_.split1('='))
         .filter(_.size == 2)
-        .map(x => x(0) -> x(1).split1(','))
+        .map(x => x(0) -> x(1).split(","))
         .filter(x => neededAnnotations.contains(x._1))
         .toMap
 
