@@ -51,7 +51,7 @@ object CountHeptamers {
   val joinGnomadGenomeCoverageWithGnomadDataTask =
     EColl.outerJoinBy2[GenomeCoverage, GnomadLine](
       "joinGnomadCoverageWithData",
-      1)(1024 * 1024 * 50, _.cp, _.cp)
+      1)(1024 * 1024 * 50, _.cp, _.cp, Some(3))
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
                         calls: EColl[GnomadLine],
@@ -65,7 +65,7 @@ object CountHeptamers {
         CPUMemoryRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
         (filteredCoverage, calls))(CPUMemoryRequest(12, 5000))
-      mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(12, 5000))
+      mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
       grouped <- groupByTask(mapped)(CPUMemoryRequest(12, 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
       _ <- heptamerCounts(summed)(CPUMemoryRequest(1, 5000))
@@ -78,7 +78,8 @@ object CountHeptamers {
     EColl
       .groupBy[(String, (Seq[Int], Seq[Int], Int))]("groupHeptamer", 1)(
         1024 * 1024 * 50,
-        _._1)
+        _._1,
+        Some(1))
 
   val sum =
     EColl.reduceSeq[(String, (Seq[Int], Seq[Int], Int))]("sumHeptamer", 1) {

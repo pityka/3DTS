@@ -35,18 +35,18 @@ object ConvertGnomad2HLI {
     else {
       val neededAnnotations =
         List("AC_Female", "AN_Female", "AC_Male", "AN_Male")
-      val spl = line.split1('\t')
+      val spl = line.split1Array('\t')
       val chr = spl(0)
       val position = spl(1).toInt
       val ref = spl(3)
-      val alts = spl(4).split(",").toList
+      val alts = spl(4).split1Array(',').toList
       val vcf_filter = spl(6)
       val anno = spl(7)
         .split1(';')
         .filter(_.startsWith("A"))
         .map(_.split1('='))
         .filter(_.size == 2)
-        .map(x => x(0) -> x(1).split(","))
+        .map(x => x(0) -> x(1).split1Array(','))
         .filter(x => neededAnnotations.contains(x._1))
         .toMap
 
