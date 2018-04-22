@@ -9,16 +9,6 @@ object Model {
           numLoci
     } sum
 
-  def appoximationPoissonCodonWithRounds(codons: Seq[(Seq[Int], Int, Int)],
-                                         p: Double) =
-    codons.map {
-      case (codon, mult, rounds) =>
-        val e = 1d - (codon map { i =>
-          math.exp(-1 * p * rounds * i / 3d)
-        } reduce (_ * _))
-        e * mult
-    } sum
-
   def solveForPWithNsWithRounds(size: Seq[(Int, Int, Int)],
                                 successes: Double): Double = {
 
