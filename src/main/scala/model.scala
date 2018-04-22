@@ -54,12 +54,12 @@ object Model {
     posteriorUnderSelection1D(lociRounds.map(_ => 3),
                               lociRounds,
                               successes,
-                              lociRounds.map(_ => 1.0))._3
+                              lociRounds.map(_ => 1.0))
 
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Double): (Double, Double, Double) =
+                                p: Double): Double =
     posteriorUnderSelection1D(lociNumNs,
                               lociRounds,
                               successes,
@@ -68,17 +68,15 @@ object Model {
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Array[Double]): (Double, Double, Double) = {
+                                p: Array[Double]): Double = {
 
     val `P(x|s)` =
       likelihoodLoci(lociNumNs, lociRounds, successes, p, _: Double)
 
-    val Posteriors(postP1, _, _, postLessThan10, postMean) =
-      bayesAlternatingPriors(`P(x|s)` = `P(x|s)`,
-                             prior1 = MathHelpers.leftSkew,
-                             prior2 = MathHelpers.uniform)
+    val Posteriors(_, postMean) =
+      bayes(`P(x|s)` = `P(x|s)`, prior1 = MathHelpers.uniform)
 
-    (postP1, postLessThan10, postMean)
+    (postMean)
   }
 
 }

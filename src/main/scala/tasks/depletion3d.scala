@@ -135,7 +135,7 @@ object depletion3d {
                                                       numSGroupedInFullChain,
                                                     p = pSyn)
 
-              val (postP1, postLess, postMean) =
+              val postMean =
                 posteriorUnderSelection1D(numNs, sampleSizeNs, countNs, pSyn)
 
               val synSizeInFullChain: Seq[(Int, Int, Int)] =
@@ -148,7 +148,7 @@ object depletion3d {
                 solveForPWithNsWithRounds(size = synSizeInFullChain,
                                           successes = countSInFullChain)
 
-              val (postP12d, postLess2d, postMean2d) =
+              val postMean2d =
                 posteriorUnderSelection1D(numNs,
                                           sampleSizeNs,
                                           countNs,
@@ -162,7 +162,7 @@ object depletion3d {
                 heptamerNeutralRates(heptamer)
               }.toArray
 
-              val (postP1Hepta, postLessHepta, postMeanHepta) =
+              val postMeanHepta =
                 posteriorUnderSelection1D(numNs,
                                           sampleSizeNs,
                                           countNs,
@@ -179,11 +179,11 @@ object depletion3d {
                      expectedSInFullChain,
                      loci.size,
                      locus.sampleSize,
-                     postP1,
-                     postLess,
+                     -1d,
+                     -1d,
                      postMean,
-                     postP12d,
-                     postLess2d,
+                     -1d,
+                     -1d,
                      postMean2d).productIterator.mkString("\t") + "\n")
                 }
               }
@@ -195,11 +195,11 @@ object depletion3d {
                  ObsS(countSInFullChain),
                  ExpS(expectedSInFullChain),
                  NumLoci(loci.size),
-                 NsPostP1(postP1),
-                 NsPostLess10(postLess),
+                 NsPostP1(-1d),
+                 NsPostLess10(-1d),
                  NsPostMean(postMean),
-                 NsPostP12D(postP12d),
-                 NsPostLess102D(postLess2d),
+                 NsPostP12D(-1d),
+                 NsPostLess102D(-1d),
                  NsPostMean2D(postMean2d),
                  unis)
 
