@@ -207,7 +207,7 @@ object CountHeptamers {
       case (heptamer, (samples, alleleCounts, _)) =>
         val countOfVariableLoci = alleleCounts.count(_ > 0)
         val p =
-          Model.posteriorMeanOfNeutralRate(samples.toArray, countOfVariableLoci)
+          Model.mlNeutral(samples.toArray, countOfVariableLoci)
         (heptamer, p, countOfVariableLoci, samples)
     }
 

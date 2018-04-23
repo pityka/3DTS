@@ -27,11 +27,11 @@ object Model {
       math.exp(-1 * p * rounds * selection * numNs / 3d)
 
   /* P(x|p,s) */
-  def likelihoodLoci(lociNumNs: Array[Int],
-                     lociRounds: Array[Int],
-                     successes: Int,
-                     p: Array[Double],
-                     selection: Double): Double = {
+  def logLikelihoodLoci(lociNumNs: Array[Int],
+                        lociRounds: Array[Int],
+                        successes: Int,
+                        p: Array[Double],
+                        selection: Double): Double = {
     val ps = {
       var s = 0d
       var i = 0
@@ -46,7 +46,38 @@ object Model {
     }
 
     // poibin.pdf(Array(successes), ps.toArray)(0)
-    jdistlib.Poisson.density(successes, ps, false)
+    jdistlib.Poisson.density(successes, ps, true)
+  }
+
+  def likelihoodLoci(lociNumNs: Array[Int],
+                     lociRounds: Array[Int],
+                     successes: Int,
+                     p: Array[Double],
+                     selection: Double): Double = {
+    val ll = logLikelihoodLoci(lociNumNs, lociRounds, successes, p, selection)
+    math.exp(ll)
+  }
+
+  def mlNeutral(lociRounds: Array[Int], successes: Int): Double = {
+    val lik = (d: Double) =>
+      logLikelihoodLoci(lociRounds.map(_ => 3),
+                        lociRounds,
+                        successes,
+                        lociRounds.map(_ => 1.0),
+                        d)
+
+    val (max, it) =
+      findMinimum(1E-12, 0.01, 1E-20, 20000)((d: Double) => -1 * lik(d))
+    val maxV = lik(max)
+    val predicted = appoximationPoissonWithNsWithRounds(lociRounds.map {
+      rounds =>
+        (3, 1, rounds)
+    }, max)
+
+    println(s"$successes ${lociRounds.size} ${lociRounds.sorted
+      .apply(lociRounds.size / 2)} | ${lik(1E-6)} ${lik(5E-6)} ${lik(1E-5)} ${lik(
+      5E-5)} ${lik(1E-4)} ${lik(5E-4)}  | ($max $maxV $predicted $it)")
+    max
   }
 
   def posteriorMeanOfNeutralRate(lociRounds: Array[Int],
