@@ -185,20 +185,44 @@ object CountHeptamers {
             Source.fromFuture(countTable).flatMapConcat(list => Source(list))
 
       }
+  import akka.stream.scaladsl._
+  import akka.util.ByteString
+  def zippedTemporaryFileSink(
+      implicit ec: ExecutionContext): Sink[ByteString, Future[File]] = {
+    val f = tasks.util.TempFile.createTempFile("tmp")
+    Flow[ByteString]
+      .via(tasks.util.AkkaStreamComponents
+        .strictBatchWeighted[ByteString](1024 * 512, _.size.toLong)(_ ++ _))
+      .via(Compression.gzip)
+      .toMat(FileIO.toPath(f.toPath))(Keep.right)
+      .mapMaterializedValue(_.map(_ => f))
+  }
 
   val heptamerFrequenciesToFile =
     AsyncTask[EColl[(String, Double, Int, Seq[Int])], HeptamerRates](
       "writeHeptamerRates",
-      1) { ecoll => implicit ctx =>
+      3) { ecoll => implicit ctx =>
       implicit val mat = ctx.components.actorMaterializer
-      val f = fileutils.openFileWriter { writer =>
-        ecoll.source(resourceAllocated.cpu).runForeach {
-          case (hept, rate, counts, calls) =>
-            writer.write(s"$hept\t$rate\t$counts\t${calls.mkString(",")}\n")
+
+      val accepted = Set('A', 'T', 'G', 'C')
+
+      ecoll
+        .source(resourceAllocated.cpu)
+        .map {
+          case (hept, rate, counts, _) =>
+            if ((hept.toSet &~ accepted).isEmpty) {
+              val str = s"$hept\t$rate\t$counts\n"
+              ByteString(str)
+            } else {
+              ByteString.empty
+            }
         }
-      }._1
-      SharedFile(f, "heptamerRates." + ecoll.basename)
-        .map(HeptamerRates.apply)
+        .toMat(zippedTemporaryFileSink)(Keep.right)
+        .run
+        .flatMap { f =>
+          SharedFile(f, "heptamerRates." + ecoll.basename)
+            .map(HeptamerRates.apply)
+        }
     }
 
   val heptamerNeutralRates =
