@@ -195,20 +195,15 @@ case class FeatureKey2(pdbId: PdbId,
     pdbId.s + "_" + pdbChain.s + "_" + uniprotFeatureName.s + "_" + pdbResidueMin.s + "_" + pdbResidueMax.s
 }
 
-case class DepletionRow(_1: FeatureKey,
-                        _2: ObsNs,
-                        _3: ExpNs,
-                        _4: ObsS,
-                        _5: ExpS,
-                        _6: NumLoci,
-                        _7: NsPostP1,
-                        _8: NsPostLess10,
-                        _9: NsPostMean,
-                        _10: NsPostP12D,
-                        _11: NsPostLess102D,
-                        _12: NsPostMean2D,
-                        _13: Map[String, MyColor],
-                        _14: Seq[UniId])
+case class DepletionRow(featureKey: FeatureKey,
+                        obsNs: ObsNs,
+                        expNs: ExpNs,
+                        obsS: ObsS,
+                        expS: ExpS,
+                        numLoci: NumLoci,
+                        nsPostMeanGlobalRate: NsPostMeanGlobalRate,
+                        nsPostMeanHeptamerSpecificRate: NsPostMeanHeptamerSpecificRate        
+                        uniprotIds: Seq[UniId])
 
 object DepletionRow {
   implicit val rw = upickle.default.macroRW[DepletionRow]
