@@ -256,13 +256,8 @@ class ProteinUI(
                         ObsS(obss),
                         ExpS(exps),
                         NumLoci(size),
-                        NsPostP1(postp1),
-                        NsPostLess10(postless),
-                        NsPostMean(postmean),
-                        NsPostP12D(postP12d),
-                        NsPostLess102D(postLess2d),
-                        NsPostMean2D(postMean2d),
-                        _,
+                        NsPostMeanGlobalRate(nsPostmean),
+                        NsPostMeanHeptamerSpecificRate(nsPostMeanHepta),
                         unis) =>
         val btn = button(
           `class` := "uk-button uk-button-default uk-button-small uk-button-primary",
@@ -316,7 +311,7 @@ class ProteinUI(
           td(obss),
           td(f"$exps%1.2f"),
           td(size),
-          td(f"$postmean%1.2f"),
+          td(f"$nsPostmean%1.2f"),
           //  td(f"$postmean2d%1.2f"),
           unis.map(_.s).mkString(",")
         ).render
@@ -356,9 +351,7 @@ class ProteinUI(
             byResidue.get((pdbChain -> pdbRes)).toList.flatten.distinct
           renderTable(pdbId.s + "/" + pdbChain.s + "/" + pdbRes.s, scores)
       }
-      .getOrElse(
-        renderTable("",
-                    byResidue.values.flatten.toSeq.distinct.sortBy(_._12.v)))
+      .getOrElse(renderTable("", byResidue.values.flatten.toSeq.distinct))
   }
 
   val resetClickButton =
@@ -385,10 +378,7 @@ class ProteinUI(
       : Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] =
       byResidue.map {
         case (key, scores) =>
-          val min = scores.minBy(_._12.v)
-          key -> Array(min._13(colorString).r / 255d,
-                       min._13(colorString).g / 255d,
-                       min._13(colorString).b / 255d)
+          key -> Array(1d, 1d, 1d)
       }
 
     val colorByResidue_Mean1DLocal = colorByResidue("PMean_2d_local")

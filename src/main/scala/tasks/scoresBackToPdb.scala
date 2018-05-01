@@ -4,6 +4,7 @@ import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
 
@@ -13,7 +14,7 @@ import index2._
 import SharedTypes._
 
 case class Depletion2PdbInput(
-    posteriorFile: JsDump[DepletionRow],
+    posteriorFile: EColl[DepletionRow],
     contextFile: JsDump[StructuralContext.T1]
 )
 
@@ -66,12 +67,14 @@ object Depletion2Pdb {
           contextJs
           ) =>
         implicit ctx =>
+          implicit val am = ctx.components.actorMaterializer
           for {
-            scoresL <- scoresJs.sf.file
             contextL <- contextJs.sf.file
+            scoreMap <- scoresJs
+              .source(resourceAllocated.cpu)
+              .runWith(akka.stream.scaladsl.Sink.seq)
+              .map(_.groupBy(_.featureKey))
             result <- {
-              val scoreMap =
-                scoresJs.iterator(scoresL)(_.toVector).groupBy(_._1)
 
               contextJs.iterator(contextL) { contextIter =>
                 val iter = contextIter.flatMap {
@@ -88,9 +91,9 @@ object Depletion2Pdb {
 
                     }
                 }
-                JsDump.fromIterator(
-                  iter,
-                  name = scoresJs.sf.name + ".back2pdb.json.gz")
+                JsDump.fromIterator(iter,
+                                    name = scoresJs.partitions.headOption.fold(
+                                      "scores")(_.name) + ".back2pdb.json.gz")
               }
 
             }

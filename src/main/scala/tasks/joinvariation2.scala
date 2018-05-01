@@ -4,6 +4,7 @@ import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import tasks.upicklesupport._
@@ -29,6 +30,20 @@ case class JoinVariationsInput(
     gencodeGtf: SharedFile)
 
 object joinVariations {
+
+  val toEColl =
+    AsyncTask[JsDump[LocusVariationCountAndNumNs],
+              EColl[LocusVariationCountAndNumNs]](
+      "convertjoindvariations-ecoll-1",
+      1) {
+      case js =>
+        implicit ctx =>
+          EColl.fromSource(js.source,
+                           js.sf.name,
+                           1024 * 1024 * 50,
+                           parallelism = resourceAllocated.cpu)
+
+    }
 
   val task =
     AsyncTask[JoinVariationsInput, JsDump[LocusVariationCountAndNumNs]](

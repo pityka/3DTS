@@ -63,14 +63,14 @@ object Server {
             pdbuni._5.s,
             pdbuni._6.i + 1,
             pdbuni._7.s) ++ List(
-        scores.featureScores._1.toString,
-        scores.featureScores._2.v,
-        scores.featureScores._3.v,
-        scores.featureScores._4.v,
-        scores.featureScores._5.v,
-        scores.featureScores._6.v,
-        scores.featureScores._9.v,
-        scores.featureScores._12.v
+        // scores.featureScores._1.toString,
+        // scores.featureScores._2.v,
+        // scores.featureScores._3.v,
+        // scores.featureScores._4.v,
+        // scores.featureScores._5.v,
+        // scores.featureScores._6.v,
+        // scores.featureScores._9.v,
+        // scores.featureScores._12.v
       ) ++ ligand.data
         .map(x => x._1 + ":" + x._2)).mkString(",")
     }
@@ -207,14 +207,14 @@ object Server {
     List(
       e.pdbId,
       e.pdbChain,
-      e.pdbResidue,
-      e.featureScores._2.v,
-      e.featureScores._3.v,
-      e.featureScores._4.v,
-      e.featureScores._5.v,
-      e.featureScores._6.v,
-      e.featureScores._9.v,
-      e.featureScores._12.v
+      e.pdbResidue
+      // e.featureScores._2.v,
+      // e.featureScores._3.v,
+      // e.featureScores._4.v,
+      // e.featureScores._5.v,
+      // e.featureScores._6.v,
+      // e.featureScores._9.v,
+      // e.featureScores._12.v
     ).map(_.toString).mkString(",")
   }
 

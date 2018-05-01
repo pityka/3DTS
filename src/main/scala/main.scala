@@ -153,6 +153,10 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       }
     }
 
+    val variationsJoinedEColl = variationsJoined.flatMap { f =>
+      joinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
+    }
+
     val uniprotpdbmap = uniprotgencodemap.flatMap { uniprotgencodemap =>
       UniProtPdb.task(
         UniProtPdbFullInput(uniprotKbOriginal, uniprotgencodemap))(
@@ -211,17 +215,19 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         }
       }
 
-      val depletionScores = feature2cp.flatMap { feature2cp =>
-        variationsJoined.flatMap { variationsJoined =>
+      val feature2cpEcoll = feature2cp.flatMap { f =>
+        Feature2CPSecond.toEColl(f)(CPUMemoryRequest(12, 5000))
+      }
+
+      val depletionScores = feature2cpEcoll.flatMap { feature2cp =>
+        variationsJoinedEColl.flatMap { variationsJoined =>
           heptamerRates.flatMap { heptamerRates =>
-            depletion3d.task(
-              Depletion3dInputFull(
-                locusDataFile = variationsJoined,
-                featureFile = feature2cp,
-                fasta = referenceFasta,
-                fai = referenceFai,
-                heptamerNeutralRates = heptamerRates
-              ))(CPUMemoryRequest(1, 1))
+            depletion3d.computeDepletionScores(variationsJoined,
+                                               feature2cp,
+                                               fasta = referenceFasta,
+                                               fai = referenceFai,
+                                               heptamerNeutralRates =
+                                                 heptamerRates)
           }
         }
       }
@@ -230,7 +236,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         features.flatMap { features =>
           Depletion2Pdb.task(
             Depletion2PdbInput(
-              scores.js,
+              scores,
               features
             ))(CPUMemoryRequest(1, 10000))
         }

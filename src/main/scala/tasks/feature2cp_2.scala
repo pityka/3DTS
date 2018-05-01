@@ -4,6 +4,7 @@ import scala.sys.process._
 import scala.concurrent._
 import scala.concurrent.duration._
 import tasks._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
 
@@ -26,6 +27,19 @@ object Feature2CPSecond {
 
   type MappedFeatures =
     (FeatureKey, ChrPos, PdbChain, PdbResidueNumberUnresolved, Seq[UniId])
+
+  val toEColl =
+    AsyncTask[JsDump[MappedFeatures], EColl[MappedFeatures]](
+      "convertfeature2cp-ecoll-1",
+      1) {
+      case js =>
+        implicit ctx =>
+          EColl.fromSource(js.source,
+                           js.sf.name,
+                           1024 * 1024 * 50,
+                           parallelism = resourceAllocated.cpu)
+
+    }
 
   val task =
     AsyncTask[Feature2CPSecondInput, JsDump[MappedFeatures]](
