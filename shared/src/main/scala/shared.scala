@@ -127,15 +127,15 @@ object NumLoci {
   implicit val pickler =
     AnyValPicklers(NumLoci.unapply, NumLoci.apply)
 }
-case class NsPostMeanGlobalRate(v: Double) extends AnyVal
-object NsPostMeanGlobalRate {
+case class NsPostMeanGlobalSynonymousRate(v: Double) extends AnyVal
+object NsPostMeanGlobalSynonymousRate {
   implicit val pickler =
-    AnyValPicklers(NsPostMeanGlobalRate.unapply, NsPostMeanGlobalRate.apply)
+    AnyValPicklers(NsPostMeanGlobalSynonymousRate.unapply, NsPostMeanGlobalSynonymousRate.apply)
 }
-case class NsPostMeanHeptamerSpecificRate(v: Double) extends AnyVal
-object NsPostMeanHeptamerSpecificRate {
+case class NsPostMeanHeptamerSpecificIntergenicRate(v: Double) extends AnyVal
+object NsPostMeanHeptamerSpecificIntergenicRate {
   implicit val pickler =
-    AnyValPicklers(NsPostMeanHeptamerSpecificRate.unapply, NsPostMeanHeptamerSpecificRate.apply)
+    AnyValPicklers(NsPostMeanHeptamerSpecificIntergenicRate.unapply, NsPostMeanHeptamerSpecificIntergenicRate.apply)
 }
 case class MyColor(r: Int, g: Int, b: Int)
 case class ExpS(v: Double) extends AnyVal
@@ -181,8 +181,8 @@ case class DepletionRow(featureKey: FeatureKey,
                         obsS: ObsS,
                         expS: ExpS,
                         numLoci: NumLoci,
-                        nsPostMeanGlobalRate: NsPostMeanGlobalRate,
-                        nsPostMeanHeptamerSpecificRate: NsPostMeanHeptamerSpecificRate     ,   
+                        nsPostMeanGlobalSynonymousRate: NsPostMeanGlobalSynonymousRate,
+                        nsPostMeanHeptamerSpecificIntergenicRate: NsPostMeanHeptamerSpecificIntergenicRate     ,   
                         uniprotIds: Seq[UniId])
 
 object DepletionRow {

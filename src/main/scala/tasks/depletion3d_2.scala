@@ -45,7 +45,7 @@ object depletion3d {
       lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs],
       name: String,
       features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
-      pSyn: Double,
+      pSynonymous: Double,
       referenceSequence: IndexedFastaSequenceFile,
       heptamerNeutralRates: Map[String, Double]): List[DepletionRow] = {
 
@@ -74,13 +74,12 @@ object depletion3d {
           val numNs = loci.map(_.numNs).toArray
           val sampleSizeNs = loci.map(_.sampleSize).toArray
 
-          val countSInFullChain =
-            lociInThisPdbChain.count(x => x.alleleCountSyn > 0)
-          val numSInFullChain = lociInThisPdbChain.map(_.numS).toArray
-          val sampleSizeSInFullChain =
-            lociInThisPdbChain.map(_.sampleSize).toArray
+          val exclude = {
+            val countSInFullChain =
+              lociInThisPdbChain.count(x => x.alleleCountSyn > 0)
 
-          val exclude = countSInFullChain == 0
+            countSInFullChain == 0
+          }
 
           if (!exclude) {
 
@@ -97,34 +96,32 @@ object depletion3d {
                 .map(x => (x._1._1, x._2.size, x._1._2))
 
             val expectedNs =
-              appoximationPoissonWithNsWithRounds(sizes = numNsGrouped,
-                                                  p = pSyn)
+              predictionPoissonWithNsWithRounds(sizes = numNsGrouped,
+                                                p = pSynonymous)
             val expectedSInFullChain =
-              appoximationPoissonWithNsWithRounds(
-                sizes = numSGroupedInFullChain,
-                p = pSyn)
+              predictionPoissonWithNsWithRounds(sizes = numSGroupedInFullChain,
+                                                p = pSynonymous)
 
-            val postMean =
-              posteriorUnderSelection1D(numNs, sampleSizeNs, countNs, pSyn)
-
-            val synSizeInFullChain: Seq[(Int, Int, Int)] =
-              (numSInFullChain zip sampleSizeSInFullChain)
-                .groupBy(x => x)
-                .map(x => (x._1._1, x._1._2, x._2.size))
-                .toList
-            val pSynByHeptamer = loci.map { locus =>
-              val cp = locus.locus
-              val heptamer =
-                HeptamerHelpers.heptamerAt(cp, referenceSequence).get
-
-              heptamerNeutralRates(heptamer)
-            }.toArray
-
-            val postMeanHepta =
+            val postMeanAgainstSynonymousRate =
               posteriorUnderSelection1D(numNs,
                                         sampleSizeNs,
                                         countNs,
-                                        pSynByHeptamer)
+                                        pSynonymous)
+
+            val postMeanHepta = {
+              val pIntergenicByHeptamer = loci.map { locus =>
+                val cp = locus.locus
+                val heptamer =
+                  HeptamerHelpers.heptamerAt(cp, referenceSequence).get
+
+                heptamerNeutralRates(heptamer)
+              }.toArray
+
+              posteriorUnderSelection1D(numNs,
+                                        sampleSizeNs,
+                                        countNs,
+                                        pIntergenicByHeptamer)
+            }
             val row =
               (feature,
                ObsNs(countNs),
@@ -132,8 +129,8 @@ object depletion3d {
                ObsS(countSInFullChain),
                ExpS(expectedSInFullChain),
                NumLoci(loci.size),
-               NsPostMeanGlobalRate(postMean),
-               NsPostMeanHeptamerSpecificRate(postMeanHepta),
+               NsPostMeanGlobalSynonymousRate(postMeanAgainstSynonymousRate),
+               NsPostMeanHeptamerSpecificIntergenicRate(postMeanHepta),
                unis)
 
             Some(row)

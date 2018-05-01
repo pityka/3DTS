@@ -1,8 +1,8 @@
 import MathHelpers._
 object Model {
 
-  def appoximationPoissonWithNsWithRounds(sizes: Seq[(Int, Int, Int)],
-                                          p: Double) =
+  def predictionPoissonWithNsWithRounds(sizes: Seq[(Int, Int, Int)],
+                                        p: Double) =
     sizes map {
       case (ns, numLoci, rounds) =>
         (1d - math.exp(-1 * p * rounds * ns / 3d)) *
@@ -13,7 +13,7 @@ object Model {
                                 successes: Double): Double = {
 
     val f = (p: Double) => {
-      appoximationPoissonWithNsWithRounds(size, p) - successes
+      predictionPoissonWithNsWithRounds(size, p) - successes
     }
 
     bisect(1E-10, 1E-3, 1E-5, 200, 1E-25, 1E-25)(f)
@@ -68,15 +68,15 @@ object Model {
 
     val (max, it) =
       findMinimum(1E-12, 0.01, 1E-20, 20000)((d: Double) => -1 * lik(d))
-    val maxV = lik(max)
-    val predicted = appoximationPoissonWithNsWithRounds(lociRounds.map {
-      rounds =>
-        (3, 1, rounds)
-    }, max)
+    // val maxV = lik(max)
+    // val predicted = appoximationPoissonWithNsWithRounds(lociRounds.map {
+    //   rounds =>
+    //     (3, 1, rounds)
+    // }, max)
 
-    println(s"$successes ${lociRounds.size} ${lociRounds.sorted
-      .apply(lociRounds.size / 2)} | ${lik(1E-6)} ${lik(5E-6)} ${lik(1E-5)} ${lik(
-      5E-5)} ${lik(1E-4)} ${lik(5E-4)}  | ($max $maxV $predicted $it)")
+    // println(s"$successes ${lociRounds.size} ${lociRounds.sorted
+    //   .apply(lociRounds.size / 2)} | ${lik(1E-6)} ${lik(5E-6)} ${lik(1E-5)} ${lik(
+    //   5E-5)} ${lik(1E-4)} ${lik(5E-4)}  | ($max $maxV $predicted $it)")
     max
   }
 
