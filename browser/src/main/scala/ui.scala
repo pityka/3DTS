@@ -256,8 +256,10 @@ class ProteinUI(
                         ObsS(obss),
                         ExpS(exps),
                         NumLoci(size),
-                        NsPostMeanGlobalRate(nsPostmean),
-                        NsPostMeanHeptamerSpecificRate(nsPostMeanHepta),
+                        NsPostMeanGlobalSynonymousRate(nsPostmean),
+                        NsPostMeanHeptamerSpecificIntergenicRate(
+                          nsPostMeanHepta),
+                        NsPostMeanGlobalIntergenicRate(_),
                         unis) =>
         val btn = button(
           `class` := "uk-button uk-button-default uk-button-small uk-button-primary",

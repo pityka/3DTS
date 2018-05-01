@@ -28,7 +28,8 @@ object depletion3d {
                              features: EColl[Feature2CPSecond.MappedFeatures],
                              fasta: SharedFile,
                              fai: SharedFile,
-                             heptamerNeutralRates: HeptamerRates)(
+                             heptamerNeutralRates: HeptamerRates,
+                             globalIntergenicRate: GlobalIntergenicRate)(
       implicit tc: tasks.TaskSystemComponents,
       ec: ExecutionContext) =
     for {
@@ -37,8 +38,11 @@ object depletion3d {
       unused <- groupByPdbId(features)(CPUMemoryRequest(12, 5000))
       mapped <- computeScores(
         grouped,
-        Depletion3dInput(locusData, fasta, fai, heptamerNeutralRates))(
-        CPUMemoryRequest(1, 5000))
+        Depletion3dInput(locusData,
+                         fasta,
+                         fai,
+                         heptamerNeutralRates,
+                         globalIntergenicRate))(CPUMemoryRequest(1, 5000))
     } yield mapped
 
   def makeScores(
@@ -47,7 +51,8 @@ object depletion3d {
       features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
       pSynonymous: Double,
       referenceSequence: IndexedFastaSequenceFile,
-      heptamerNeutralRates: Map[String, Double]): List[DepletionRow] = {
+      heptamerNeutralRates: Map[String, Double],
+      globalIntergenicRate: GlobalIntergenicRate): List[DepletionRow] = {
 
     val lociByPdbChain: Map[(PdbId, PdbChain), Vector[ChrPos]] = features
       .groupBy(x => x._2.pdbId -> x._2.pdbChain)
@@ -74,10 +79,10 @@ object depletion3d {
           val numNs = loci.map(_.numNs).toArray
           val sampleSizeNs = loci.map(_.sampleSize).toArray
 
-          val exclude = {
-            val countSInFullChain =
-              lociInThisPdbChain.count(x => x.alleleCountSyn > 0)
+          val countSInFullChain =
+            lociInThisPdbChain.count(x => x.alleleCountSyn > 0)
 
+          val exclude = {
             countSInFullChain == 0
           }
 
@@ -122,6 +127,13 @@ object depletion3d {
                                         countNs,
                                         pIntergenicByHeptamer)
             }
+
+            val postMeanAgainstGlobalIntergenicRate =
+              posteriorUnderSelection1D(numNs,
+                                        sampleSizeNs,
+                                        countNs,
+                                        globalIntergenicRate.v)
+
             val row =
               (feature,
                ObsNs(countNs),
@@ -131,6 +143,8 @@ object depletion3d {
                NumLoci(loci.size),
                NsPostMeanGlobalSynonymousRate(postMeanAgainstSynonymousRate),
                NsPostMeanHeptamerSpecificIntergenicRate(postMeanHepta),
+               NsPostMeanGlobalIntergenicRate(
+                 postMeanAgainstGlobalIntergenicRate),
                unis)
 
             Some(row)
@@ -150,7 +164,16 @@ object depletion3d {
       .flatMap {
         case (_, features) =>
           features.map { x =>
-            DepletionRow(x._1, x._2, x._3, x._4, x._5, x._6, x._7, x._8, x._9)
+            DepletionRow(x._1,
+                         x._2,
+                         x._3,
+                         x._4,
+                         x._5,
+                         x._6,
+                         x._7,
+                         x._8,
+                         x._9,
+                         x._10)
           }
       }
 
@@ -220,13 +243,19 @@ object depletion3d {
   case class Depletion3dInput(locusData: EColl[LocusVariationCountAndNumNs],
                               fasta: SharedFile,
                               fai: SharedFile,
-                              heptamerNeutralRates: HeptamerRates)
+                              heptamerNeutralRates: HeptamerRates,
+                              globalIntergenicRate: GlobalIntergenicRate)
 
   val computeScores = EColl
     .mapSourceWith[Seq[Feature2CPSecond.MappedFeatures],
                    Depletion3dInput,
                    DepletionRow]("depletion3d", 8) {
-      case (source, Depletion3dInput(loci, fasta, fai, heptamerRates)) =>
+      case (source,
+            Depletion3dInput(loci,
+                             fasta,
+                             fai,
+                             heptamerRates,
+                             globalIntergenicRate)) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
           val futureSoure = for {
@@ -251,7 +280,8 @@ object depletion3d {
                          features,
                          pSyn,
                          referenceSequence,
-                         heptamerRates)
+                         heptamerRates,
+                         globalIntergenicRate)
             }
 
           }

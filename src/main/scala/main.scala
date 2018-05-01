@@ -6,6 +6,7 @@ import MathHelpers._
 import Model._
 
 import tasks._
+import tasks.collection._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -106,7 +107,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       ConvertGnomad2HLI
         .gnomadToEColl(gnomadWGSVCF)(CPUMemoryRequest(12, 5000))
 
-    val heptamerRates =
+    val heptamerRatesWithGlobalIntergenicRate =
       gnomadWGSConvertedCoverage.flatMap { coverage =>
         gnomadWGSConvertedVCF.flatMap { calls =>
           CountHeptamers.calculateHeptamer(coverage,
@@ -196,71 +197,90 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val scores = {
       val radius = 5d
+      val includeBothSidesOfPlan = true
 
-      val features = uniprotpdbmap.flatMap { uniprotpdbmap =>
-        cifs.flatMap { cifs =>
-          StructuralContext.taskfromFeatures(
-            StructuralContextFromFeaturesInput(
-              cifs = cifs.cifFiles,
-              mappedUniprotFeatures = uniprotpdbmap.tables.map(_._3).toSet,
-              radius = radius))(CPUMemoryRequest((1, 12), 1000))
-        }
-      }
-
-      val feature2cp = cppdb.flatMap { cppdb =>
-        features.flatMap { features =>
-          Feature2CPSecond.task(
-            Feature2CPSecondInput(featureContext = features, cppdb = cppdb))(
-            CPUMemoryRequest(1, 60000))
-        }
-      }
-
-      val feature2cpEcoll = feature2cp.flatMap { f =>
-        Feature2CPSecond.toEColl(f)(CPUMemoryRequest(12, 5000))
-      }
-
-      val depletionScores = feature2cpEcoll.flatMap { feature2cp =>
-        variationsJoinedEColl.flatMap { variationsJoined =>
-          heptamerRates.flatMap { heptamerRates =>
-            depletion3d.computeDepletionScores(variationsJoined,
-                                               feature2cp,
-                                               fasta = referenceFasta,
-                                               fai = referenceFai,
-                                               heptamerNeutralRates =
-                                                 heptamerRates)
+      def makeFeatures(includeBothSidesOfPlan: Boolean) = {
+        val features = uniprotpdbmap.flatMap { uniprotpdbmap =>
+          cifs.flatMap { cifs =>
+            StructuralContext.taskfromFeatures(
+              StructuralContextFromFeaturesInput(
+                cifs = cifs.cifFiles,
+                mappedUniprotFeatures = uniprotpdbmap.tables.map(_._3).toSet,
+                radius = radius,
+                bothSides = includeBothSidesOfPlan))(
+              CPUMemoryRequest((1, 12), 1000))
           }
         }
-      }
 
-      val scores2pdb = depletionScores.flatMap { scores =>
-        features.flatMap { features =>
-          Depletion2Pdb.task(
-            Depletion2PdbInput(
-              scores,
-              features
-            ))(CPUMemoryRequest(1, 10000))
+        val feature2cp = cppdb.flatMap { cppdb =>
+          features.flatMap { features =>
+            Feature2CPSecond.task(
+              Feature2CPSecondInput(featureContext = features, cppdb = cppdb))(
+              CPUMemoryRequest(1, 60000))
+          }
         }
+
+        val feature2cpEcoll = feature2cp.flatMap { f =>
+          Feature2CPSecond.toEColl(f)(CPUMemoryRequest(12, 5000))
+        }
+
+        (features, feature2cpEcoll)
+
       }
 
-      val indexedScores = scores2pdb.flatMap { scores =>
-        Depletion2Pdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
-      }
+      val (_, feature2cpEcollTwoSided) = makeFeatures(false)
+      val (_, feature2cpEcollOneSided) = makeFeatures(true)
 
-      var server = indexedScores.flatMap { index =>
-        cppdbindex.flatMap { cppdb =>
-          uniprotByGene.flatMap { uniprotByGene =>
-            indexedLigandability.flatMap { indexedLigandability =>
-              Server.start(8080,
-                           index,
-                           cppdb,
-                           uniprotByGene,
-                           indexedLigandability)
+      def makeDepletionScores(
+          features2cpEcoll: Future[EColl[Feature2CPSecond.MappedFeatures]]) =
+        features2cpEcoll.flatMap { feature2cp =>
+          variationsJoinedEColl.flatMap { variationsJoined =>
+            heptamerRatesWithGlobalIntergenicRate.flatMap {
+              case (heptamerRates, globalIntergenicRate) =>
+                depletion3d.computeDepletionScores(variationsJoined,
+                                                   feature2cp,
+                                                   fasta = referenceFasta,
+                                                   fai = referenceFai,
+                                                   heptamerNeutralRates =
+                                                     heptamerRates,
+                                                   globalIntergenicRate =
+                                                     globalIntergenicRate)
             }
           }
         }
-      }
 
-      List(indexedScores, server)
+      val depletionScoresTwoSided = makeDepletionScores(feature2cpEcollTwoSided)
+      val depletionScoresOneSided = makeDepletionScores(feature2cpEcollOneSided)
+
+      // val scores2pdb = depletionScores.flatMap { scores =>
+      //   features.flatMap { features =>
+      //     Depletion2Pdb.task(
+      //       Depletion2PdbInput(
+      //         scores,
+      //         features
+      //       ))(CPUMemoryRequest(1, 10000))
+      //   }
+      // }
+
+      // val indexedScores = scores2pdb.flatMap { scores =>
+      //   Depletion2Pdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
+      // }
+
+      // var server = indexedScores.flatMap { index =>
+      //   cppdbindex.flatMap { cppdb =>
+      //     uniprotByGene.flatMap { uniprotByGene =>
+      //       indexedLigandability.flatMap { indexedLigandability =>
+      //         Server.start(8080,
+      //                      index,
+      //                      cppdb,
+      //                      uniprotByGene,
+      //                      indexedLigandability)
+      //       }
+      //     }
+      //   }
+      // }
+
+      List(depletionScoresOneSided, depletionScoresTwoSided)
     }
 
     Future.sequence(
@@ -271,8 +291,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
            uniprotpdbmap,
            variationsJoined,
            uniprotgencodemap,
-           assemblies,
-           heptamerRates) ++ scores)
+           assemblies) ++ scores)
 
   }
 }

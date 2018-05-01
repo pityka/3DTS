@@ -66,8 +66,10 @@ object Ensembl2Uniprot {
       m1 ++ ensembleXRefUniProt.filterNot(x => m1.contains(x._1))
     }
 
+    def filterTSL(tsl: TranscriptSupportLevel) = !(tsl.v == 4 || tsl.v == 5)
+
     transcripts
-      .filter(x => gencode.contains(x._1) && gencode(x._1)._2.v <= 3)
+      .filter(x => gencode.contains(x._1) && filterTSL(gencode(x._1)._2))
       .map {
         case (enst, transcript) =>
           val uni = enst2uni.get(enst)

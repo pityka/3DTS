@@ -24,15 +24,11 @@ import akka.util.ByteString
 
 import akka.actor.Extension
 
-case class StructuralContextInput(uniprotKb: SharedFile,
-                                  mappableIds: JsDump[UniId],
-                                  windowSize: Int,
-                                  radius: Double)
-
 case class StructuralContextFromFeaturesInput(
     cifs: Map[PdbId, SharedFile],
     mappedUniprotFeatures: Set[JsDump[UniProtPdb.T2]],
-    radius: Double)
+    radius: Double,
+    bothSides: Boolean)
 
 object StructuralContext {
 
@@ -47,7 +43,8 @@ object StructuralContext {
       case StructuralContextFromFeaturesInput(
           cifs,
           mappedFeatures,
-          radius
+          radius,
+          bothSides
           ) =>
         implicit ctx =>
           log.info("Start structural features ")
@@ -90,7 +87,8 @@ object StructuralContext {
                               pdbId,
                               cifContents,
                               features.map(x => (pdbchain, x._1, x._2)).toSeq,
-                              radius)
+                              radius,
+                              bothSides)
                             .map { x =>
                               (FeatureKey2(pdbId,
                                            x._1._1,
@@ -109,9 +107,8 @@ object StructuralContext {
             }
             .mapConcat(identity)
 
-          s2.runWith(
-            JsDump.sink(
-              radius + "." + mappedFeatures.hashCode + "." + ".json.gz"))
+          s2.runWith(JsDump.sink(
+            radius + "." + bothSides + "." + mappedFeatures.hashCode + "." + ".json.gz"))
 
     }
 

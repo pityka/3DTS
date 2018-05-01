@@ -87,7 +87,8 @@ object StructureContext {
       pdbId: PdbId,
       cif: CIFContents,
       features: Seq[(PdbChain, UniprotFeatureName, Set[PdbResidueNumber])],
-      radius: Double)
+      radius: Double,
+      bothSidesOfSpace: Boolean)
     : List[((PdbChain, UniprotFeatureName, PdbResidueNumber, PdbResidueNumber),
             Seq[(PdbChain, PdbResidueNumber)])] = {
 
@@ -118,31 +119,38 @@ object StructureContext {
       .map {
         case (chain, featureName, residuesInFeature) =>
           println(pdbId, chain, featureName, residuesInFeature.size)
-          val featureAtoms: List[Atom] = (residuesInFeature flatMap { residue =>
-            atomsByResidue.get(chain -> residue).toVector.flatten
+          val featureAtoms: List[List[Atom]] = (residuesInFeature map {
+            residue =>
+              atomsByResidue.get(chain -> residue).toList.flatten
           } toList)
 
           val expandedAtoms2: Vector[T1] =
             featureAtoms
-              .flatMap { fa =>
-                val bbXTop = fa.coord.raw(0) + radius
-                val bbXBot = fa.coord.raw(0) - radius
-                val bbYTop = fa.coord.raw(1) + radius
-                val bbYBot = fa.coord.raw(1) - radius
-                val bbZTop = fa.coord.raw(2) + radius
-                val bbZBot = fa.coord.raw(2) - radius
-                val queryRegion = Region
-                  .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
-                  .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
-                  .from(liftIntoFakeT1(Vec(0d, bbYBot, 0d)), 1)
-                  .to(liftIntoFakeT1(Vec(0d, bbYTop, 0d)), 1)
-                  .from(liftIntoFakeT1(Vec(0d, 0d, bbZBot)), 2)
-                  .to(liftIntoFakeT1(Vec(0d, 0d, bbZTop)), 2)
+              .flatMap { atomsOfFeatureResidue =>
+                atomsOfFeatureResidue.flatMap { fa =>
+                  val bbXTop = fa.coord.raw(0) + radius
+                  val bbXBot = fa.coord.raw(0) - radius
+                  val bbYTop = fa.coord.raw(1) + radius
+                  val bbYBot = fa.coord.raw(1) - radius
+                  val bbZTop = fa.coord.raw(2) + radius
+                  val bbZBot = fa.coord.raw(2) - radius
+                  val queryRegion = Region
+                    .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
+                    .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
+                    .from(liftIntoFakeT1(Vec(0d, bbYBot, 0d)), 1)
+                    .to(liftIntoFakeT1(Vec(0d, bbYTop, 0d)), 1)
+                    .from(liftIntoFakeT1(Vec(0d, 0d, bbZBot)), 2)
+                    .to(liftIntoFakeT1(Vec(0d, 0d, bbZTop)), 2)
 
-                kdtree
-                  .regionQuery(queryRegion)
-                  .filter(atomWithPdb =>
-                    fa.within(radius, atomWithPdb._1.coord))
+                  kdtree
+                    .regionQuery(queryRegion)
+                    .filter(atomWithPdb =>
+                      fa.within(radius, atomWithPdb._1.coord))
+                    .filter(atomWithPdb =>
+                      bothSidesOfSpace || atomAlignsWithSideChain(
+                        atomWithPdb._1,
+                        atomsOfFeatureResidue))
+                }
               }
               .distinct
               .toVector
@@ -157,6 +165,19 @@ object StructureContext {
       }
       .toList
 
+  }
+
+  def atomAlignsWithSideChain(atom: Atom, residue: List[Atom]): Boolean = {
+    val alphaCarbon = residue.find(_.name == "CA").map(_.coord)
+    val betaCarbon = residue.find(_.name == "CB").map(_.coord)
+    if (alphaCarbon.isDefined && betaCarbon.isDefined) {
+      val normal = alphaCarbon.get - betaCarbon.get
+      val point = alphaCarbon.get
+      val atomCoordinate = atom.coord
+      val atomVector = point - atomCoordinate
+      val dot = atomVector dot normal
+      dot > 0
+    } else false // do not expand glycines
   }
 
 }

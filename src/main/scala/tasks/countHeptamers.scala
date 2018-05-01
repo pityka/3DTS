@@ -59,19 +59,21 @@ object CountHeptamers {
                         fai: SharedFile,
                         gencode: SharedFile)(
       implicit tc: tasks.TaskSystemComponents,
-      ec: ExecutionContext): Future[HeptamerRates] = {
+      ec: ExecutionContext): Future[(HeptamerRates, GlobalIntergenicRate)] = {
     for {
       filteredCoverage <- filterTask(coverage, gencode)(
         CPUMemoryRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (filteredCoverage, calls))(CPUMemoryRequest(12, 5000))
+        (filteredCoverage, calls))(CPUMemoryRequest((1, 12), 5000))
       mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
-      grouped <- groupByTask(mapped)(CPUMemoryRequest(12, 5000))
+      grouped <- groupByTask(mapped)(CPUMemoryRequest((1, 12), 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
+      concatenated <- concatenate(summed)(CPUMemoryRequest((1, 12), 5000))
+      globalRate <- globalNeutralRate(concatenated)(CPUMemoryRequest(1, 5000))
       _ <- heptamerCounts(summed)(CPUMemoryRequest(1, 5000))
       rates <- heptamerNeutralRates(summed)(CPUMemoryRequest(1, 5000))
       file <- heptamerFrequenciesToFile(rates)(CPUMemoryRequest(1, 5000))
-    } yield file
+    } yield (file, globalRate)
   }
 
   val groupByTask =
@@ -233,6 +235,36 @@ object CountHeptamers {
         val p =
           Model.mlNeutral(samples.toArray, countOfVariableLoci)
         (heptamer, p, countOfVariableLoci, samples)
+    }
+
+  val concatenate =
+    EColl.foldLeft[(String, (Seq[Int], Seq[Int], Int)), (Vector[Int], Int)](
+      "concatenate",
+      2)(
+      (Vector[Int](), 0), {
+        case ((accumulatedListOfSamples, accumulatedAlleleCounts),
+              (hepta, (samples, alleleCounts, _))) =>
+          val accepted = Set('A', 'T', 'G', 'C')
+          if ((hepta.toSet &~ accepted).isEmpty) {
+            println(s"concat $hepta " + accumulatedListOfSamples.size)
+            val rnd = new scala.util.Random(1)
+            val idx = rnd.shuffle((0 until alleleCounts.size).toList).take(2000)
+            val countOfVariableLoci = idx.map(alleleCounts).count(_ > 0)
+
+            (accumulatedListOfSamples ++ idx.map(samples),
+             accumulatedAlleleCounts + countOfVariableLoci)
+          } else (accumulatedListOfSamples, accumulatedAlleleCounts)
+      }
+    )
+
+  val globalNeutralRate =
+    AsyncTask[(Seq[Int], Int), GlobalIntergenicRate]("globalNeutralRate", 1) {
+      case (samples, alleleCounts) =>
+        implicit ctx =>
+          val g = Model.mlNeutral(samples.toArray, alleleCounts)
+          ctx.log.info("Global neutral rate " + g)
+          Future.successful(GlobalIntergenicRate(g))
+
     }
 
 }
