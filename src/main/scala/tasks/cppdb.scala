@@ -77,7 +77,7 @@ object JoinCPWithPdb {
     }
 
   val task =
-    AsyncTask[JoinCPWithPdbInput, JsDump[PdbUniGencodeRow]]("cppdb-1", 3) {
+    AsyncTask[JoinCPWithPdbInput, JsDump[PdbUniGencodeRow]]("cppdb-2", 1) {
 
       case JoinCPWithPdbInput(
           gencodeUniprot,
