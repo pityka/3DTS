@@ -220,24 +220,7 @@ object SharedTypes {
             uniprotSequenceFromGencodeJoin:UniSeq,
             referenceNucleotide:RefNuc,
             indexInCds:IndexInCds,
-            perfectMatch:Boolean)
-
-  // type PdbUniGencodeRow = (PdbId,
-  //                          PdbChain,
-  //                          PdbResidueNumberUnresolved,
-  //                          PdbSeq,
-  //                          UniId,
-  //                          UniNumber,
-  //                          UniSeq,
-  //                          EnsT,
-  //                          ChrPos,
-  //                          IndexInCodon,
-  //                          IndexInTranscript,
-  //                          MissenseConsequences,
-  //                          UniSeq,
-  //                          RefNuc,
-  //                          IndexInCds,
-  //                          Boolean)
+            perfectMatch:Boolean)  
 
   type ServerReturn = (Seq[PdbId], Seq[DepletionScoresByResidue])
 
