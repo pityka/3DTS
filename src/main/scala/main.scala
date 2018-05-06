@@ -197,9 +197,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val scores = {
       val radius = 5d
-      val includeBothSidesOfPlan = true
 
-      def makeFeatures(includeBothSidesOfPlan: Boolean) = {
+      def makeFeatures(includeBothSidesOfPlane: Boolean) = {
         val features = uniprotpdbmap.flatMap { uniprotpdbmap =>
           cifs.flatMap { cifs =>
             StructuralContext.taskfromFeatures(
@@ -207,7 +206,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
                 cifs = cifs.cifFiles,
                 mappedUniprotFeatures = uniprotpdbmap.tables.map(_._3).toSet,
                 radius = radius,
-                bothSides = includeBothSidesOfPlan))(
+                bothSides = includeBothSidesOfPlane))(
               CPUMemoryRequest((1, 12), 1000))
           }
         }
@@ -228,8 +227,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
       }
 
-      val (_, feature2cpEcollTwoSided) = makeFeatures(false)
-      val (_, feature2cpEcollOneSided) = makeFeatures(true)
+      val (features, feature2cpEcoll) = makeFeatures(
+        includeBothSidesOfPlane = true)
 
       def makeDepletionScores(
           features2cpEcoll: Future[EColl[Feature2CPSecond.MappedFeatures]]) =
@@ -249,22 +248,21 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
-      val depletionScoresTwoSided = makeDepletionScores(feature2cpEcollTwoSided)
-      val depletionScoresOneSided = makeDepletionScores(feature2cpEcollOneSided)
+      val depletionScores = makeDepletionScores(feature2cpEcoll)
 
-      // val scores2pdb = depletionScores.flatMap { scores =>
-      //   features.flatMap { features =>
-      //     Depletion2Pdb.task(
-      //       Depletion2PdbInput(
-      //         scores,
-      //         features
-      //       ))(CPUMemoryRequest(1, 10000))
-      //   }
-      // }
+      val scores2pdb = depletionScores.flatMap { scores =>
+        features.flatMap { features =>
+          Depletion2Pdb.task(
+            Depletion2PdbInput(
+              scores,
+              features
+            ))(CPUMemoryRequest(1, 10000))
+        }
+      }
 
-      // val indexedScores = scores2pdb.flatMap { scores =>
-      //   Depletion2Pdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
-      // }
+      val indexedScores = scores2pdb.flatMap { scores =>
+        Depletion2Pdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
+      }
 
       // var server = indexedScores.flatMap { index =>
       //   cppdbindex.flatMap { cppdb =>
@@ -280,7 +278,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       //   }
       // }
 
-      List(depletionScoresOneSided, depletionScoresTwoSided)
+      List(indexedScores)
     }
 
     Future.sequence(
