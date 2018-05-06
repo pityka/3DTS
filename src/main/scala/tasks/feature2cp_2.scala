@@ -59,10 +59,11 @@ object Feature2CPSecond {
                   val mmap =
                     scala.collection.mutable.AnyRefMap[String, List[String]]()
                   iterator.foreach { row =>
-                    val cp: ChrPos = row._9
-                    val pdbId: PdbId = row._1
-                    val pdbChain: PdbChain = row._2
-                    val pdbres: PdbResidueNumberUnresolved = row._3
+                    val cp: ChrPos = row.cp
+                    val pdbId: PdbId = row.pdbId
+                    val pdbChain: PdbChain = row.pdbChain
+                    val pdbres: PdbResidueNumberUnresolved =
+                      row.pdbResidueNumberUnresolved
                     val k = pdbId.s + "_" + pdbChain.s + "_" + pdbres.s
 
                     mmap.get(k) match {

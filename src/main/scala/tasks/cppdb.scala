@@ -48,12 +48,12 @@ object JoinCPWithPdb {
 
         pdbunigencode.source
           .runForeach { pdbunigencode =>
-            val pdbId = pdbunigencode._1.s
-            val enst = pdbunigencode._8.s
-            val uniid = pdbunigencode._5.s
-            val chrpos = pdbunigencode._9.s.split1('\t')
-            val pdbchain = pdbunigencode._2.s
-            val pdbres = pdbunigencode._3.s
+            val pdbId = pdbunigencode.pdbId.s
+            val enst = pdbunigencode.ensT.s
+            val uniid = pdbunigencode.uniId.s
+            val chrpos = pdbunigencode.cp.s.split1('\t')
+            val pdbchain = pdbunigencode.pdbChain.s
+            val pdbres = pdbunigencode.pdbResidueNumberUnresolved.s
 
             val cp = chrpos(0) + "_" + chrpos(2)
             val js = upickle.default.write(pdbunigencode)
@@ -159,22 +159,24 @@ object JoinCPWithPdb {
                               val t1: MappedTranscriptToUniprot =
                                 upickle.default
                                   .read[MappedTranscriptToUniprot](genomeLine)
-                              (pdbid,
-                               pdbch,
-                               pdbres,
-                               pdbaa,
-                               uniid,
-                               unin,
-                               uniaa,
-                               t1.ensT,
-                               t1.cp,
-                               t1.indexInCodon,
-                               t1.indexInTranscript,
-                               t1.missenseConsequences,
-                               t1.uniprotSequence,
-                               t1.referenceNucleotide,
-                               t1.indexInCds,
-                               t1.perfectMatch)
+                              PdbUniGencodeRow(
+                                pdbid,
+                                pdbch,
+                                pdbres,
+                                pdbaa,
+                                uniid,
+                                unin,
+                                uniaa,
+                                t1.ensT,
+                                t1.cp,
+                                t1.indexInCodon,
+                                t1.indexInTranscript,
+                                t1.missenseConsequences,
+                                t1.uniprotSequence,
+                                t1.referenceNucleotide,
+                                t1.indexInCds,
+                                t1.perfectMatch
+                              )
                           }
 
                       }

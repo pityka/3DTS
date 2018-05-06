@@ -177,10 +177,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       JoinCPWithPdb.indexCpPdb(cppdb)(CPUMemoryRequest(1, 60000))
     }
 
-    val simplecppdb = cppdb.flatMap { cppdb =>
-      ProjectCpPdb.task(cppdb)(CPUMemoryRequest(1, 5000))
-    }
-
     val mappableUniprotIds = uniprotgencodemap.flatMap { uniprotgencodemap =>
       MappableUniprot.task(uniprotgencodemap)(CPUMemoryRequest(1, 1000))
     }
@@ -285,7 +281,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       List(cppdbindex,
            uniprotgencodemap,
            cppdb,
-           simplecppdb,
            uniprotpdbmap,
            variationsJoined,
            uniprotgencodemap,

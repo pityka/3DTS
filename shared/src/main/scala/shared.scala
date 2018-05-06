@@ -204,22 +204,40 @@ object DepletionRow {
 
 object SharedTypes {
 
-  type PdbUniGencodeRow = (PdbId,
-                           PdbChain,
-                           PdbResidueNumberUnresolved,
-                           PdbSeq,
-                           UniId,
-                           UniNumber,
-                           UniSeq,
-                           EnsT,
-                           ChrPos,
-                           IndexInCodon,
-                           IndexInTranscript,
-                           MissenseConsequences,
-                           UniSeq,
-                           RefNuc,
-                           IndexInCds,
-                           Boolean)
+  case class PdbUniGencodeRow(
+            pdbId: PdbId,
+            pdbChain: PdbChain,
+            pdbResidueNumberUnresolved: PdbResidueNumberUnresolved,
+            pdbSequence: PdbSeq,
+            uniId: UniId,
+            uniNumber:UniNumber,
+            uniprotSequenceFromPdbJoin:UniSeq,
+            ensT:EnsT,
+            cp: ChrPos,
+            indexInCodon:IndexInCodon,
+            indexInTranscript:IndexInTranscript,
+            missenseConsequences:MissenseConsequences,
+            uniprotSequenceFromGencodeJoin:UniSeq,
+            referenceNucleotide:RefNuc,
+            indexInCds:IndexInCds,
+            perfectMatch:Boolean)
+
+  // type PdbUniGencodeRow = (PdbId,
+  //                          PdbChain,
+  //                          PdbResidueNumberUnresolved,
+  //                          PdbSeq,
+  //                          UniId,
+  //                          UniNumber,
+  //                          UniSeq,
+  //                          EnsT,
+  //                          ChrPos,
+  //                          IndexInCodon,
+  //                          IndexInTranscript,
+  //                          MissenseConsequences,
+  //                          UniSeq,
+  //                          RefNuc,
+  //                          IndexInCds,
+  //                          Boolean)
 
   type ServerReturn = (Seq[PdbId], Seq[DepletionScoresByResidue])
 

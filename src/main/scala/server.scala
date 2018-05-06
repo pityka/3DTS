@@ -60,9 +60,9 @@ object Server {
       (List(scores.pdbId,
             scores.pdbChain,
             scores.pdbResidue,
-            pdbuni._5.s,
-            pdbuni._6.i + 1,
-            pdbuni._7.s) ++ List(
+            pdbuni.uniId.s,
+            pdbuni.uniNumber.i + 1,
+            pdbuni.uniprotSequenceFromPdbJoin.s) ++ List(
         // scores.featureScores._1.toString,
         // scores.featureScores._2.v,
         // scores.featureScores._3.v,
@@ -104,7 +104,7 @@ object Server {
             upickle.default.read[PdbUniGencodeRow](str)
         }
 
-    val uniId: Option[UniId] = pdbUni.headOption.map(_._5)
+    val uniId: Option[UniId] = pdbUni.headOption.map(_.uniId)
 
     val ligandabilityRows: Seq[LigandabilityRow] = uniId match {
       case None => Vector()
@@ -119,11 +119,11 @@ object Server {
       .flatMap { scores =>
         pdbUni.iterator.flatMap { pdbUni =>
           ligandabilityRows.flatMap { ligandability =>
-            if ((scores.pdbId: String) == pdbUni._1.s &&
-                (scores.pdbChain: String) == pdbUni._2.s &&
-                (scores.pdbResidue: String) == pdbUni._3.s &&
-                (pdbUni._5: UniId) == ligandability.uniid &&
-                (pdbUni._6: UniNumber) == ligandability.uninum)
+            if ((scores.pdbId: String) == pdbUni.pdbId.s &&
+                (scores.pdbChain: String) == pdbUni.pdbChain.s &&
+                (scores.pdbResidue: String) == pdbUni.pdbResidueNumberUnresolved.s &&
+                (pdbUni.uniId: UniId) == ligandability.uniid &&
+                (pdbUni.uniNumber: UniNumber) == ligandability.uninum)
               List((scores, pdbUni, ligandability)).iterator
             else Iterator.empty
           }
