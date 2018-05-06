@@ -1,23 +1,5 @@
 object MathHelpers {
 
-  def makeColor(s: Seq[Double]) = {
-    val cdf = CumulativeRelativeFrequencies.empirical(s)
-    val colormap = RedBlue(min = 0d, max = 1d, mid = 0.5)
-    (s: Double) =>
-      {
-        val c = colormap.apply(cdf.cdf(s))
-        MyColor(c.r, c.g, c.b)
-      }
-  }
-
-  def value2Color(s: Double) = {
-    val colormap = RedBlue(min = 0d, max = 1d, mid = 0.5)
-
-    val c = colormap.apply(s)
-    MyColor(c.r, c.g, c.b)
-
-  }
-
   def bisect(x0: Double,
              x1: Double,
              start: Double,
