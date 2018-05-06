@@ -228,3 +228,20 @@ object SharedTypes {
 case class LigandabilityRow(uniid: UniId,
                             uninum: UniNumber,
                             data: Map[String, String])
+
+case class MappedTranscriptToUniprot(ensT:EnsT,
+             uniId: UniId,
+             uniNumber:Option[UniNumber],
+             cp: ChrPos,
+             indexInCodon:IndexInCodon,
+             indexInTranscript:IndexInTranscript,
+             missenseConsequences:MissenseConsequences,
+             uniprotSequence:UniSeq,
+             referenceNucleotide:RefNuc,
+             indexInCds:IndexInCds,
+             perfectMatch:Boolean)
+
+object MappedTranscriptToUniprot {
+  import upickle.default.macroRW
+  implicit val rw = macroRW[MappedTranscriptToUniprot]
+}             

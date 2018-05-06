@@ -89,8 +89,8 @@ object JoinVariationsCore {
     i =>
       i match {
         case Ensembl2Uniprot.Success(list) =>
-          list.iterator.map((t1: Ensembl2Uniprot.T1) =>
-            MappedCP(t1._4.s, t1._7.map))
+          list.iterator.map((t1: MappedTranscriptToUniprot) =>
+            MappedCP(t1.cp.s, t1.missenseConsequences.map))
         case _ => Iterator.empty
       }
   }

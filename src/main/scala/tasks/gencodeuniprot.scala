@@ -20,8 +20,8 @@ case class GencodeUniprotInput(
 object gencodeUniprot {
 
   val task = AsyncTask[GencodeUniprotInput, JsDump[Ensembl2Uniprot.MapResult]](
-    "gencodeuniprot-2",
-    5) {
+    "gencodeuniprot-3",
+    1) {
     case GencodeUniprotInput(
         gencodeGtf,
         xref,

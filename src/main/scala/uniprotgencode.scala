@@ -30,10 +30,10 @@ object Ensembl2Uniprot {
 
   def readUniProtIds(s: Iterator[MapResult]): Set[UniId] =
     s.filter(_.isInstanceOf[Success])
-      .flatMap(_.asInstanceOf[Success].v.map(_._2))
+      .flatMap(_.asInstanceOf[Success].v.map(_.uniId))
       .toSet
 
-  case class Success(v: Seq[T1]) extends MapResult
+  case class Success(v: Seq[MappedTranscriptToUniprot]) extends MapResult
   case class MultipleChromosomes(exons: Seq[EnsE]) extends MapResult
   case class TranscriptSizeError(exons: Seq[EnsE], transcript: Transcript)
       extends MapResult
@@ -44,18 +44,6 @@ object Ensembl2Uniprot {
                                  translated: String,
                                  transcript: Transcript)
       extends MapResult
-
-  type T1 = (EnsT,
-             UniId,
-             Option[UniNumber],
-             ChrPos,
-             IndexInCodon,
-             IndexInTranscript,
-             MissenseConsequences,
-             UniSeq,
-             RefNuc,
-             IndexInCds,
-             Boolean)
 
   def mapTranscripts(gencode: Map[EnsT, (Seq[EnsE], TranscriptSupportLevel)],
                      ensembleXRefUniProt: Map[EnsT, UniId],
@@ -194,20 +182,22 @@ object Ensembl2Uniprot {
                     }
                     .toMap
 
-                  (enst,
-                   uniprot,
-                   transcriptOffset2UniprotOffsetMap
-                     .get(codonIndex0)
-                     .map(i => UniNumber(i)),
-                   ChrPos(
-                     exon.chr + "\t" + genomicPosition0 + "\t" + (genomicPosition0 + 1)),
-                   IndexInCodon(indexInCodon0),
-                   IndexInTranscript(currentIndexInTranscript0),
-                   MissenseConsequences(missenseConsequences),
-                   UniSeq(aminoAcid.toString), // this is the gencode translated amino acid
-                   RefNuc(refNuc),
-                   IndexInCds(currentIndexInCDS0),
-                   perfectMatch) :: Nil
+                  MappedTranscriptToUniprot(
+                    enst,
+                    uniprot,
+                    transcriptOffset2UniprotOffsetMap
+                      .get(codonIndex0)
+                      .map(i => UniNumber(i)),
+                    ChrPos(
+                      exon.chr + "\t" + genomicPosition0 + "\t" + (genomicPosition0 + 1)),
+                    IndexInCodon(indexInCodon0),
+                    IndexInTranscript(currentIndexInTranscript0),
+                    MissenseConsequences(missenseConsequences),
+                    UniSeq(aminoAcid.toString), // this is the gencode translated amino acid
+                    RefNuc(refNuc),
+                    IndexInCds(currentIndexInCDS0),
+                    perfectMatch
+                  ) :: Nil
                 }
 
               }

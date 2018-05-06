@@ -101,8 +101,8 @@ object JoinCPWithPdb {
                     .map(_.asInstanceOf[Ensembl2Uniprot.Success])
                     .flatMap(_.v)
                     .map { line =>
-                      val uni: UniId = line._2
-                      val uninum: Option[UniNumber] = line._3
+                      val uni: UniId = line.uniId
+                      val uninum: Option[UniNumber] = line.uniNumber
                       (uni, uninum) -> upickle.default.write(line)
                     }
                     .filter(_._1._2.isDefined)
@@ -156,8 +156,9 @@ object JoinCPWithPdb {
                                unipdbmatch)) =>
                           genomeLines.iterator.map {
                             case genomeLine =>
-                              val t1: Ensembl2Uniprot.T1 = upickle.default
-                                .read[Ensembl2Uniprot.T1](genomeLine)
+                              val t1: MappedTranscriptToUniprot =
+                                upickle.default
+                                  .read[MappedTranscriptToUniprot](genomeLine)
                               (pdbid,
                                pdbch,
                                pdbres,
@@ -165,15 +166,15 @@ object JoinCPWithPdb {
                                uniid,
                                unin,
                                uniaa,
-                               t1._1,
-                               t1._4,
-                               t1._5,
-                               t1._6,
-                               t1._7,
-                               t1._8,
-                               t1._9,
-                               t1._10,
-                               t1._11)
+                               t1.ensT,
+                               t1.cp,
+                               t1.indexInCodon,
+                               t1.indexInTranscript,
+                               t1.missenseConsequences,
+                               t1.uniprotSequence,
+                               t1.referenceNucleotide,
+                               t1.indexInCds,
+                               t1.perfectMatch)
                           }
 
                       }
