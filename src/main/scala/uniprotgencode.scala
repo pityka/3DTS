@@ -62,12 +62,14 @@ object Ensembl2Uniprot {
         case (enst, transcript) =>
           val uni = enst2uni.get(enst)
           uni
-            .map { uni =>
-              mapTranscript(enst,
-                            gencode(enst)._1,
-                            uni,
-                            uniprotKb(uni).sequence,
-                            transcript)
+            .flatMap { uni =>
+              uniprotKb.get(uni).map { uniEntry =>
+                mapTranscript(enst,
+                              gencode(enst)._1,
+                              uni,
+                              uniEntry.sequence,
+                              transcript)
+              }
             }
             .getOrElse(Enst2UniFailed(enst))
       }
