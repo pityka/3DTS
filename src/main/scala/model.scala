@@ -104,10 +104,23 @@ object Model {
     val `P(x|s)` =
       likelihoodLoci(lociNumNs, lociRounds, successes, p, _: Double)
 
-    val Posteriors(_, postMean) =
+    val rnd = new jdistlib.rng.RandomWELL44497b
+    rnd.setSeed(1L)
+
+    val Posteriors(postMean) =
       bayes(`P(x|s)` = `P(x|s)`, prior1 = MathHelpers.uniform)
 
-    (postMean)
+    val postMeanIS = estimatePosteriorMeanWithImportanceSampling(
+      likelihood = `P(x|s)`,
+      prior = (x: Double) => 1.0,
+      sampleFromPrior = rnd.nextDouble,
+      n = 20000).estimate
+
+    if (math.abs(postMean - postMeanIS) > 0.02) {
+      println(postMean + "\t" + postMeanIS)
+    }
+
+    postMean
   }
 
 }

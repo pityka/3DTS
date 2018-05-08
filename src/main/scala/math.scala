@@ -46,7 +46,7 @@ object MathHelpers {
 
   val uniform = (x: Double) => 1d
 
-  case class Posteriors(`P(s|x,p1)`: Double => Double, `E(P(s|x,p1))`: Double)
+  case class Posteriors(`E(P(s|x,p1))`: Double)
 
   def bayes(`P(x|s)`: Double => Double,
             prior1: Double => Double,
@@ -61,7 +61,25 @@ object MathHelpers {
     val `E(P(s|x,p1))` =
       integrate((s: Double) => `P(s|x,p1)`(s) * s, 0.0, 1.0, 16 * nx, 1024 * nx)
 
-    Posteriors(`P(s|x,p1)`, `E(P(s|x,p1))`)
+    Posteriors(`E(P(s|x,p1))`)
+
+  }
+
+  def estimatePosteriorMeanWithImportanceSampling(likelihood: Double => Double,
+                                                  prior: Double => Double,
+                                                  sampleFromPrior: => Double,
+                                                  n: Int): sampling.Estimate = {
+
+    def unnormalizedPosterior(x: Double) = prior(x) * likelihood(x)
+
+    sampling.ImportanceSampling
+      .unnormalized(
+        evaluateUnnormalizedTarget = unnormalizedPosterior _,
+        sampleFromSamplingDistribution = sampleFromPrior,
+        evaluateSamplingDistribution = prior,
+        f = (x: Double) => x,
+        numberOfSamples = n
+      )
 
   }
 

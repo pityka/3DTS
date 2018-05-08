@@ -249,7 +249,7 @@ object depletion3d {
   val computeScores = EColl
     .mapSourceWith[Seq[Feature2CPSecond.MappedFeatures],
                    Depletion3dInput,
-                   DepletionRow]("depletion3d", 8) {
+                   DepletionRow]("depletion3d", 9) {
       case (source,
             Depletion3dInput(loci,
                              fasta,
