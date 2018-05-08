@@ -111,7 +111,7 @@ object ProteinJoin {
         entry.pdbs
           .filter(x =>
             (x._2 == PdbMethod.XRay && x._3.isDefined) || (x._1: PdbId) == PdbId(
-                "1JM7")) //let the BRCA nmr structure through
+              "1JM7")) //let the BRCA nmr structure through
           .flatMap(pdb =>
             pdb._4
               .filter(chain => chain._2.map(x => x._2 - x._1 + 1).sum > 10)
@@ -163,6 +163,10 @@ object ProteinJoin {
      Seq[(UniprotFeatureName, Set[PdbResidueNumber])])] = {
 
     val candidates = selectCandidateChains(uniId, uniprotKb)
+
+    if (uniId.s == "Q53SS5") {
+      println(candidates)
+    }
 
     val uniprotEntry = uniprotKb(uniId)
 

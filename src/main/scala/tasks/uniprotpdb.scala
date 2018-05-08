@@ -116,7 +116,7 @@ object UniProtPdb {
   val task =
     AsyncTask[UniProtPdbFullInput, UniProtPdbFullOutput](
       "uniprot2pdb_full_withFeatures",
-      17) {
+      18) {
 
       case UniProtPdbFullInput(
           uniprotkbSF,
@@ -181,7 +181,7 @@ object UniProtPdb {
     }
 
   val subtask =
-    AsyncTask[UniProtPdbInput, UniProtPdbOutput]("uniprot2pdb-2", 6) {
+    AsyncTask[UniProtPdbInput, UniProtPdbOutput]("uniprot2pdb-2", 7) {
 
       case UniProtPdbInput(
           uniprotkbSF,
