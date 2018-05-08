@@ -109,9 +109,8 @@ object ProteinJoin {
       .flatMap { entry =>
         val seqLength = entry.seqLength.get
         entry.pdbs
-          .filter(
-            x =>
-              (x._2 == PdbMethod.XRay && x._3.isDefined) || x._1 == PdbId(
+          .filter(x =>
+            (x._2 == PdbMethod.XRay && x._3.isDefined) || (x._1: PdbId) == PdbId(
                 "1JM7")) //let the BRCA nmr structure through
           .flatMap(pdb =>
             pdb._4
