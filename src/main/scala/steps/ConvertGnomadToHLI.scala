@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -20,7 +23,7 @@ import stringsplit._
 
 case class GnomadData(sf: SharedFile)
 
-object ConvertGnomad2HLI {
+object ConvertGnomadToHLI {
 
   val toEColl =
     AsyncTask[JsDump[GnomadLine], EColl[GnomadLine]]("GenomeCoverageToEColl", 1) {

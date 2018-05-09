@@ -1,3 +1,6 @@
+package sd
+
+import sd.steps._
 import fileutils._
 import stringsplit._
 
@@ -41,7 +44,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val uniprotKbOriginal = importFile(config.getString("uniprotKb"))
 
     val uniprotKbAsJS =
-      UniprotKb2Js.task(uniprotKbOriginal)(CPUMemoryRequest(1, 5000))
+      UniprotKbToJs.task(uniprotKbOriginal)(CPUMemoryRequest(1, 5000))
 
     val uniprotByGene = uniprotKbAsJS.flatMap { uniprotKbAsJS =>
       IndexUniByGeneName.task(uniprotKbAsJS)(CPUMemoryRequest(1, 5000))
@@ -76,12 +79,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val convertedGnomadGenome = {
       val gnomadGenome = importFile(config.getString("gnomadGenome"))
-      ConvertGnomad2HLI.task(GnomadData(gnomadGenome))(
+      ConvertGnomadToHLI.task(GnomadData(gnomadGenome))(
         CPUMemoryRequest(1, 5000))
     }
     val convertedGnomadExome = {
       val gnomadExome = importFile(config.getString("gnomadExome"))
-      ConvertGnomad2HLI.task(GnomadData(gnomadExome))(CPUMemoryRequest(1, 5000))
+      ConvertGnomadToHLI.task(GnomadData(gnomadExome))(
+        CPUMemoryRequest(1, 5000))
     }
 
     val gnomadExomeCoverage = ConvertGenomeCoverage.task(
@@ -90,12 +94,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       gnomadGenomeCoverageFile -> 15496)(CPUMemoryRequest(1, 5000))
 
     val filteredGnomadExomeCoverage = gnomadExomeCoverage.flatMap { g =>
-      FilterCoverage.task(FilterCoverageInput(g, gencodeGtf))(
+      FilterCoverageToExome.task(FilterCoverageInput(g, gencodeGtf))(
         CPUMemoryRequest(1, 5000))
     }
 
     val filteredGnomadGenomeCoverage = gnomadGenomeCoverage.flatMap { g =>
-      FilterCoverage.task(FilterCoverageInput(g, gencodeGtf))(
+      FilterCoverageToExome.task(FilterCoverageInput(g, gencodeGtf))(
         CPUMemoryRequest(1, 5000))
     }
 
@@ -104,7 +108,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         .gnomadToEColl(gnomadWGSCoverage -> 15496)(CPUMemoryRequest(12, 5000))
 
     val gnomadWGSConvertedVCF =
-      ConvertGnomad2HLI
+      ConvertGnomadToHLI
         .gnomadToEColl(gnomadWGSVCF)(CPUMemoryRequest(12, 5000))
 
     val heptamerRatesWithGlobalIntergenicRate =
@@ -120,17 +124,18 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
     val filteredGnomadGenome =
       convertedGnomadGenome.flatMap { gnomadGenome =>
-        FilterGnomad.task(
-          FilterGnomadInput(gnomadGenome, "gnomad", gencodeGtf))(
+        FilterVariantsToExome.task(
+          FilterVariantsInput(gnomadGenome, "gnomad", gencodeGtf))(
           CPUMemoryRequest(1, 5000))
       }
 
     val filteredGnomadExome = convertedGnomadExome.flatMap { gnomadExome =>
-      FilterGnomad.task(FilterGnomadInput(gnomadExome, "gnomad", gencodeGtf))(
+      FilterVariantsToExome.task(
+        FilterVariantsInput(gnomadExome, "gnomad", gencodeGtf))(
         CPUMemoryRequest(1, 5000))
     }
 
-    val uniprotgencodemap = gencodeUniprot.task(
+    val uniprotgencodemap = sd.steps.JoinGencodeToUniprot.task(
       GencodeUniprotInput(gencodeGtf,
                           gencodeMetadataXrefUniprot,
                           gencodeTranscripts,
@@ -141,7 +146,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         filteredGnomadExome.flatMap { filteredGnomadExome =>
           filteredGnomadExomeCoverage.flatMap { exomeCov =>
             filteredGnomadGenomeCoverage.flatMap { genomeCov =>
-              joinVariations.task(
+              JoinVariations.task(
                 JoinVariationsInput(filteredGnomadExome.f,
                                     filteredGnomadGenome.f,
                                     uniprotgencodemap,
@@ -155,13 +160,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     }
 
     val variationsJoinedEColl = variationsJoined.flatMap { f =>
-      joinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
+      JoinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
     }
 
     val uniprotpdbmap = uniprotgencodemap.flatMap { uniprotgencodemap =>
-      UniProtPdb.task(
-        UniProtPdbFullInput(uniprotKbOriginal, uniprotgencodemap))(
-        CPUMemoryRequest(1, 1000))
+      sd.steps.JoinUniprotWithPdb
+        .task(UniProtPdbFullInput(uniprotKbOriginal, uniprotgencodemap))(
+          CPUMemoryRequest(1, 1000))
     }
 
     val cppdb = uniprotgencodemap.flatMap { uniprotgencodemap =>
@@ -182,13 +187,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     }
 
     val cifs = mappableUniprotIds.flatMap { mappedUniprotIds =>
-      Assembly2Pdb.fetchCif(
+      AssemblyToPdb.fetchCif(
         Assembly2PdbInput(uniprotKbOriginal, mappedUniprotIds))(
         CPUMemoryRequest((1, 8), 3000))
     }
 
     val assemblies = cifs.flatMap { cifs =>
-      Assembly2Pdb.assembly(cifs)(CPUMemoryRequest((1, 16), 3000))
+      AssemblyToPdb.assembly(cifs)(CPUMemoryRequest((1, 16), 3000))
     }
 
     val scores = {
@@ -209,14 +214,14 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
         val feature2cp = cppdb.flatMap { cppdb =>
           features.flatMap { features =>
-            Feature2CPSecond.task(
-              Feature2CPSecondInput(featureContext = features, cppdb = cppdb))(
+            JoinFeatureWithCp.task(
+              Feature2CPInput(featureContext = features, cppdb = cppdb))(
               CPUMemoryRequest(1, 60000))
           }
         }
 
         val feature2cpEcoll = feature2cp.flatMap { f =>
-          Feature2CPSecond.toEColl(f)(CPUMemoryRequest(12, 5000))
+          JoinFeatureWithCp.toEColl(f)(CPUMemoryRequest(12, 5000))
         }
 
         (features, feature2cpEcoll)
@@ -227,7 +232,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         includeBothSidesOfPlane = true)
 
       def makeDepletionScores(
-          features2cpEcoll: Future[EColl[Feature2CPSecond.MappedFeatures]]) =
+          features2cpEcoll: Future[EColl[JoinFeatureWithCp.MappedFeatures]]) =
         features2cpEcoll.flatMap { feature2cp =>
           variationsJoinedEColl.flatMap { variationsJoined =>
             heptamerRatesWithGlobalIntergenicRate.flatMap {
@@ -248,7 +253,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
       val scores2pdb = depletionScores.flatMap { scores =>
         features.flatMap { features =>
-          Depletion2Pdb.task(
+          DepletionToPdb.task(
             Depletion2PdbInput(
               scores,
               features
@@ -257,7 +262,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       }
 
       val indexedScores = scores2pdb.flatMap { scores =>
-        Depletion2Pdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
+        DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
       }
 
       // var server = indexedScores.flatMap { index =>

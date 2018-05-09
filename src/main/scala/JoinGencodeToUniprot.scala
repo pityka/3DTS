@@ -1,3 +1,5 @@
+package sd
+
 import intervaltree._
 import scala.util._
 import stringsplit._
@@ -11,7 +13,7 @@ case class EnsE(from: Int,
                 exonNumber: Int)
     extends Interval
 
-object Ensembl2Uniprot {
+object JoinGencodeToUniprot {
 
   val Nuc = List('A', 'T', 'G', 'C')
 
@@ -103,11 +105,12 @@ object Ensembl2Uniprot {
         if (translated.stripSuffix("*") == uniSeq.s)
           Some(uniSeq.s.zipWithIndex.map(x => x._2 -> x._2).toMap -> true)
         else {
-          val alignment: Seq[(PdbNumber, UniNumber, Boolean)] = ProteinJoin
-            .align(PdbSeq(translated.filterNot(_ == '*')), uniSeq)
-            ._1
-            .filter(x => x._1.isDefined && x._2.isDefined)
-            .map(x => (x._1.get, x._2.get, x._3))
+          val alignment: Seq[(PdbNumber, UniNumber, Boolean)] =
+            JoinUniprotWithPdb
+              .align(PdbSeq(translated.filterNot(_ == '*')), uniSeq)
+              ._1
+              .filter(x => x._1.isDefined && x._2.isDefined)
+              .map(x => (x._1.get, x._2.get, x._3))
 
           val qc = alignment.size >= math
             .min(translated.size, uniSeq.s.size) * 0.8 && alignment.count(_._3) >= alignment.size * 0.8

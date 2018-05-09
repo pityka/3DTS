@@ -1,3 +1,5 @@
+package sd
+
 import akka.actor._
 import akka.event.LoggingAdapter
 import akka.stream._
@@ -29,7 +31,7 @@ case class UniProtEntry(
     features: List[(String, UniNumber, UniNumber)],
     geneNames: List[GeneName])
 
-object ProteinJoin {
+object JoinUniprotWithPdb {
 
   val blosum = {
     val s = scala.io.Source

@@ -1,3 +1,5 @@
+package sd 
+
 object AnyValPicklers {
   import upickle.default.{ReadWriter, Writer, Reader}
   def apply[S: upickle.default.ReadWriter, T](f: T => Option[S],

@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -22,18 +25,18 @@ import akka.stream.scaladsl._
 import akka.util._
 import scala.collection.mutable.ArrayBuffer
 
-case class FilterGnomadInput(gnomad: JsDump[JoinVariationsCore.GnomadLine],
-                             tpe: String,
-                             gencodeGtf: SharedFile)
+case class FilterVariantsInput(gnomad: JsDump[JoinVariationsCore.GnomadLine],
+                               tpe: String,
+                               gencodeGtf: SharedFile)
 
 case class FilterGnomadOutput(f: SharedFile) extends ResultWithSharedFiles(f)
 
-object FilterGnomad {
+object FilterVariantsToExome {
 
   val task =
-    AsyncTask[FilterGnomadInput, FilterGnomadOutput]("filtergnomad-1", 1) {
+    AsyncTask[FilterVariantsInput, FilterGnomadOutput]("filtergnomad-1", 1) {
 
-      case FilterGnomadInput(genome, tpe, gencode) =>
+      case FilterVariantsInput(genome, _, gencode) =>
         implicit ctx =>
           log.info("Start filtering " + genome.sf.name + " to " + gencode.name)
           for {

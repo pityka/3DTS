@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -19,29 +22,30 @@ import akka.stream.ActorMaterializer
 
 import akka.actor.Extension
 
-case class UniProtPdbInput(uniprotKb: SharedFile,
-                           uniProtId: List[UniId],
-                           batchName: String,
-                           genomeUniJoinFile: JsDump[Ensembl2Uniprot.MapResult])
+case class UniProtPdbInput(
+    uniprotKb: SharedFile,
+    uniProtId: List[UniId],
+    batchName: String,
+    genomeUniJoinFile: JsDump[sd.JoinGencodeToUniprot.MapResult])
 
 case class UniProtPdbFullInput(
     uniprotKb: SharedFile,
-    genomeUniJoinFile: JsDump[Ensembl2Uniprot.MapResult])
+    genomeUniJoinFile: JsDump[sd.JoinGencodeToUniprot.MapResult])
 
 case class UniProtPdbFullOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
-                  JsDump[UniProtPdb.T1],
-                  JsDump[UniProtPdb.T2])],
+                  JsDump[JoinUniprotWithPdb.T1],
+                  JsDump[JoinUniprotWithPdb.T2])],
     qc: SharedFile)
     extends ResultWithSharedFiles(qc +: tables.map(_._2.sf): _*)
 
 case class UniProtPdbOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
-                  JsDump[UniProtPdb.T1],
-                  JsDump[UniProtPdb.T2])])
+                  JsDump[JoinUniprotWithPdb.T1],
+                  JsDump[JoinUniprotWithPdb.T2])])
     extends ResultWithSharedFiles(tables.map(_._2.sf): _*)
 
-object UniProtPdb {
+object JoinUniprotWithPdb {
 
   type T1 = (UniId,
              PdbId,
@@ -85,14 +89,14 @@ object UniProtPdb {
   }
 
   def downloadUniprot(uniprotkbSF: SharedFile,
-                      genomeUniJoin: JsDump[Ensembl2Uniprot.MapResult])(
+                      genomeUniJoin: JsDump[sd.JoinGencodeToUniprot.MapResult])(
       implicit ts: tasks.queue.ComputationEnvironment) = {
     log.info(
       "Downloading uniprot + genome file.." + uniprotkbSF.name + " " + genomeUniJoin.sf.name)
     uniprotkbSF.file.flatMap { localFile =>
       genomeUniJoin.sf.file.map { genomeJoinFile =>
         val uniIdFilter = genomeUniJoin.iterator(genomeJoinFile)(it =>
-          Ensembl2Uniprot.readUniProtIds(it))
+          sd.JoinGencodeToUniprot.readUniProtIds(it))
         log.info(uniIdFilter.take(10).toString)
         log.info("Read uniprot file.. filter for: " + uniIdFilter.size)
         val uniprotkblist =
@@ -198,7 +202,7 @@ object UniProtPdb {
             .flatMap { (uniprotKb: Map[UniId, UniProtEntry]) =>
               val result = uniIds.flatMap { uniId =>
                 val r = try {
-                  ProteinJoin.joinUniProtWithPdb(uniId, uniprotKb)
+                  sd.JoinUniprotWithPdb.joinUniProtWithPdb(uniId, uniprotKb)
                 } catch {
                   case e: Exception =>
                     log.error("Failed uni: " + uniId)

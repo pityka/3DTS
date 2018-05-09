@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -26,7 +29,7 @@ import akka.actor.Extension
 
 case class StructuralContextFromFeaturesInput(
     cifs: Map[PdbId, SharedFile],
-    mappedUniprotFeatures: Set[JsDump[UniProtPdb.T2]],
+    mappedUniprotFeatures: Set[JsDump[JoinUniprotWithPdb.T2]],
     radius: Double,
     bothSides: Boolean)
 
@@ -50,7 +53,7 @@ object StructuralContext {
           log.info("Start structural features ")
           implicit val mat = ctx.components.actorMaterializer
 
-          val source: Source[UniProtPdb.T2, _] =
+          val source: Source[JoinUniprotWithPdb.T2, _] =
             Source(mappedFeatures).flatMapConcat { s =>
               log.info(s.toString)
               s.source

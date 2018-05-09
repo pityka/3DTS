@@ -1,9 +1,24 @@
+package sd
+
 import stringsplit._
 import intervaltree._
 
+case class GenomeCoverage(chromosome: String,
+                          position: Int,
+                          numberOfWellSequencedIndividuals: Int) {
+  def cp = chromosome + "\t" + position
+}
+
+object GenomeCoverage {
+  implicit val sk = new flatjoin.StringKey[GenomeCoverage] {
+    def key(g: GenomeCoverage) = g.cp
+  }
+}
+
 object JoinVariationsCore {
 
-  def addMaps[K, V](a: Map[K, V], b: Map[K, V])(fun: (V, V) => V): Map[K, V] = {
+  private def addMaps[K, V](a: Map[K, V], b: Map[K, V])(
+      fun: (V, V) => V): Map[K, V] = {
     a ++ b.map {
       case (key, bval) =>
         val aval = a.get(key)
@@ -15,8 +30,8 @@ object JoinVariationsCore {
     }
   }
 
-  def mergeCons(a1: Map[Char, Consequence],
-                a2: Map[Char, Consequence]): Map[Char, Consequence] =
+  private def mergeCons(a1: Map[Char, Consequence],
+                        a2: Map[Char, Consequence]): Map[Char, Consequence] =
     addMaps(a1, a2)((_, _) match {
       case (c1, c2) if c1 == c2 => c1
       case (c1, c2) if c1 == StopGain || c2 == StopGain =>
@@ -85,15 +100,15 @@ object JoinVariationsCore {
       .filter(_.pass)
 
   def readMappedFile(
-      i: Iterator[Ensembl2Uniprot.MapResult]): Iterator[MappedCP] = i.flatMap {
-    i =>
+      i: Iterator[JoinGencodeToUniprot.MapResult]): Iterator[MappedCP] =
+    i.flatMap { i =>
       i match {
-        case Ensembl2Uniprot.Success(list) =>
+        case JoinGencodeToUniprot.Success(list) =>
           list.iterator.map((t1: MappedTranscriptToUniprot) =>
             MappedCP(t1.cp.s, t1.missenseConsequences.map))
         case _ => Iterator.empty
       }
-  }
+    }
 
   def exomeIntervalTree(
       s: scala.io.Source): Map[String, IntervalTree[GFFEntry]] =

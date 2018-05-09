@@ -1,3 +1,5 @@
+package sd
+
 import MathHelpers._
 object Model {
 
@@ -108,7 +110,7 @@ object Model {
     rnd.setSeed(1L)
 
     val Posteriors(postMean) =
-      bayes(`P(x|s)` = `P(x|s)`, prior1 = MathHelpers.uniform)
+      bayes(`P(x|s)` = `P(x|s)`, prior1 = (x: Double) => 1.0)
 
     val postMeanIS = estimatePosteriorMeanWithImportanceSampling(
       likelihood = `P(x|s)`,

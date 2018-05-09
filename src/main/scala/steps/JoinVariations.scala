@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -24,12 +27,12 @@ import scala.collection.mutable.ArrayBuffer
 case class JoinVariationsInput(
     gnomadExome: SharedFile,
     gnomadGenome: SharedFile,
-    mappedProteinCoding: JsDump[Ensembl2Uniprot.MapResult],
+    mappedProteinCoding: JsDump[sd.JoinGencodeToUniprot.MapResult],
     gnomadExomeCoverage: JsDump[GenomeCoverage],
     gnomadGenomeCoverage: JsDump[GenomeCoverage],
     gencodeGtf: SharedFile)
 
-object joinVariations {
+object JoinVariations {
 
   val toEColl =
     AsyncTask[JsDump[LocusVariationCountAndNumNs],

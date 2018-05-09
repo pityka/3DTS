@@ -1,3 +1,6 @@
+package sd.ui
+
+import sd._
 import org.scalajs.dom
 import org.scalajs.dom.ext.{Ajax, AjaxException}
 import scalatags.JsDom._

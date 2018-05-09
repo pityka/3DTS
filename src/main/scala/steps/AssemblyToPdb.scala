@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -39,7 +42,7 @@ case class FetchCifOutput(cifFiles: Map[PdbId, SharedFile])
 case class Assembly2PdbOutput(pdbFiles: Map[PdbId, SharedFile])
     extends ResultWithSharedFiles(pdbFiles.map(_._2).toList: _*)
 
-object Assembly2Pdb {
+object AssemblyToPdb {
 
   def retry[A](i: Int)(f: => A): A = Try(f) match {
     case Success(x)          => x
@@ -58,11 +61,11 @@ object Assembly2Pdb {
           log.info("Fetching cif files.")
           implicit val mat = ctx.components.actorMaterializer
 
-          UniProtPdb.downloadUniprot2(uniprotKb, mappableIds).flatMap {
+          JoinUniprotWithPdb.downloadUniprot2(uniprotKb, mappableIds).flatMap {
             (uniprotKb: Map[UniId, UniProtEntry]) =>
               log.info("Size of uniprotkb {}", uniprotKb.size)
 
-              val pdbIds = ProteinJoin
+              val pdbIds = sd.JoinUniprotWithPdb
                 .extractPdbIdsFromUniprot(uniprotKb)
                 .map(_._2)
                 .distinct
@@ -74,7 +77,7 @@ object Assembly2Pdb {
                   Future {
                     log.info("Fetching " + pdbId)
 
-                    Try(retry(3)(ProteinJoin.fetchCif(pdbId))) match {
+                    Try(retry(3)(sd.JoinUniprotWithPdb.fetchCif(pdbId))) match {
                       case Success(cifString) =>
                         SharedFile(writeToTempFile(cifString), pdbId.s + ".cif")
                           .map(s => Some(pdbId -> s))

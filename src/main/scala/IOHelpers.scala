@@ -1,3 +1,5 @@
+package sd
+
 import fileutils._
 import stringsplit._
 // import org.saddle._

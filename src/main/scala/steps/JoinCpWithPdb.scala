@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -22,8 +25,9 @@ import akka.stream.ActorMaterializer
 import index2._
 import SharedTypes._
 
-case class JoinCPWithPdbInput(gencodeUniprot: JsDump[Ensembl2Uniprot.MapResult],
-                              pdbUniprot: List[JsDump[UniProtPdb.T1]])
+case class JoinCPWithPdbInput(
+    gencodeUniprot: JsDump[sd.JoinGencodeToUniprot.MapResult],
+    pdbUniprot: List[JsDump[JoinUniprotWithPdb.T1]])
 
 case class CpPdbIndex(fs: Set[SharedFile])
     extends ResultWithSharedFiles(fs.toSeq: _*)
@@ -97,8 +101,8 @@ object JoinCPWithPdb {
 
               gencodeUniprot.iterator(localFile)(
                 i =>
-                  i.filter(_.isInstanceOf[Ensembl2Uniprot.Success])
-                    .map(_.asInstanceOf[Ensembl2Uniprot.Success])
+                  i.filter(_.isInstanceOf[sd.JoinGencodeToUniprot.Success])
+                    .map(_.asInstanceOf[sd.JoinGencodeToUniprot.Success])
                     .flatMap(_.v)
                     .map { line =>
                       val uni: UniId = line.uniId

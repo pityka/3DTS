@@ -1,3 +1,5 @@
+package sd
+
 import stringsplit._
 import IOHelpers.three2One
 import org.saddle._

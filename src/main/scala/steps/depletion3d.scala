@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -25,7 +28,7 @@ import htsjdk.samtools.reference._
 object depletion3d {
 
   def computeDepletionScores(locusData: EColl[LocusVariationCountAndNumNs],
-                             features: EColl[Feature2CPSecond.MappedFeatures],
+                             features: EColl[JoinFeatureWithCp.MappedFeatures],
                              fasta: SharedFile,
                              fai: SharedFile,
                              heptamerNeutralRates: HeptamerRates,
@@ -224,19 +227,19 @@ object depletion3d {
 
   val groupByPdbId =
     EColl
-      .groupBy[Feature2CPSecond.MappedFeatures](
+      .groupBy[JoinFeatureWithCp.MappedFeatures](
         "groupMappedFeaturesByPdbId",
         1)(1024 * 1024 * 10, _._1.pdbId.s, Some(1))
 
   val sortByPdbId =
     EColl
-      .sortBy[Feature2CPSecond.MappedFeatures]("sortMappedFeaturesByPdbId", 1)(
+      .sortBy[JoinFeatureWithCp.MappedFeatures]("sortMappedFeaturesByPdbId", 1)(
         1024 * 1024 * 10,
         _._1.pdbId.s)
 
   val groupSortedByPdbId =
     EColl
-      .groupBySorted[Feature2CPSecond.MappedFeatures](
+      .groupBySorted[JoinFeatureWithCp.MappedFeatures](
         "groupBySortedMappedFeaturesByPdbId",
         1)(1024 * 1024 * 10, _._1.pdbId.s)
 
@@ -247,7 +250,7 @@ object depletion3d {
                               globalIntergenicRate: GlobalIntergenicRate)
 
   val computeScores = EColl
-    .mapSourceWith[Seq[Feature2CPSecond.MappedFeatures],
+    .mapSourceWith[Seq[JoinFeatureWithCp.MappedFeatures],
                    Depletion3dInput,
                    DepletionRow]("depletion3d", 9) {
       case (source,

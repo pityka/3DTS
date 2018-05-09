@@ -1,3 +1,5 @@
+package sd
+
 import htsjdk.samtools.reference._
 import stringsplit._
 import java.io.File

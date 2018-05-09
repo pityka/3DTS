@@ -1,3 +1,5 @@
+package sd
+
 import akka.actor._
 import akka.stream._
 import akka.stream.scaladsl._
@@ -134,10 +136,10 @@ object Server {
   }
 
   def start(port: Int,
-            scoresIndex: ScoresIndexedByPdbId,
-            cppdbIndex: CpPdbIndex,
-            geneNameIndex: UniprotIndexedByGene,
-            ligandabilityByUniId: Option[LigandabilityIndexedByUniId])(
+            scoresIndex: steps.ScoresIndexedByPdbId,
+            cppdbIndex: steps.CpPdbIndex,
+            geneNameIndex: steps.UniprotIndexedByGene,
+            ligandabilityByUniId: Option[steps.LigandabilityIndexedByUniId])(
       implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
@@ -252,11 +254,12 @@ object Server {
 
     val tableManager = TableManager(indexFolder)
     val scoresReader =
-      tableManager.reader(Depletion2Pdb.ScoresByPdbIdTable)
-    val cppdbReadr = tableManager.reader(JoinCPWithPdb.CpPdbTable)
-    val geneNameReader = tableManager.reader(IndexUniByGeneName.UniEntryByGene)
+      tableManager.reader(steps.DepletionToPdb.ScoresByPdbIdTable)
+    val cppdbReadr = tableManager.reader(steps.JoinCPWithPdb.CpPdbTable)
+    val geneNameReader =
+      tableManager.reader(steps.IndexUniByGeneName.UniEntryByGene)
     val ligandabilityReader =
-      tableManager.reader(IndexLigandability.LigandabilityByUniId)
+      tableManager.reader(steps.IndexLigandability.LigandabilityByUniId)
 
     log.info("Reader ok")
     val route =

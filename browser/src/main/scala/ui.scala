@@ -1,3 +1,6 @@
+package sd.ui
+
+import sd._
 import scala.scalajs._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js._

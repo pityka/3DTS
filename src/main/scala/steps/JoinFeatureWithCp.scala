@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -20,10 +23,10 @@ import Model._
 
 import akka.stream.ActorMaterializer
 
-case class Feature2CPSecondInput(featureContext: JsDump[StructuralContext.T1],
-                                 cppdb: JsDump[SharedTypes.PdbUniGencodeRow])
+case class Feature2CPInput(featureContext: JsDump[StructuralContext.T1],
+                           cppdb: JsDump[SharedTypes.PdbUniGencodeRow])
 
-object Feature2CPSecond {
+object JoinFeatureWithCp {
 
   type MappedFeatures =
     (FeatureKey, ChrPos, PdbChain, PdbResidueNumberUnresolved, Seq[UniId])
@@ -42,11 +45,9 @@ object Feature2CPSecond {
     }
 
   val task =
-    AsyncTask[Feature2CPSecondInput, JsDump[MappedFeatures]](
-      "feature2cpsecond-2",
-      2) {
+    AsyncTask[Feature2CPInput, JsDump[MappedFeatures]]("feature2cpsecond-2", 2) {
 
-      case Feature2CPSecondInput(
+      case Feature2CPInput(
           featureContextJsDump,
           cppdbJsDump
           ) =>

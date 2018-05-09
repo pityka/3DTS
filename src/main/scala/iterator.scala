@@ -1,3 +1,5 @@
+package sd
+
 import upickle.default.{Writer, Reader}
 import java.io.{Closeable, File}
 

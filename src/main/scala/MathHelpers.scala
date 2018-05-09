@@ -1,3 +1,5 @@
+package sd
+
 object MathHelpers {
 
   def bisect(x0: Double,
@@ -39,12 +41,6 @@ object MathHelpers {
       b,
       max
     )
-
-  val leftSkew = (x: Double) => jdistlib.Beta.density(x, 1, 10, false)
-
-  val rightSkew = (x: Double) => jdistlib.Beta.density(x, 10, 1, false)
-
-  val uniform = (x: Double) => 1d
 
   case class Posteriors(`E(P(s|x,p1))`: Double)
 

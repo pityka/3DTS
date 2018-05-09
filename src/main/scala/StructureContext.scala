@@ -1,3 +1,5 @@
+package sd
+
 import com.thesamet.spatial._
 import org.saddle._
 

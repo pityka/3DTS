@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.{File, Closeable}
 import collection.JavaConversions._
 import scala.sys.process._

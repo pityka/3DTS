@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -22,22 +25,10 @@ import akka.stream.scaladsl._
 import akka.util._
 import scala.collection.mutable.ArrayBuffer
 
-case class GenomeCoverage(chromosome: String,
-                          position: Int,
-                          numberOfWellSequencedIndividuals: Int) {
-  def cp = chromosome + "\t" + position
-}
-
-object GenomeCoverage {
-  implicit val sk = new flatjoin.StringKey[GenomeCoverage] {
-    def key(g: GenomeCoverage) = g.cp
-  }
-}
-
 case class FilterCoverageInput(coverage: JsDump[GenomeCoverage],
                                gencodeGtf: SharedFile)
 
-object FilterCoverage {
+object FilterCoverageToExome {
 
   val task =
     AsyncTask[FilterCoverageInput, JsDump[GenomeCoverage]]("filtercoverage-1",

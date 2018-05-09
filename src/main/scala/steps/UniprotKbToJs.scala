@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -21,7 +24,7 @@ import akka.stream.ActorMaterializer
 import index2._
 import SharedTypes._
 
-object UniprotKb2Js {
+object UniprotKbToJs {
   val task =
     AsyncTask[SharedFile, JsDump[UniProtEntry]]("uniprotkb2js", 2) {
       uniprotkb => implicit ctx =>

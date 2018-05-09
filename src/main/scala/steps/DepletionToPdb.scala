@@ -1,3 +1,6 @@
+package sd.steps
+
+import sd._
 import java.io.File
 import collection.JavaConversions._
 import scala.sys.process._
@@ -21,7 +24,7 @@ case class Depletion2PdbInput(
 case class ScoresIndexedByPdbId(fs: Set[SharedFile])
     extends ResultWithSharedFiles(fs.toSeq: _*)
 
-object Depletion2Pdb {
+object DepletionToPdb {
 
   val ScoresByPdbIdTable = Table(name = "SCORESbyPDBID",
                                  uniqueDocuments = true,
