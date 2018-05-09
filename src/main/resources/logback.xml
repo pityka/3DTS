@@ -1,0 +1,24 @@
+<configuration>
+  <timestamp key="bySecond" datePattern="yyyy-MM-dd'T'HH-mm-ss"/>
+
+  <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+    <file>log-${bySecond}.txt</file>    
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="chapters.configuration" level="INFO"/>
+
+  <root level="DEBUG">          
+    <appender-ref ref="FILE" />
+    <appender-ref ref="STDOUT" />
+  </root>  
+  
+</configuration>

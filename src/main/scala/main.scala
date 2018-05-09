@@ -300,11 +300,6 @@ object importFile {
 
 object ProteinDepletion extends App {
 
-  System.setProperty("org.apache.commons.logging.Log",
-                     "org.apache.commons.logging.impl.NoOpLog");
-
-  //val startServer = args(0).toBoolean
-
   val config = ConfigFactory.load()
 
   withTaskSystem { implicit ts =>

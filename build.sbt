@@ -52,11 +52,12 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "saddle-linalg" % "0.0.23",
   "io.github.pityka" %% "poibin" % "0.0.1",
   "io.github.pityka" %% "intervaltree" % "1.0.0",
+  "io.github.pityka" %% "sampling" % "0.0.1-SNAPSHOT",
+  "io.github.pityka" % "saddle-core-fork_2.12" % "1.3.4-fork1",
   "tasks-core" %% "tasks-core" % "0.0.14",
   "tasks-upickle" %% "tasks-upickle" % "0.0.14",
   "tasks-collection" %% "tasks-collection" % "0.0.14",
-  "io.github.pityka" % "saddle-core-fork_2.12" % "1.3.4-fork1",
-  "io.github.pityka" %% "sampling" % "0.0.1-SNAPSHOT",
+  "indexlib" %% "indexlib" % "1.2.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.spire-math" %% "spire" % "0.13.0",
   "com.github.samtools" % "htsjdk" % "2.14.3",
@@ -64,13 +65,14 @@ libraryDependencies ++= Seq(
   "org.scalaj" %% "scalaj-http" % "2.3.0",
   "com.thesamet" %% "kdtree" % "1.0.6-hli1",
   "org.jzy3d" % "jzy3d-api" % "1.0.0" % "test",
-  "indexlib" %% "indexlib" % "1.2.0",
-  "com.github.tototoshi" %% "scala-csv" % "1.3.5"
+  "com.github.tototoshi" %% "scala-csv" % "1.3.5",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
+  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "com.typesafe.akka" %% "akka-slf4j" % "2.5.11"
 ).map(
   x =>
-    // x.exclude("log4j", "log4j")
-    x.exclude("commons-logging", "commons-logging")
-      .excludeAll(ExclusionRule(organization = "ch.qos.logback"))
+    x.exclude("log4j", "log4j")
+      .exclude("commons-logging", "commons-logging")
 )
 
 enablePlugins(JavaAppPackaging)
@@ -115,6 +117,6 @@ lazy val root =
 lazy val sharedJVM = shared.jvm
 lazy val sharedJs = shared.js
 
-mainClass in Compile := Some("ProteinDepletion")
+mainClass in Compile := Some("sd.ProteinDepletion")
 
 scalafmtOnCompile in ThisBuild := true
