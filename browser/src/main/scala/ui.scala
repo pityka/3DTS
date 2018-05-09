@@ -440,7 +440,7 @@ class ProteinUI(
 
 }
 
-@JSExportTopLevel("ProteinUIApp")
+@JSExportTopLevel("sd.ui.ProteinUIApp")
 object ProteinUIApp {
 
   implicit val c = Ctx.Owner.safe()
