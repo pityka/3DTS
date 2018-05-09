@@ -1,15 +1,8 @@
 package sd.steps
 
-import sd._
 import java.io.{File, Closeable}
-import collection.JavaConversions._
-import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
-import tasks.upicklesupport._
-import tasks.collection._
-import tasks.queue.NodeLocalCache
 import tasks.util.TempFile
 import fileutils._
 import akka.util._
@@ -18,8 +11,7 @@ import akka.stream.scaladsl._
 case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
 
   def createIterator[R](file: File)(
-      implicit r: upickle.default.Reader[T],
-      w: upickle.default.Writer[T]): (Iterator[T], Closeable) = {
+      implicit r: upickle.default.Reader[T]): (Iterator[T], Closeable) = {
     val source = createSource(file)
     val unpickler = implicitly[upickle.default.Reader[T]]
     val it =
@@ -28,8 +20,7 @@ case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
   }
 
   def iterator[R](file: File)(f: Iterator[T] => R)(
-      implicit r: upickle.default.Reader[T],
-      w: upickle.default.Writer[T]): R =
+      implicit r: upickle.default.Reader[T]): R =
     openSource(file) { source =>
       val unpickler = implicitly[upickle.default.Reader[T]]
       val it =
@@ -37,10 +28,9 @@ case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
       f(it)
     }
 
-  def source(implicit ec: ExecutionContext,
+  def source(implicit
              ts: TaskSystemComponents,
-             r: upickle.default.Reader[T],
-             w: upickle.default.Writer[T]): Source[T, _] = {
+             r: upickle.default.Reader[T]): Source[T, _] = {
     val unpickler = implicitly[upickle.default.Reader[T]]
     sf.source
       .via(Compression.gunzip())

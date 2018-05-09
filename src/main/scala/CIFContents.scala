@@ -337,7 +337,6 @@ object CIFContents {
         .sliding(2)
         .find(x => x(0).trim == "loop_" && x(1).trim.startsWith(category + "."))
         .isDefined
-      val splitRegexp = "([^\'\"\\s][^\\s]*|\'.+?\'|\".+?\")".r
       val multiLineRegexp =
         "([^\';\\s\n\r\"][^\\s\n\r]*|\'.+?\'|(?s);.+?;|\".+?\")".r
       if (loop) {
@@ -359,7 +358,7 @@ object CIFContents {
           .filter(_.size >= mIdx)
           .map { spl =>
             idx.map {
-              case (field, fieldIdx) =>
+              case (_, fieldIdx) =>
                 if (fieldIdx >= 0) Some(spl(fieldIdx))
                 else None
             }

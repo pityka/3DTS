@@ -1,8 +1,6 @@
 package sd
 
 import intervaltree._
-import scala.util._
-import stringsplit._
 
 case class TranscriptSupportLevel(v: Int) extends AnyVal
 case class EnsE(from: Int,

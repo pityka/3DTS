@@ -1,9 +1,6 @@
 package sd
 
-import fileutils._
 import stringsplit._
-// import org.saddle._
-import java.io._
 
 case class Variant(locus: String,
                    variantClass: String,

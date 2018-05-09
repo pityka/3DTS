@@ -1,31 +1,12 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
 import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
-import tasks.queue.NodeLocalCache
-import tasks.util.TempFile
 import tasks.upicklesupport._
-
-import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream._
 import akka.stream.scaladsl._
-
-import org.saddle._
-import akka.stream.ActorMaterializer
 import akka.util.ByteString
-
-import akka.actor.Extension
 
 case class StructuralContextFromFeaturesInput(
     cifs: Map[PdbId, SharedFile],

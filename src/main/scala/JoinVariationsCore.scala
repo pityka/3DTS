@@ -1,6 +1,5 @@
 package sd
 
-import stringsplit._
 import intervaltree._
 
 case class GenomeCoverage(chromosome: String,
@@ -179,7 +178,7 @@ object JoinVariationsCore {
 
           val calls = dataTyped
             .map {
-              case Data(gl, source, chrpos) =>
+              case Data(gl, source, _) =>
                 val alt: Char = gl.alt.head
                 val totalVariantAlleleCount = gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount
                 val totalChromosomeCount = gl.genders.male.totalChromosomeCount + gl.genders.female

@@ -1,22 +1,9 @@
 package sd.ui
 
 import sd._
-import org.scalajs.dom
-import org.scalajs.dom.ext.{Ajax, AjaxException}
-import scalatags.JsDom._
-import org.scalajs.dom.raw._
-import all._
-import tags2.section
-import rx._
-import rx.async._
-import scala.util._
-import scala.scalajs.js.annotation.JSExport
+import org.scalajs.dom.ext.Ajax
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.concurrent.Future
-import scala.scalajs._
-import scala.scalajs.js._
-import framework.Framework._
-import upickle.default.Reader
 import SharedTypes._
 
 object Server {

@@ -1,32 +1,13 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
-import tasks.queue.NodeLocalCache
-import tasks.util.TempFile
 import tasks.upicklesupport._
-
 import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream._
 import akka.stream.scaladsl._
-
-import akka.stream.ActorMaterializer
-
-import akka.actor.Extension
 import scala.util._
 import akka.util.ByteString
-
 import scala.util.Try
 
 case class GeneSymbol(s: String) extends AnyVal
@@ -46,7 +27,7 @@ object AssemblyToPdb {
 
   def retry[A](i: Int)(f: => A): A = Try(f) match {
     case Success(x)          => x
-    case Failure(x) if i > 0 => retry(i - 1)(f)
+    case Failure(_) if i > 0 => retry(i - 1)(f)
     case Failure(e)          => throw e
   }
 

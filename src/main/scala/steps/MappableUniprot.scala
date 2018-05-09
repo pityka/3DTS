@@ -1,27 +1,8 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
-import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.upicklesupport._
-
-import tasks.queue.NodeLocalCache
-import tasks.util.TempFile
-
-import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream.ActorMaterializer
-
-import akka.actor.Extension
 
 object MappableUniprot {
 

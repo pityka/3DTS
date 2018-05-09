@@ -1,29 +1,12 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
-import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.queue.NodeLocalCache
-import tasks.util.TempFile
 import tasks.upicklesupport._
-
-import java.io._
-
 import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import akka.util._
-import scala.collection.mutable.ArrayBuffer
 
 case class FilterVariantsInput(gnomad: JsDump[JoinVariationsCore.GnomadLine],
                                tpe: String,

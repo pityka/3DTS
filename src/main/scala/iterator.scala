@@ -54,22 +54,22 @@ package object iterator {
         h
       }
 
-      def forward1 = {
+      def forward1() = {
         head1 = if (iter1.hasNext) Some(iter1.next) else None
       }
 
-      def forward2 = {
+      def forward2() = {
         head2 = if (iter2.hasNext) Some(iter2.next) else None
       }
 
-      def fill1 =
+      def fill1() =
         while (head1.isDefined && (list1.isEmpty || o.equiv(head1.get,
                                                             list1.head))) {
           list1 = head1.get :: list1
           forward1
         }
 
-      def fill2 = {
+      def fill2() = {
         while (head2.isDefined && (list2.isEmpty || o.equiv(head2.get,
                                                             list2.head))) {
           list2 = head2.get :: list2
@@ -242,7 +242,7 @@ final class SpanIterator[A, T](iter: Iterator[A], p: A => T)
     currentPredicateValue = p(x)
   }
 
-  def fw =
+  def fw() =
     if (iter.hasNext) {
       fwRead = Some(iter.next)
     } else {

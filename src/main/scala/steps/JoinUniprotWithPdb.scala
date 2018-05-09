@@ -1,26 +1,11 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.queue.NodeLocalCache
-import tasks.util.TempFile
 import tasks.upicklesupport._
-
 import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream.ActorMaterializer
-
-import akka.actor.Extension
 
 case class UniProtPdbInput(
     uniprotKb: SharedFile,
@@ -228,19 +213,14 @@ object JoinUniprotWithPdb {
                       mapping,
                       uniSeq,
                       pdbSeq,
-                      uniAl,
-                      pdbAl,
+                      _,
+                      _,
                       _) =>
                   mapping.iterator.map {
                     case (pdbSeqNum, uniNum, pdbResNum, mat) =>
-                      val pdb1 = pdbSeqNum.i + "\t" + pdbSeq.s(pdbSeqNum.i)
-
                       val pdb2 =
                         pdbResNum.num.toString + pdbResNum.insertionCode
                           .getOrElse("")
-
-                      val uni =
-                        uniNum.i + "\t" + uniSeq.s(uniNum.i)
 
                       (uniId,
                        pdbId,

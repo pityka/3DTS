@@ -47,8 +47,7 @@ object Model {
       s
     }
 
-    // poibin.pdf(Array(successes), ps.toArray)(0)
-    jdistlib.Poisson.density(successes, ps, true)
+    jdistlib.Poisson.density(successes.toLong, ps, true)
   }
 
   def likelihoodLoci(lociNumNs: Array[Int],
@@ -68,7 +67,7 @@ object Model {
                         lociRounds.map(_ => 1.0),
                         d)
 
-    val (max, it) =
+    val (max, _) =
       findMinimum(1E-12, 0.01, 1E-20, 20000)((d: Double) => -1 * lik(d))
     // val maxV = lik(max)
     // val predicted = appoximationPoissonWithNsWithRounds(lociRounds.map {

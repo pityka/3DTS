@@ -1,26 +1,12 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
-import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
-
 import tasks.util.TempFile
-import java.io._
-
 import fileutils._
 import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream.ActorMaterializer
 
 import index2._
 import SharedTypes._
@@ -153,11 +139,11 @@ object JoinCPWithPdb {
                                pdbid,
                                pdbch,
                                pdbres,
-                               pdbnum,
+                               _,
                                pdbaa,
                                unin,
                                uniaa,
-                               unipdbmatch)) =>
+                               _)) =>
                           genomeLines.iterator.map {
                             case genomeLine =>
                               val t1: MappedTranscriptToUniprot =

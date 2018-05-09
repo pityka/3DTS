@@ -2,6 +2,7 @@ package framework
 
 import org.scalajs.dom.Element
 import rx._
+import scala.language.implicitConversions
 
 import scala.util.{Failure, Success}
 import scalatags.JsDom.all._

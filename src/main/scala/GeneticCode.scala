@@ -45,8 +45,6 @@ object GeneticCode {
     (withOrWithOutGaps.toUpperCase grouped (3) map GeneticCode.codon2aa).mkString
   }
 
-  private val codonregexp = "^[ATGCN]{1,3}$".r
-
   private val ambiguousNucleotides = Map(
     'A' -> ('A' :: Nil),
     'T' -> ('T' :: Nil),

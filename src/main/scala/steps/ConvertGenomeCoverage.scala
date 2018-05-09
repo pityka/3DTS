@@ -1,30 +1,12 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
-import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.collection._
-import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
-
-import tasks.util.TempFile
-import java.io._
-
-import fileutils._
 import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
-
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import akka.util._
-import scala.collection.mutable.ArrayBuffer
 
 object ConvertGenomeCoverage {
 
@@ -32,7 +14,6 @@ object ConvertGenomeCoverage {
     AsyncTask[JsDump[GenomeCoverage], EColl[GenomeCoverage]](
       "GenomeCoverageToEColl",
       1) { js => implicit ctx =>
-      implicit val mat = ctx.components.actorMaterializer
       log.info(s"Convert $js to ecoll.")
       EColl.fromSource(js.source, js.sf.name, 1024 * 1024 * 10)
     }
@@ -75,7 +56,6 @@ object ConvertGenomeCoverage {
       case (coverageFiles, totalSize) =>
         implicit ctx =>
           log.info("Process " + coverageFiles)
-          implicit val mat = ctx.components.actorMaterializer
           val source = Source(coverageFiles).flatMapConcat { file =>
             file.source
               .via(Compression.gunzip())

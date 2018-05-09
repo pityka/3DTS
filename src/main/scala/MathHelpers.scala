@@ -33,7 +33,6 @@ object MathHelpers {
   def integrate(f: Double => Double,
                 a: Double,
                 b: Double,
-                min: Int = 16,
                 max: Int = 128): Double =
     GaussLegendre.integrate(
       f,
@@ -50,12 +49,12 @@ object MathHelpers {
 
     val `P(x,s|p1)` = (s: Double) => `P(x|s)`(s) * prior1(s)
 
-    val `P(x|p1)` = integrate(`P(x,s|p1)`, 0.0, 1.0, 16 * nx, 1024 * nx)
+    val `P(x|p1)` = integrate(`P(x,s|p1)`, 0.0, 1.0, 1024 * nx)
 
     val `P(s|x,p1)` = (s: Double) => `P(x,s|p1)`(s) / `P(x|p1)`
 
     val `E(P(s|x,p1))` =
-      integrate((s: Double) => `P(s|x,p1)`(s) * s, 0.0, 1.0, 16 * nx, 1024 * nx)
+      integrate((s: Double) => `P(s|x,p1)`(s) * s, 0.0, 1.0, 1024 * nx)
 
     Posteriors(`E(P(s|x,p1))`)
 

@@ -1,20 +1,13 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.collection._
-import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
-
 import tasks.util.TempFile
 import fileutils._
 import index2._
-import SharedTypes._
 
 case class Depletion2PdbInput(
     posteriorFile: EColl[DepletionRow],
@@ -81,7 +74,7 @@ object DepletionToPdb {
 
               contextJs.iterator(contextL) { contextIter =>
                 val iter = contextIter.flatMap {
-                  case (fkey, pdbResidues, unis) =>
+                  case (fkey, pdbResidues, _) =>
                     val scores = scoreMap.get(fkey).getOrElse(Vector())
                     pdbResidues.iterator.flatMap {
                       case (pdbChain, pdbResidue) =>

@@ -1,28 +1,14 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
 import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.collection._
 import tasks.queue.NodeLocalCache
-import tasks.util.TempFile
 import tasks.upicklesupport._
-
 import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
 import Model._
-
-import akka.stream._
 import akka.stream.scaladsl._
-import SharedTypes._
-
 import htsjdk.samtools.reference._
 
 object depletion3d {
@@ -40,17 +26,16 @@ object depletion3d {
       grouped <- groupSortedByPdbId(sorted)(CPUMemoryRequest(12, 5000))
       unused <- groupByPdbId(features)(CPUMemoryRequest(12, 5000))
       mapped <- computeScores(
-        grouped,
-        Depletion3dInput(locusData,
-                         fasta,
-                         fai,
-                         heptamerNeutralRates,
-                         globalIntergenicRate))(CPUMemoryRequest(1, 5000))
+        (grouped,
+         Depletion3dInput(locusData,
+                          fasta,
+                          fai,
+                          heptamerNeutralRates,
+                          globalIntergenicRate)))(CPUMemoryRequest(1, 5000))
     } yield mapped
 
   def makeScores(
       lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs],
-      name: String,
       features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
       pSynonymous: Double,
       referenceSequence: IndexedFastaSequenceFile,
@@ -260,7 +245,6 @@ object depletion3d {
                              heptamerRates,
                              globalIntergenicRate)) =>
         implicit ctx =>
-          implicit val mat = ctx.components.actorMaterializer
           val futureSoure = for {
             fastaLocal <- fasta.file
             faiLocal <- fai.file
@@ -279,7 +263,6 @@ object depletion3d {
                 mappedFeatures.map(x => (x._2, x._1, x._5))
 
               makeScores(lociByCpra,
-                         "3ds-all-proteomewide",
                          features,
                          pSyn,
                          referenceSequence,

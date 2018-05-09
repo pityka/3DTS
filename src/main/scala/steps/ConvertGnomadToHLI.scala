@@ -1,21 +1,9 @@
 package sd.steps
 
 import sd._
-import java.io.File
-import collection.JavaConversions._
-import scala.sys.process._
-import scala.concurrent._
-import scala.concurrent.duration._
 import tasks._
 import tasks.collection._
-import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
-
-import tasks.util.TempFile
-import fileutils._
-import SharedTypes._
-
-import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import JoinVariationsCore.{GnomadLine, GnomadGenders, GnomadPop}
@@ -28,7 +16,6 @@ object ConvertGnomadToHLI {
   val toEColl =
     AsyncTask[JsDump[GnomadLine], EColl[GnomadLine]]("GenomeCoverageToEColl", 1) {
       js => implicit ctx =>
-        implicit val mat = ctx.components.actorMaterializer
         log.info(s"Convert $js to ecoll.")
         EColl.fromSource(js.source, js.sf.name, 1024 * 1024 * 10)
     }
@@ -105,8 +92,6 @@ object ConvertGnomadToHLI {
     AsyncTask[List[GnomadData], EColl[GnomadLine]]("convertgnomad2hli-ecoll", 1) {
       case files =>
         implicit ctx =>
-          implicit val mat = ctx.components.actorMaterializer
-
           val convertpar = math.max(1, resourceAllocated.cpu / 2)
           val ecollPar = math.max(1, resourceAllocated.cpu - convertpar)
 

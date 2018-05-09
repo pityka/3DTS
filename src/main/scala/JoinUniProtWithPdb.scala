@@ -1,17 +1,5 @@
 package sd
 
-import akka.actor._
-import akka.event.LoggingAdapter
-import akka.stream._
-import akka.stream.scaladsl._
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.util.ByteString
-import scala.concurrent.{ExecutionContext, Future, Await}
-import scala.concurrent.duration._
-import scala.util.Try
-import scala.concurrent.ExecutionContext.Implicits.global
-
 case class PdbMethod(s: String) extends AnyVal
 object PdbMethod {
   val XRay = PdbMethod("x-ray")
@@ -39,7 +27,7 @@ object JoinUniprotWithPdb {
     val lines = s.getLines.toList.map(_.split("\\s+"))
     s.close
     lines.tail.zipWithIndex.flatMap {
-      case (line, i2) =>
+      case (line, _) =>
         lines.head.drop(1).zipWithIndex.map {
           case (c1, i1) =>
             val c2 = line.head
@@ -60,7 +48,6 @@ object JoinUniprotWithPdb {
                            Int,
                            PdbSeq,
                            UniSeq) = {
-    val chars = "ACDEFGHIKLMNPQRSTVWY".toList
     val penalties: Map[(Char, Char), Int] = blosum
     val gapOpen = 5
     val gapExtension = 1
@@ -75,7 +62,7 @@ object JoinUniprotWithPdb {
       s match {
         case Nil                 => acc
         case x :: xs if x == '-' => zipWithOriginalIndex(xs, None :: acc, i)
-        case x :: xs             => zipWithOriginalIndex(xs, Some(i) :: acc, i + 1)
+        case _ :: xs             => zipWithOriginalIndex(xs, Some(i) :: acc, i + 1)
       }
 
     val pdbOrig = zipWithOriginalIndex(pdbAl.toList, Nil, 0).reverse
@@ -109,7 +96,6 @@ object JoinUniprotWithPdb {
       .toList
       .filter(x => x.seqLength.isDefined && x.seqLength.get > 10)
       .flatMap { entry =>
-        val seqLength = entry.seqLength.get
         entry.pdbs
           .filter(x =>
             (x._2 == PdbMethod.XRay && x._3.isDefined) || (x._1: PdbId) == PdbId(

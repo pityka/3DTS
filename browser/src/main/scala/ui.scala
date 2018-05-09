@@ -5,20 +5,12 @@ import scala.scalajs._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js._
 import scala.scalajs.js.annotation._
-import scala.util._
-import org.scalajs.dom.ext.{Ajax, AjaxException}
+import org.scalajs.dom.ext.Ajax
 
 import framework.Framework._
-import org.scalajs.dom
 import org.scalajs.dom.raw._
 import rx._
-import rx.async._
-import rx.async.Platform._
-import scalatags.JsDom._
 import scalatags.JsDom.all._
-import SharedTypes._
-import upickle.default._
-import upickle.Js
 
 class ProteinUI(
     parentNode: Node
@@ -80,7 +72,7 @@ class ProteinUI(
           if (picked == null) ()
           else {
             val target = picked.target()
-            if (target.qualifiedName != ()) {
+            if (!js.isUndefined(target.qualifiedName)) {
               val structureChainName =
                 target.residue().chain().name().asInstanceOf[String]
               val chainName: String =
@@ -260,8 +252,7 @@ class ProteinUI(
                         ExpS(exps),
                         NumLoci(size),
                         NsPostMeanGlobalSynonymousRate(nsPostmean),
-                        NsPostMeanHeptamerSpecificIntergenicRate(
-                          nsPostMeanHepta),
+                        NsPostMeanHeptamerSpecificIntergenicRate(_),
                         NsPostMeanGlobalIntergenicRate(_),
                         unis) =>
         val btn = button(
@@ -324,7 +315,6 @@ class ProteinUI(
           (e: Event) =>
             println("clicked " + feature)
             import js.JSConverters._
-            val pdb: PdbId = feature.pdbId
             val ch: PdbChain = feature.pdbChain
             val res: PdbResidueNumberUnresolved =
               feature.asInstanceOf[FeatureKey2].pdbResidueMin
@@ -335,7 +325,7 @@ class ProteinUI(
                     js.Dynamic.literal(chains =
                                          chainRemapReverse(ch.s).toJSArray,
                                        rnum = res.s.toInt))
-                println(chainRemapReverse(ch.s).toJSArray, res.s.toInt)
+                println((chainRemapReverse(ch.s).toJSArray, res.s.toInt))
                 viewer.ballsAndSticks("focus", focusResidue)
                 viewer.centerOn(focusResidue)
               case None =>
@@ -380,11 +370,13 @@ class ProteinUI(
       }
 
     def colorByResidue(colorString: String)
-      : Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] =
+      : Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] = {
+      println(colorString)
       byResidue.map {
-        case (key, scores) =>
+        case (key, _) =>
           key -> Array(1d, 1d, 1d)
       }
+    }
 
     val colorByResidue_Mean1DLocal = colorByResidue("PMean_2d_local")
 

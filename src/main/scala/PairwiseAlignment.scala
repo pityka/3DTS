@@ -143,7 +143,7 @@ object FittingPairwiseAlignment {
                                       gapopen: Int,
                                       gapextension: Int) = {
 
-    val (vInt, wInt, scoresInt, char2int) = PenaltyHelper(v, w, scores)
+    val (vInt, wInt, scoresInt, _) = PenaltyHelper(v, w, scores)
 
     val n = v.size
     val m = w.size
@@ -279,7 +279,7 @@ object FittingPairwiseAlignment {
     val n = v.size
     val m = w.size
 
-    val (vInt, wInt, scoresInt, char2int) = PenaltyHelper(v, w, scores)
+    val (vInt, wInt, scoresInt, _) = PenaltyHelper(v, w, scores)
 
     val s = MutableMatrix(n + 1, m + 1)
     val b = MutableMatrix(n, m)
@@ -475,7 +475,7 @@ object GlobalPairwiseAlignment {
                                w: String,
                                scores: Map[(Char, Char), Int],
                                indelpenalty: Int): (MutableMatrix[Int], Int) = {
-    val (vInt, wInt, scoresInt, char2int) = PenaltyHelper(v, w, scores)
+    val (vInt, wInt, scoresInt, _) = PenaltyHelper(v, w, scores)
 
     val n = v.size
     val m = w.size
@@ -521,7 +521,7 @@ object GlobalPairwiseAlignment {
                                      gapopen: Int,
                                      gapextension: Int) = {
 
-    val (vInt, wInt, scoresInt, char2int) = PenaltyHelper(v, w, scores)
+    val (vInt, wInt, scoresInt, _) = PenaltyHelper(v, w, scores)
 
     val n = v.size
     val m = w.size
@@ -727,7 +727,7 @@ object GlobalPairwiseAlignment {
         }
       }
     }.toMap
-    val (x, maxScore) = globalAlignmentBacktrack(v, w, score, 1)
+    val (_, maxScore) = globalAlignmentBacktrack(v, w, score, 1)
 
     maxScore * -1
   }

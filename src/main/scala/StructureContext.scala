@@ -120,7 +120,7 @@ object StructureContext {
       .filter(x => x._3.size > 0 && x._3.size < 200)
       .map {
         case (chain, featureName, residuesInFeature) =>
-          println(pdbId, chain, featureName, residuesInFeature.size)
+          println((pdbId, chain, featureName, residuesInFeature.size))
           val featureAtoms: List[List[Atom]] = (residuesInFeature map {
             residue =>
               atomsByResidue.get(chain -> residue).toList.flatten

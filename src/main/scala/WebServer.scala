@@ -8,15 +8,12 @@ import akka.http.scaladsl._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
-import akka.http.scaladsl.marshalling._
 import akka.event.Logging
 import tasks._
 import index2._
-import scala.concurrent.{Future, Await, ExecutionContext}
-import scala.concurrent.duration._
+import scala.concurrent.{Future, ExecutionContext}
 import java.io.File
 import SharedTypes._
-import com.bluelabs.s3stream._
 import tasks.util.TempFile
 
 object Server {
@@ -35,6 +32,8 @@ object Server {
     val scores =
       if (q.isEmpty) Vector[Doc]()
       else scoresReader.getDocs(q)
+
+    println(cpPdbReader)
 
     // val cppdb =
     //   if (q.isEmpty) Vector[Doc]()
@@ -181,13 +180,13 @@ object Server {
   def getData(pdb: String): Source[ByteString, _] = {
 
     val file = new File(dataFolder + "/pdbassembly/" + pdb + ".assembly.pdb")
-    akka.stream.scaladsl.FileIO.fromFile(file)
+    akka.stream.scaladsl.FileIO.fromPath(file.toPath)
 
   }
 
   def getFullDepletionScoresAsCSVStream(
       implicit ec: ExecutionContext): Source[ByteString, _] = {
-
+    println(ec)
     ???
     // val file = new File(
     //   dataFolder + "/depletion2pdb/full.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.variationdata.json.gz.5.0.2142306777..json.gz.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.-620945037.json.gz.back2pdb.json.gz")
@@ -265,9 +264,9 @@ object Server {
     val route =
       path("query") {
         get {
-          parameters("q", "format".?) {
+          parameters(("q", "format".?)) {
             case (queryTerm, format) =>
-              logRequest("query", Logging.InfoLevel) {
+              logRequest(("query", Logging.InfoLevel)) {
                 respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
                   complete {
                     val res = makeQuery(scoresReader,
@@ -286,9 +285,9 @@ object Server {
       } ~
         path("queryligandability") {
           get {
-            parameters("q", "format".?) {
+            parameters(("q", "format".?)) {
               case (queryTerm, format) =>
-                logRequest("query", Logging.InfoLevel) {
+                logRequest(("query", Logging.InfoLevel)) {
                   respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
                     complete {
                       val res = makeLigandibilityQuery(scoresReader,
@@ -306,22 +305,22 @@ object Server {
           }
         } ~
         pathSingleSlash {
-          logRequest("index", Logging.InfoLevel) {
+          logRequest(("index", Logging.InfoLevel)) {
             Route.seal(getFromResource("public/index.html"))
           }
         } ~
         path("browser-opt.js") {
-          logRequest("browser-opt.js", Logging.InfoLevel) {
+          logRequest(("browser-opt.js", Logging.InfoLevel)) {
             Route.seal(getFromResource("browser-opt.js"))
           }
         } ~
         path("browser-fastopt.js") {
-          logRequest("browser-fastopt.js", Logging.InfoLevel) {
+          logRequest(("browser-fastopt.js", Logging.InfoLevel)) {
             Route.seal(getFromResource("browser-fastopt.js"))
           }
         } ~
         path("pdb" / Segment) { segment =>
-          logRequest("pdb", Logging.InfoLevel) {
+          logRequest(("pdb", Logging.InfoLevel)) {
             complete {
               HttpResponse(
                 entity = HttpEntity.CloseDelimited(
@@ -334,7 +333,7 @@ object Server {
         } ~
         path("feedback" / Segment) { segment =>
           post {
-            logRequest("feedback", Logging.InfoLevel) {
+            logRequest(("feedback", Logging.InfoLevel)) {
               entity(as[String]) { data =>
                 if (data.size < 10000) {
                   fileutils.writeToFile(
@@ -352,7 +351,7 @@ object Server {
           }
         } ~
         path("depletionscores") {
-          logRequest("depletionscores", Logging.InfoLevel) {
+          logRequest(("depletionscores", Logging.InfoLevel)) {
             complete {
               HttpResponse(
                 entity = HttpEntity.CloseDelimited(
@@ -364,13 +363,13 @@ object Server {
           }
         } ~
         path(RemainingPath) { segment =>
-          logRequest("other", Logging.InfoLevel) {
+          logRequest(("other", Logging.InfoLevel)) {
             Route.seal(getFromResource("public/" + segment))
           }
         }
 
     Http().bindAndHandle(route, "0.0.0.0", port).andThen {
-      case e =>
+      case _ =>
         log.info("http server started listening on any host on port " + port)
     }
   }

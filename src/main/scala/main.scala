@@ -1,19 +1,12 @@
 package sd
 
 import sd.steps._
-import fileutils._
-import stringsplit._
-
-import IOHelpers._
-import MathHelpers._
-import Model._
 
 import tasks._
 import tasks.collection._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.net._
 import com.typesafe.config._
 
 import scala.collection.JavaConverters._
@@ -279,7 +272,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       //   }
       // }
 
-      List(indexedScores)
+      List(indexedScores, indexedLigandability, uniprotByGene)
     }
 
     Future.sequence(
@@ -315,8 +308,7 @@ object ProteinDepletion extends App {
   val config = ConfigFactory.load()
 
   withTaskSystem { implicit ts =>
-    val result =
-      Await.result(new TaskRunner().run(config), atMost = 168 hours)
+    Await.ready(new TaskRunner().run(config), atMost = 168 hours)
     //if (startServer) {
     println("Pipeline done. Blocking indefinitely to keep the server up.")
     while (true) {
