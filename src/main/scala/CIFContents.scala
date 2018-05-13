@@ -771,21 +771,48 @@ object CIFContents {
               .map(x => x._1 -> (x._2.map(_._2).reduce(_ ++ _)))
         }
 
-    // println(operations)
+    val rawAtomList: Vector[(Atom, PdbChain, PdbResidueNumber, CifChain)] =
+      parsedAtomTable
+        .map { spl =>
+          val id = spl(0).get.toInt
+          val chain = PdbChain(spl(1).get)
+          val rn = spl(2).get.toInt
+          val insC = if (spl(3).isEmpty) "?" else spl(3).get
+          val pdbResidue =
+            PdbResidueNumber(rn, (if (insC == "?") None else Some(insC)))
+          val coord =
+            Vec(spl(4).get.toDouble, spl(5).get.toDouble, spl(6).get.toDouble)
+          val occ = spl(7).get.toDouble
+          val entityId = spl(8).get.toInt
+          val cifChain = CifChain(spl(13).getOrElse(chain.s))
+          val polyProtein = polyProteinEntities.contains(entityId)
+          val modelNumber: Option[Int] = spl(9).map(_.toInt).orElse(None)
+
+          (chain,
+           pdbResidue,
+           Atom(coord,
+                id,
+                name = spl(10).getOrElse(""),
+                symbol = spl(11).getOrElse(""),
+                residue3 = spl(12).getOrElse(""),
+                tempFactor = spl(14).getOrElse("")),
+           occ,
+           polyProtein,
+           modelNumber == representativeModelNumber,
+           cifChain)
+        }
+        .filter(x => x._4 > 0.0 && x._5 && x._6)
+        .map(x => (x._3, x._1, x._2, x._7))
+        .toVector
 
     val assemblyOperations: Map[CifChain, Seq[AffineTransformation]] =
-      operations.get(assemblyId.get).getOrElse(Map())
+      assemblyId.flatMap(operations.get).getOrElse {
+        val chains = rawAtomList.map(_._4).toSet
+        chains.toList.map { chain =>
+          chain -> List(AffineTransformation.identity)
+        }.toMap
+      }
     val assemblyChainsSet: Set[CifChain] = assemblyOperations.keySet.toSet
-
-    // println(operations)
-
-    // val chainIdx = header.indexOf("_atom_site.auth_asym_id")
-    // val residueNumberIdx = header.indexOf("_atom_site.auth_seq_id")
-    // val insertionCodeIdx = header.indexOf("_atom_site.pdbx_PDB_ins_code")
-    // val entityIdIdx = header.indexOf("_atom_site.label_entity_id")
-
-    // println(polyProteinEntities)
-    // println(assemblyChainsSet)
 
     val aminoAcidSequence = {
 
@@ -840,11 +867,7 @@ object CIFContents {
             threeLetterInUniProt.map(t => three2One.get(t).getOrElse('X'))
 
           val modelNumber: Option[Int] =
-            if (modelNumberIdx < 0) None else Some(spl(modelNumberIdx).toInt)
-
-          // println(modelNumber == representativeModelNumber)
-          // println(oneLetter)
-          // println(cifChain)
+            if (modelNumberIdx < 0) None else Some(spl(modelNumberIdx).toInt)        
 
           (oneLetter,
            pdbResidue,
@@ -861,48 +884,6 @@ object CIFContents {
         .groupBy(_._3)
         .map(x => x._1 -> x._2.map(x => (x._1, x._2)).sortBy(_._2))
     }
-
-    val rawAtomList: Vector[(Atom, PdbChain, PdbResidueNumber, CifChain)] =
-      parsedAtomTable
-        .map { spl =>
-          // println(spl)
-          val id = spl(0).get.toInt
-          val chain = PdbChain(spl(1).get)
-          val rn = spl(2).get.toInt
-          val insC = if (spl(3).isEmpty) "?" else spl(3).get
-          val pdbResidue =
-            PdbResidueNumber(rn, (if (insC == "?") None else Some(insC)))
-          val coord =
-            Vec(spl(4).get.toDouble, spl(5).get.toDouble, spl(6).get.toDouble)
-          val occ = spl(7).get.toDouble
-          val entityId = spl(8).get.toInt
-          val cifChain = CifChain(spl(13).getOrElse(chain.s))
-          val polyProtein = polyProteinEntities.contains(entityId)
-          val modelNumber: Option[Int] = spl(9).map(_.toInt).orElse(None)
-
-          // println(modelNumber == representativeModelNumber)
-          // println(polyProtein)
-          // println(occ)
-
-          (chain,
-           pdbResidue,
-           Atom(coord,
-                id,
-                name = spl(10).getOrElse(""),
-                symbol = spl(11).getOrElse(""),
-                residue3 = spl(12).getOrElse(""),
-                tempFactor = spl(14).getOrElse("")),
-           occ,
-           polyProtein,
-           modelNumber == representativeModelNumber,
-           cifChain)
-        }
-        .filter(x => x._4 > 0.0 && x._5 && x._6)
-        .map(x => (x._3, x._1, x._2, x._7))
-        .toVector
-
-    // println(rawAtomList.size)
-    // println(assemblyChainsSet)
 
     val assembly: Structure = {
 
@@ -948,7 +929,6 @@ object CIFContents {
               .zipWithIndex
               .flatMap {
                 case (operation, opidx) =>
-                  // println(operation)
 
                   atoms.map {
                     case (atom, chain, residue, _) =>
@@ -960,7 +940,6 @@ object CIFContents {
                              atom.symbol,
                              atom.residue3,
                              atom.tempFactor)
-                      // println(atom, imageAtom)
                       (imageAtom,
                        chain,
                        residue,
