@@ -1,5 +1,7 @@
 package sd
 
+import com.typesafe.scalalogging.StrictLogging
+
 case class PdbMethod(s: String) extends AnyVal
 object PdbMethod {
   val XRay = PdbMethod("x-ray")
@@ -19,7 +21,7 @@ case class UniProtEntry(
     features: List[(String, UniNumber, UniNumber)],
     geneNames: List[GeneName])
 
-object JoinUniprotWithPdb {
+object JoinUniprotWithPdb extends StrictLogging {
 
   val blosum = {
     val s = scala.io.Source
@@ -152,31 +154,49 @@ object JoinUniprotWithPdb {
 
     val candidates = selectCandidateChains(uniId, uniprotKb)
 
-    if (uniId.s == "Q53SS5") {
-      println(candidates)
-    }
-
     val uniprotEntry = uniprotKb(uniId)
 
     val uniquePdbids: Seq[PdbId] =
       candidates.map(_._1).toSeq.distinct
 
-    val cifs = uniquePdbids.flatMap { pdb =>
-      val s = fetchCif(pdb)
-      val lines = scala.io.Source.fromString(s).getLines.toList
-      CIFContents
-        .parseCIF(lines)
-        .toOption
-        .map(_.aminoAcidSequence)
-        .toSeq
-        .map(x => pdb -> x)
+    if (uniId.s == "Q53SS5") {
+      logger.info("Q53SS5 pdb ids: " + uniquePdbids)
+    }
 
-    }.toMap
+    val cifs: Map[PdbId, Map[PdbChain, List[(Char, PdbResidueNumber)]]] =
+      uniquePdbids.flatMap { pdb =>
+        val s = fetchCif(pdb)
+        val lines = scala.io.Source.fromString(s).getLines.toList
+        val parsedCIF = CIFContents
+          .parseCIF(lines)
+
+        parsedCIF match {
+          case scala.util.Failure(e) =>
+            logger.error(s"$pdb failed parsing", e)
+          case _ => logger.info(s"$pdb parsing ok")
+        }
+
+        parsedCIF.toOption
+          .map(_.aminoAcidSequence)
+          .map(x => pdb -> x)
+          .toSeq
+
+      }.toMap
 
     candidates
-      .filter(x => cifs.contains(x._1) && cifs(x._1).contains(x._2))
+      .filter {
+        case (pdbId, pdbChain, _) =>
+          val cifContainsPdb = cifs.contains(pdbId)
+          val cifContainsPdbChain = cifContainsPdb && cifs(pdbId).contains(
+            pdbChain)
+          logger.info(
+            s"$pdbId cif contains pdb ($cifContainsPdb) and chain($cifContainsPdbChain)")
+          cifContainsPdbChain
+      }
       .map {
         case (pdbId, pdbChain, uniSeq) =>
+          logger.info(
+            s"$pdbId $pdbChain - aligning pdb sequence with uniprot sequence")
           val pdbResidueList: Vector[(Char, PdbResidueNumber)] =
             cifs(pdbId)(pdbChain).toVector
           val pdbSeq = PdbSeq(pdbResidueList.map(_._1).mkString)

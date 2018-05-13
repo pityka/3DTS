@@ -46,7 +46,7 @@ object StructuralContext {
                          _] = source
             .mapAsync(resourceAllocated.cpu) {
               case (uniid, pdbId, pdbchain, features) =>
-                log.info(pdbId.toString)
+                log.info(s"$uniid $pdbId cif:${cifs.contains(pdbId)}")
                 val cifString: Future[Option[String]] = cifs
                   .get(pdbId)
                   .map(
@@ -58,13 +58,18 @@ object StructuralContext {
                   mayCifString
                     .filter(_.startsWith("data_"))
                     .flatMap { cifString =>
-                      CIFContents
+                      val cifContents = CIFContents
                         .parseCIF(
                           scala.io.Source
                             .fromString(cifString)
                             .getLines
                             .toList)
                         .toOption
+
+                      log.info(
+                        s"$uniid $pdbId cif parsed: ${cifContents.isDefined}")
+
+                      cifContents
                         .map { cifContents =>
                           StructureContext
                             .featureFromUniprotFeatureSegmentation(

@@ -1,6 +1,7 @@
 package sd
 
 import intervaltree._
+import com.typesafe.scalalogging.StrictLogging
 
 case class TranscriptSupportLevel(v: Int) extends AnyVal
 case class EnsE(from: Int,
@@ -11,7 +12,7 @@ case class EnsE(from: Int,
                 exonNumber: Int)
     extends Interval
 
-object JoinGencodeToUniprot {
+object JoinGencodeToUniprot extends StrictLogging {
 
   val Nuc = List('A', 'T', 'G', 'C')
 
@@ -54,15 +55,29 @@ object JoinGencodeToUniprot {
       m1 ++ ensembleXRefUniProt.filterNot(x => m1.contains(x._1))
     }
 
+    enst2uni.foreach {
+      case (enst, uniid) =>
+        logger.info(s"$enst $uniid")
+    }
+
     def filterTSL(tsl: TranscriptSupportLevel) = !(tsl.v == 4 || tsl.v == 5)
 
     transcripts
-      .filter(x => gencode.contains(x._1) && filterTSL(gencode(x._1)._2))
+      .filter {
+        case (enst, _) =>
+          val gencodeContains = gencode.contains(enst)
+          val tslOK = gencodeContains && filterTSL(gencode(enst)._2)
+          logger.info(
+            s"$enst kept: $tslOK, gencode contains enst: $gencodeContains")
+          tslOK
+      }
       .map {
         case (enst, transcript) =>
           val uni = enst2uni.get(enst)
-          uni
+          val result = uni
             .flatMap { uni =>
+              val uniprotcontains = uniprotKb.contains(uni)
+              logger.info(s"$enst $uni UniprotKB contains: $uniprotcontains")
               uniprotKb.get(uni).map { uniEntry =>
                 mapTranscript(enst,
                               gencode(enst)._1,
@@ -72,6 +87,15 @@ object JoinGencodeToUniprot {
               }
             }
             .getOrElse(Enst2UniFailed(enst))
+
+          result match {
+            case Success(_) =>
+              logger.info(s"$enst mapped to uniprot")
+            case e =>
+              logger.info(s"$enst FAILED to map to uniprot ${e.getClass}")
+          }
+
+          result
       }
   }
 

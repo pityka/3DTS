@@ -91,6 +91,7 @@ object JoinCPWithPdb {
                     .map(_.asInstanceOf[sd.JoinGencodeToUniprot.Success])
                     .flatMap(_.v)
                     .map { line =>
+                      log.info(s"Add $line to index")
                       val uni: UniId = line.uniId
                       val uninum: Option[UniNumber] = line.uniNumber
                       (uni, uninum) -> upickle.default.write(line)
@@ -129,6 +130,7 @@ object JoinCPWithPdb {
                           val uninum: UniNumber = unipdbline._7
                           val genomeLines =
                             uniprot2Genome.get(uni.s + "_" + uninum.i)
+                          log.info(s"$unipdbline JOIN $genomeLines")
                           (genomeLines, unipdbline)
                       }
                       .filter(_._1.isDefined)

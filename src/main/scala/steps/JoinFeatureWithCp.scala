@@ -34,7 +34,7 @@ object JoinFeatureWithCp {
           cppdbJsDump
           ) =>
         implicit ctx =>
-          log.info("Start feature2cpsecond")
+          log.info("Start JoinFeatureWithCp")
           featureContextJsDump.sf.file.flatMap { featureContextLocalFile =>
             cppdbJsDump.sf.file.flatMap { cppdb =>
               val map: scala.collection.mutable.Map[String, List[String]] =
@@ -48,7 +48,7 @@ object JoinFeatureWithCp {
                     val pdbres: PdbResidueNumberUnresolved =
                       row.pdbResidueNumberUnresolved
                     val k = pdbId.s + "_" + pdbChain.s + "_" + pdbres.s
-
+                    log.info(s"Add $k - $cp to index.")
                     mmap.get(k) match {
                       case None    => mmap.update(k, List(cp.s))
                       case Some(l) => mmap.update(k, cp.s :: l)
@@ -66,6 +66,8 @@ object JoinFeatureWithCp {
                         pdbResidues.iterator.flatMap {
                           case (PdbChain(pdbChain),
                                 PdbResidueNumberUnresolved(pdbResidue)) =>
+                            log.debug(
+                              s"Join $featureKey with CPs.  $pdbChain:$pdbResidue")
                             map
                               .get(featureKey.pdbId.s + "_" + pdbChain + "_" + pdbResidue)
                               .toList

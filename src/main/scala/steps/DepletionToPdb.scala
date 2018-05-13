@@ -76,6 +76,7 @@ object DepletionToPdb {
                 val iter = contextIter.flatMap {
                   case (fkey, pdbResidues, _) =>
                     val scores = scoreMap.get(fkey).getOrElse(Vector())
+                    log.info(s"Scores found for $fkey: ${scores.size}")
                     pdbResidues.iterator.flatMap {
                       case (pdbChain, pdbResidue) =>
                         scores.iterator.map { longLine =>

@@ -10,8 +10,9 @@ import fileutils._
 import Model._
 import akka.stream.scaladsl._
 import htsjdk.samtools.reference._
+import com.typesafe.scalalogging.StrictLogging
 
-object depletion3d {
+object depletion3d extends StrictLogging {
 
   def computeDepletionScores(locusData: EColl[LocusVariationCountAndNumNs],
                              features: EColl[JoinFeatureWithCp.MappedFeatures],
@@ -75,6 +76,7 @@ object depletion3d {
           }
 
           if (!exclude) {
+            logger.info(s"Scoring $feature")
 
             // ns, numLoci, rounds
             val numNsGrouped: Seq[(Int, Int, Int)] = loci
@@ -136,7 +138,11 @@ object depletion3d {
                unis)
 
             Some(row)
-          } else None
+          } else {
+            logger.info(s"Excloding $feature from scoring")
+
+            None
+          }
       }
       .filter(_.isDefined)
       .map(_.get)

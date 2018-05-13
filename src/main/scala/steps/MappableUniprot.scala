@@ -15,6 +15,10 @@ object MappableUniprot {
         val uni: Set[UniId] = mapresult.iterator(genomeJoinFile)(it =>
           sd.JoinGencodeToUniprot.readUniProtIds(it))
 
+        uni.foreach { uni =>
+          log.info(s"$uni mappable.")
+        }
+
         JsDump.fromIterator(uni.iterator,
                             name = mapresult.sf.name + ".uniids.json.gz")
 

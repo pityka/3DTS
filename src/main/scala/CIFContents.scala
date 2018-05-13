@@ -867,7 +867,7 @@ object CIFContents {
             threeLetterInUniProt.map(t => three2One.get(t).getOrElse('X'))
 
           val modelNumber: Option[Int] =
-            if (modelNumberIdx < 0) None else Some(spl(modelNumberIdx).toInt)        
+            if (modelNumberIdx < 0) None else Some(spl(modelNumberIdx).toInt)
 
           (oneLetter,
            pdbResidue,
@@ -929,7 +929,6 @@ object CIFContents {
               .zipWithIndex
               .flatMap {
                 case (operation, opidx) =>
-
                   atoms.map {
                     case (atom, chain, residue, _) =>
                       atomIdx += 1

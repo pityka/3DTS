@@ -2,8 +2,9 @@ package sd
 
 import com.thesamet.spatial._
 import org.saddle._
+import com.typesafe.scalalogging.StrictLogging
 
-object StructureContext {
+object StructureContext extends StrictLogging {
 
   def featureFromSlidingWindow(
       cif: CIFContents,
@@ -120,7 +121,8 @@ object StructureContext {
       .filter(x => x._3.size > 0 && x._3.size < 200)
       .map {
         case (chain, featureName, residuesInFeature) =>
-          println((pdbId, chain, featureName, residuesInFeature.size))
+          logger.info(
+            s"$pdbId - $chain - $featureName - $residuesInFeature.size")
           val featureAtoms: List[List[Atom]] = (residuesInFeature map {
             residue =>
               atomsByResidue.get(chain -> residue).toList.flatten

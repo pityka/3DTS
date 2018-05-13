@@ -186,6 +186,7 @@ object JoinUniprotWithPdb {
             }
             .flatMap { (uniprotKb: Map[UniId, UniProtEntry]) =>
               val result = uniIds.flatMap { uniId =>
+                log.info("Join $uniID with PDB")
                 val r = try {
                   sd.JoinUniprotWithPdb.joinUniProtWithPdb(uniId, uniprotKb)
                 } catch {
@@ -216,6 +217,7 @@ object JoinUniprotWithPdb {
                       _,
                       _,
                       _) =>
+                  log.info(s"$uniId - $pdbId - $pdbChain")
                   mapping.iterator.map {
                     case (pdbSeqNum, uniNum, pdbResNum, mat) =>
                       val pdb2 =
