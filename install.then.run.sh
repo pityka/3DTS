@@ -29,6 +29,12 @@ tasks.fileservice.storageURI = ./data/
 hosts.RAM=120000
 hosts.numCPU=16
 
+akka {
+  loggers = ["akka.event.slf4j.Slf4jLogger"]
+  loglevel = "DEBUG"
+  logging-filter = "akka.event.slf4j.Slf4jLoggingFilter"
+}
+
 uniprotKb = input/uniprot.gz
 gencodeGTF = input/gencode.v26lift37.annotation.gtf.gz
 gencodeTranscripts = input/gencode.v26lift37.pc_transcripts.fa.gz
@@ -42,6 +48,62 @@ gnomadExome = "https://data.broadinstitute.org/gnomAD/release-170228/exomes/vcf/
 
 gnomadExomeCoverage = input/exome.coverage.concat.txt
 gnomadGenomeCoverage = input/genome.coverage.concat.txt
+
+fasta = input/human_g1k_v37.fasta
+fai = input/human_g1k_v37.fasta.fai
+
+tasks.skipContentHashVerificationAfterCache = true
+
+gnomadWGSCoverage = [
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr1.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr2.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr3.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr4.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr5.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr6.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr7.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr8.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr9.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr10.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr11.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr12.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr13.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr14.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr15.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr16.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr17.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr18.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr19.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr20.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr21.coverage.txt.gz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr22.coverage.txt.gz"
+
+	]
+
+gnomadWGSVCF = [
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr1.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr2.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr3.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr4.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr5.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr6.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr7.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr8.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr9.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr10.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr11.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr12.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr13.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr14.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr15.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr16.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr17.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr18.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr19.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr20.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr21.vcf.bgz"
+	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr22.vcf.bgz"
+	]
 EOF
 
 wget -O input/uniprot.gz  'http://www.uniprot.org/uniprot/?sort=&desc=&compress=yes&query=proteome:UP000005640%20reviewed:yes&fil=&force=yes&format=txt'
