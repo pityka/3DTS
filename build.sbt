@@ -53,10 +53,10 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "poibin" % "0.0.1",
   "io.github.pityka" %% "intervaltree" % "1.0.0",
   "io.github.pityka" %% "sampling" % "0.0.1",
-  "io.github.pityka" % "saddle-core-fork_2.12" % "1.3.4-fork1",
-  "tasks-core" %% "tasks-core" % "0.0.14",
-  "tasks-upickle" %% "tasks-upickle" % "0.0.14",
-  "tasks-collection" %% "tasks-collection" % "0.0.14",
+  "io.github.pityka" %% "saddle-core-fork" % "1.3.4-fork1",
+  "io.github.pityka" %% "tasks-core" % "0.0.14",
+  "io.github.pityka" %% "tasks-upickle" % "0.0.14",
+  "io.github.pityka" %% "tasks-collection" % "0.0.14",
   "indexlib" %% "indexlib" % "1.2.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.spire-math" %% "spire" % "0.13.0",
@@ -64,7 +64,6 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.scalaj" %% "scalaj-http" % "2.3.0",
   "com.thesamet" %% "kdtree" % "1.0.6-hli1",
-  "org.jzy3d" % "jzy3d-api" % "1.0.0" % "test",
   "com.github.tototoshi" %% "scala-csv" % "1.3.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -74,6 +73,8 @@ libraryDependencies ++= Seq(
     x.exclude("log4j", "log4j")
       .exclude("commons-logging", "commons-logging")
 )
+
+resolvers += Resolver.sonatypeRepo("public")
 
 enablePlugins(JavaAppPackaging)
 
