@@ -52,7 +52,7 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "saddle-linalg" % "0.0.23",
   "io.github.pityka" %% "poibin" % "0.0.1",
   "io.github.pityka" %% "intervaltree" % "1.0.0",
-  "io.github.pityka" %% "sampling" % "0.0.1-SNAPSHOT",
+  "io.github.pityka" %% "sampling" % "0.0.1",
   "io.github.pityka" % "saddle-core-fork_2.12" % "1.3.4-fork1",
   "tasks-core" %% "tasks-core" % "0.0.14",
   "tasks-upickle" %% "tasks-upickle" % "0.0.14",
