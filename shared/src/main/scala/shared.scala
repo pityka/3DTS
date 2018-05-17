@@ -1,5 +1,6 @@
 package sd 
 
+
 object AnyValPicklers {
   import upickle.default.{ReadWriter, Writer, Reader}
   def apply[S: upickle.default.ReadWriter, T](f: T => Option[S],
@@ -8,6 +9,11 @@ object AnyValPicklers {
       case js: upickle.Js.Value => g(implicitly[Reader[S]].read(js))
     })
 
+}
+
+case class Posterior(mean: Double, cdf: List[Double])
+object Posterior {
+  implicit val pickler = upickle.default.macroRW[Posterior]
 }
 
 case class ChrPos(s: String) extends AnyVal // first 3 columns of the bed file
@@ -136,20 +142,20 @@ object GlobalIntergenicRate {
     AnyValPicklers(GlobalIntergenicRate.unapply, GlobalIntergenicRate.apply)
 }
 
-case class NsPostMeanGlobalSynonymousRate(v: Double) extends AnyVal
-object NsPostMeanGlobalSynonymousRate {
+case class NsPostGlobalSynonymousRate(post: Posterior) extends AnyVal
+object NsPostGlobalSynonymousRate {
   implicit val pickler =
-    AnyValPicklers(NsPostMeanGlobalSynonymousRate.unapply, NsPostMeanGlobalSynonymousRate.apply)
+    AnyValPicklers(NsPostGlobalSynonymousRate.unapply, NsPostGlobalSynonymousRate.apply)
 }
-case class NsPostMeanGlobalIntergenicRate(v: Double) extends AnyVal
-object NsPostMeanGlobalIntergenicRate {
+case class NsPostGlobalIntergenicRate(post: Posterior) extends AnyVal
+object NsPostGlobalIntergenicRate {
   implicit val pickler =
-    AnyValPicklers(NsPostMeanGlobalIntergenicRate.unapply, NsPostMeanGlobalIntergenicRate.apply)
+    AnyValPicklers(NsPostGlobalIntergenicRate.unapply, NsPostGlobalIntergenicRate.apply)
 }
-case class NsPostMeanHeptamerSpecificIntergenicRate(v: Double) extends AnyVal
-object NsPostMeanHeptamerSpecificIntergenicRate {
+case class NsPostHeptamerSpecificIntergenicRate(post: Posterior) extends AnyVal
+object NsPostHeptamerSpecificIntergenicRate {
   implicit val pickler =
-    AnyValPicklers(NsPostMeanHeptamerSpecificIntergenicRate.unapply, NsPostMeanHeptamerSpecificIntergenicRate.apply)
+    AnyValPicklers(NsPostHeptamerSpecificIntergenicRate.unapply, NsPostHeptamerSpecificIntergenicRate.apply)
 }
 case class MyColor(r: Int, g: Int, b: Int)
 case class ExpS(v: Double) extends AnyVal
@@ -195,9 +201,9 @@ case class DepletionRow(featureKey: FeatureKey,
                         obsS: ObsS,
                         expS: ExpS,
                         numLoci: NumLoci,
-                        nsPostMeanGlobalSynonymousRate: NsPostMeanGlobalSynonymousRate,
-                        nsPostMeanHeptamerSpecificIntergenicRate: NsPostMeanHeptamerSpecificIntergenicRate     ,   
-                        nsPostMeanGlobalIntergenicRate: NsPostMeanGlobalIntergenicRate     ,   
+                        nsPostGlobalSynonymousRate: NsPostGlobalSynonymousRate,
+                        nsPostHeptamerSpecificIntergenicRate: NsPostHeptamerSpecificIntergenicRate     ,   
+                        nsPostGlobalIntergenicRate: NsPostGlobalIntergenicRate     ,   
                         uniprotIds: Seq[UniId])
 
 object DepletionRow {

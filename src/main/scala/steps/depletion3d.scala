@@ -131,10 +131,9 @@ object depletion3d extends StrictLogging {
                ObsS(countSInFullChain),
                ExpS(expectedSInFullChain),
                NumLoci(loci.size),
-               NsPostMeanGlobalSynonymousRate(postMeanAgainstSynonymousRate),
-               NsPostMeanHeptamerSpecificIntergenicRate(postMeanHepta),
-               NsPostMeanGlobalIntergenicRate(
-                 postMeanAgainstGlobalIntergenicRate),
+               NsPostGlobalSynonymousRate(postMeanAgainstSynonymousRate),
+               NsPostHeptamerSpecificIntergenicRate(postMeanHepta),
+               NsPostGlobalIntergenicRate(postMeanAgainstGlobalIntergenicRate),
                unis)
 
             Some(row)
@@ -147,13 +146,11 @@ object depletion3d extends StrictLogging {
       .filter(_.isDefined)
       .map(_.get)
       .toList
-      .sortBy(_._8.v)
-      .reverse
 
     val tableContent: List[DepletionRow] = estimates
       .groupBy(x => x._1.pdbId.s -> x._1.pdbChain.s)
       .toList
-      .sortBy(_._2.head._8.v)
+      .sortBy(_._2.head._8.post.mean)
       .reverse
       .flatMap {
         case (_, features) =>
@@ -243,7 +240,7 @@ object depletion3d extends StrictLogging {
   val computeScores = EColl
     .mapSourceWith[Seq[JoinFeatureWithCp.MappedFeatures],
                    Depletion3dInput,
-                   DepletionRow]("depletion3d", 9) {
+                   DepletionRow]("depletion3d", 10) {
       case (source,
             Depletion3dInput(loci,
                              fasta,

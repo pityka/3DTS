@@ -41,22 +41,26 @@ object MathHelpers {
       max
     )
 
-  case class Posteriors(`E(P(s|x,p1))`: Double)
-
   def bayes(`P(x|s)`: Double => Double,
-            prior1: Double => Double,
-            nx: Int = 1): Posteriors = {
+            prior: Double => Double,
+            nx: Int = 1): Posterior = {
 
-    val `P(x,s|p1)` = (s: Double) => `P(x|s)`(s) * prior1(s)
+    val `P(x,s|prior)` = (s: Double) => `P(x|s)`(s) * prior(s)
 
-    val `P(x|p1)` = integrate(`P(x,s|p1)`, 0.0, 1.0, 1024 * nx)
+    val `P(x|prior)` = integrate(`P(x,s|prior)`, 0.0, 1.0, 1024 * nx)
 
-    val `P(s|x,p1)` = (s: Double) => `P(x,s|p1)`(s) / `P(x|p1)`
+    val `P(s|x,prior)` = (s: Double) => `P(x,s|prior)`(s) / `P(x|prior)`
 
-    val `E(P(s|x,p1))` =
-      integrate((s: Double) => `P(s|x,p1)`(s) * s, 0.0, 1.0, 1024 * nx)
+    val cdf = (1 to 10).toList
+      .map { (i: Int) =>
+        integrate(`P(s|x,prior)`, i / 10d - 0.1d, i / 10d, 1024 * nx)
+      }
+      .scanLeft(0d)(_ + _)
 
-    Posteriors(`E(P(s|x,p1))`)
+    val `E(P(s|x,prior))` =
+      integrate((s: Double) => `P(s|x,prior)`(s) * s, 0.0, 1.0, 1024 * nx)
+
+    Posterior(`E(P(s|x,prior))`, cdf)
 
   }
 

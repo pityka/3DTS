@@ -1,7 +1,8 @@
 package sd
 
 import MathHelpers._
-object Model {
+import com.typesafe.scalalogging.StrictLogging
+object Model extends StrictLogging {
 
   def predictionPoissonWithNsWithRounds(sizes: Seq[(Int, Int, Int)],
                                         p: Double) =
@@ -82,7 +83,7 @@ object Model {
   }
 
   def posteriorMeanOfNeutralRate(lociRounds: Array[Int],
-                                 successes: Int): Double =
+                                 successes: Int): Posterior =
     posteriorUnderSelection1D(lociRounds.map(_ => 3),
                               lociRounds,
                               successes,
@@ -91,7 +92,7 @@ object Model {
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Double): Double =
+                                p: Double): Posterior =
     posteriorUnderSelection1D(lociNumNs,
                               lociRounds,
                               successes,
@@ -100,7 +101,7 @@ object Model {
   def posteriorUnderSelection1D(lociNumNs: Array[Int],
                                 lociRounds: Array[Int],
                                 successes: Int,
-                                p: Array[Double]): Double = {
+                                p: Array[Double]): Posterior = {
 
     val `P(x|s)` =
       likelihoodLoci(lociNumNs, lociRounds, successes, p, _: Double)
@@ -108,8 +109,8 @@ object Model {
     val rnd = new jdistlib.rng.RandomWELL44497b
     rnd.setSeed(1L)
 
-    val Posteriors(postMean) =
-      bayes(`P(x|s)` = `P(x|s)`, prior1 = (x: Double) => 1.0)
+    val posteriors @ Posterior(postMean, _) =
+      bayes(`P(x|s)` = `P(x|s)`, prior = (x: Double) => 1.0)
 
     val postMeanIS = estimatePosteriorMeanWithImportanceSampling(
       likelihood = `P(x|s)`,
@@ -118,10 +119,11 @@ object Model {
       n = 20000).estimate
 
     if (math.abs(postMean - postMeanIS) > 0.02) {
-      println(postMean + "\t" + postMeanIS)
+      logger.warn(
+        "Quadrature vs Importance sampling deviate: " + postMean + "\t" + postMeanIS)
     }
 
-    postMean
+    posteriors
   }
 
 }
