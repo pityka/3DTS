@@ -1,4 +1,4 @@
-scalaVersion := "2.12.4"
+scalaVersion := "2.12.5"
 
 resolvers ++= Seq[Resolver](
   "jzy3d maven repository " at "http://maven.jzy3d.org/releases")
