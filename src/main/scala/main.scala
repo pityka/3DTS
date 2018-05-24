@@ -209,7 +209,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           features.flatMap { features =>
             JoinFeatureWithCp.task(
               Feature2CPInput(featureContext = features, cppdb = cppdb))(
-              CPUMemoryRequest(1, 60000))
+              CPUMemoryRequest(1, 120000))
           }
         }
 
