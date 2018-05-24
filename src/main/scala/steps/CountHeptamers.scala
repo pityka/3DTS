@@ -45,7 +45,7 @@ object CountHeptamers {
   val joinGnomadGenomeCoverageWithGnomadDataTask =
     EColl.outerJoinBy2[GenomeCoverage, GnomadLine](
       "joinGnomadCoverageWithData",
-      1)(1024 * 1024 * 50, _.cp, _.cp, Some(3))
+      1)(1024 * 1024 * 50, _.cp, _.cp, Some(1))
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
                         calls: EColl[GnomadLine],
