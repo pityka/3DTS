@@ -303,7 +303,7 @@ object ProteinDepletion extends App {
   val config = ConfigFactory.load()
 
   withTaskSystem { implicit ts =>
-    Await.ready(new TaskRunner().run(config), atMost = 168 hours)
+    Await.result(new TaskRunner().run(config), atMost = 168 hours)
     //if (startServer) {
     println("Pipeline done. Blocking indefinitely to keep the server up.")
     while (true) {
