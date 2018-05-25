@@ -20,14 +20,16 @@ case class UniProtPdbFullInput(
 case class UniProtPdbFullOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
                   JsDump[JoinUniprotWithPdb.T1],
-                  JsDump[JoinUniprotWithPdb.T2])],
+                  JsDump[JoinUniprotWithPdb.T2],
+                  JsDump[AlignmentDetails])],
     qc: SharedFile)
     extends ResultWithSharedFiles(qc +: tables.map(_._2.sf): _*)
 
 case class UniProtPdbOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
                   JsDump[JoinUniprotWithPdb.T1],
-                  JsDump[JoinUniprotWithPdb.T2])])
+                  JsDump[JoinUniprotWithPdb.T2],
+                  JsDump[AlignmentDetails])])
     extends ResultWithSharedFiles(tables.map(_._2.sf): _*)
 
 object JoinUniprotWithPdb {
@@ -248,9 +250,38 @@ object JoinUniprotWithPdb {
                 JsDump.fromIterator(featureMappingIter,
                                     name = batchName + ".features.json.gz")
 
+              val alignmentData = JsDump.fromIterator(
+                result.iterator.map {
+                  case (uniId,
+                        pdbId,
+                        pdbChain,
+                        _,
+                        _,
+                        _,
+                        alignedUniSeq,
+                        alignedPdbSeq,
+                        _) =>
+                    val percentIdentity = {
+                      val matches =
+                        (alignedUniSeq.s.toSeq zip alignedPdbSeq.s.toSeq)
+                          .count { case (a, b) => a == b }
+                      matches.toDouble / alignedUniSeq.s.size
+                    }
+                    AlignmentDetails(uniId,
+                                     pdbId,
+                                     pdbChain,
+                                     percentIdentity,
+                                     alignedUniSeq,
+                                     alignedPdbSeq)
+                },
+                name = batchName + ".alignments.js.gz"
+              )
+
               mapping.flatMap { m =>
-                featureMapping.map { fm =>
-                  UniProtPdbOutput(List((ids.toList, m, fm)))
+                alignmentData.flatMap { al =>
+                  featureMapping.map { fm =>
+                    UniProtPdbOutput(List((ids.toList, m, fm, al)))
+                  }
                 }
               }
 

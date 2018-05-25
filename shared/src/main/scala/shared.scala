@@ -210,6 +210,11 @@ object DepletionRow {
   implicit val rw = upickle.default.macroRW[DepletionRow]
 }
 
+case class AlignmentDetails(uniId : UniId, pdbId: PdbId, pdbChain: PdbChain, percentIdentity: Double,alignedUniSeq: UniSeq,alignedPdbSeq:PdbSeq)
+object AlignmentDetails {
+  implicit val rw = upickle.default.macroRW[AlignmentDetails]
+}
+
 object SharedTypes {
 
   case class PdbUniGencodeRow(
