@@ -14,7 +14,8 @@
     </encoder>
   </appender>
 
-  <logger name="chapters.configuration" level="INFO"/>
+  <logger name="tasks.fileservice.StreamHelper" level="DEBUG"/>
+  <logger name="httpqueue.HttpQueueImpl" level="DEBUG"/>
 
   <root level="INFO">          
     <appender-ref ref="FILE" />

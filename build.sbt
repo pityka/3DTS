@@ -1,8 +1,5 @@
 scalaVersion := "2.12.5"
 
-resolvers ++= Seq[Resolver](
-  "jzy3d maven repository " at "http://maven.jzy3d.org/releases")
-
 val commonSettings = Seq(
   scalacOptions ++= Seq(
     "-deprecation", // Emit warning and location for usages of deprecated APIs.
@@ -54,9 +51,9 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "intervaltree" % "1.0.0",
   "io.github.pityka" %% "sampling" % "0.0.1",
   "io.github.pityka" %% "saddle-core-fork" % "1.3.4-fork1",
-  "io.github.pityka" %% "tasks-core" % "0.0.14",
-  "io.github.pityka" %% "tasks-upickle" % "0.0.14",
-  "io.github.pityka" %% "tasks-collection" % "0.0.14",
+  "io.github.pityka" %% "tasks-core" % "0.0.15",
+  "io.github.pityka" %% "tasks-upickle" % "0.0.15",
+  "io.github.pityka" %% "tasks-collection" % "0.0.15",
   "indexlib" %% "indexlib" % "1.2.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.spire-math" %% "spire" % "0.13.0",
