@@ -254,6 +254,8 @@ class ProteinUI(
                         NsPostGlobalSynonymousRate(Posterior(nsPostmean, _)),
                         _,
                         _,
+                        _,
+                        _,
                         unis) =>
         val btn = button(
           `class` := "uk-button uk-button-default uk-button-small uk-button-primary",

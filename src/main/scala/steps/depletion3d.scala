@@ -7,6 +7,7 @@ import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
 import fileutils._
+import stringsplit._
 import Model._
 import akka.stream.scaladsl._
 import htsjdk.samtools.reference._
@@ -14,12 +15,17 @@ import com.typesafe.scalalogging.StrictLogging
 
 object depletion3d extends StrictLogging {
 
-  def computeDepletionScores(locusData: EColl[LocusVariationCountAndNumNs],
-                             features: EColl[JoinFeatureWithCp.MappedFeatures],
-                             fasta: SharedFile,
-                             fai: SharedFile,
-                             heptamerNeutralRates: HeptamerRates,
-                             globalIntergenicRate: GlobalIntergenicRate)(
+  def computeDepletionScores(
+      locusData: EColl[LocusVariationCountAndNumNs],
+      features: EColl[JoinFeatureWithCp.MappedFeatures],
+      fasta: SharedFile,
+      fai: SharedFile,
+      heptamerNeutralRates: HeptamerRates,
+      heptamerIndependentIntergenicRate: HeptamerIndependentIntergenicRate,
+      chromosomeSpecificHeptamerRates: Map[String, HeptamerRates],
+      chromosomeSpecificHeptamerIndependentRates: Map[
+        String,
+        HeptamerIndependentIntergenicRate])(
       implicit tc: tasks.TaskSystemComponents,
       ec: ExecutionContext) =
     for {
@@ -32,7 +38,10 @@ object depletion3d extends StrictLogging {
                           fasta,
                           fai,
                           heptamerNeutralRates,
-                          globalIntergenicRate)))(CPUMemoryRequest(1, 5000))
+                          heptamerIndependentIntergenicRate,
+                          chromosomeSpecificHeptamerRates,
+                          chromosomeSpecificHeptamerIndependentRates)))(
+        CPUMemoryRequest(1, 5000))
     } yield mapped
 
   def makeScores(
@@ -41,7 +50,11 @@ object depletion3d extends StrictLogging {
       pSynonymous: Double,
       referenceSequence: IndexedFastaSequenceFile,
       heptamerNeutralRates: Map[String, Double],
-      globalIntergenicRate: GlobalIntergenicRate): List[DepletionRow] = {
+      heptamerIndependentIntergenicRate: HeptamerIndependentIntergenicRate,
+      chromosomeSpecificHeptamerRates: Map[String, Map[String, Double]],
+      chromosomeSpecificHeptamerIndependentRates: Map[
+        String,
+        HeptamerIndependentIntergenicRate]): List[DepletionRow] = {
 
     val lociByPdbChain: Map[(PdbId, PdbChain), Vector[ChrPos]] = features
       .groupBy(x => x._2.pdbId -> x._2.pdbChain)
@@ -103,7 +116,7 @@ object depletion3d extends StrictLogging {
                                         countNs,
                                         pSynonymous)
 
-            val postMeanHepta = {
+            val postChromosomeIndependentHeptamerSpecific = {
               val pIntergenicByHeptamer = loci.map { locus =>
                 val cp = locus.locus
                 val heptamer =
@@ -118,11 +131,41 @@ object depletion3d extends StrictLogging {
                                         pIntergenicByHeptamer)
             }
 
-            val postMeanAgainstGlobalIntergenicRate =
+            val postChromosomeSpecificHeptamerSpecific = {
+              val pIntergenicByHeptamerByChromosome = loci.map { locus =>
+                val cp = locus.locus
+                val chr = cp.s.split1('\t').head
+                val heptamer =
+                  HeptamerHelpers.heptamerAt(cp, referenceSequence).get
+
+                chromosomeSpecificHeptamerRates(chr)(heptamer)
+              }.toArray
+
               posteriorUnderSelection1D(numNs,
                                         sampleSizeNs,
                                         countNs,
-                                        globalIntergenicRate.v)
+                                        pIntergenicByHeptamerByChromosome)
+            }
+
+            val postChromosomeSpecificHeptamerIndependent = {
+              val pIntergenicByChromosome = loci.map { locus =>
+                val cp = locus.locus
+                val chr = cp.s.split1('\t').head
+
+                chromosomeSpecificHeptamerIndependentRates(chr).v
+              }.toArray
+
+              posteriorUnderSelection1D(numNs,
+                                        sampleSizeNs,
+                                        countNs,
+                                        pIntergenicByChromosome)
+            }
+
+            val postChromosomeIndependentHeptamerIndependentIntergenicRate =
+              posteriorUnderSelection1D(numNs,
+                                        sampleSizeNs,
+                                        countNs,
+                                        heptamerIndependentIntergenicRate.v)
 
             val row =
               (feature,
@@ -132,8 +175,14 @@ object depletion3d extends StrictLogging {
                ExpS(expectedSInFullChain),
                NumLoci(loci.size),
                NsPostGlobalSynonymousRate(postMeanAgainstSynonymousRate),
-               NsPostHeptamerSpecificIntergenicRate(postMeanHepta),
-               NsPostGlobalIntergenicRate(postMeanAgainstGlobalIntergenicRate),
+               NsPostHeptamerSpecificIntergenicRate(
+                 postChromosomeIndependentHeptamerSpecific),
+               NsPostHeptamerIndependentIntergenicRate(
+                 postChromosomeIndependentHeptamerIndependentIntergenicRate),
+               NsPostHeptamerSpecificChromosomeSpecificIntergenicRate(
+                 postChromosomeSpecificHeptamerSpecific),
+               NsPostHeptamerIndependentChromosomeSpecificIntergenicRate(
+                 postChromosomeSpecificHeptamerIndependent),
                unis)
 
             Some(row)
@@ -164,7 +213,9 @@ object depletion3d extends StrictLogging {
                          x._7,
                          x._8,
                          x._9,
-                         x._10)
+                         x._10,
+                         x._11,
+                         x._12)
           }
       }
 
@@ -231,27 +282,39 @@ object depletion3d extends StrictLogging {
         "groupBySortedMappedFeaturesByPdbId",
         1)(1024 * 1024 * 10, _._1.pdbId.s)
 
-  case class Depletion3dInput(locusData: EColl[LocusVariationCountAndNumNs],
-                              fasta: SharedFile,
-                              fai: SharedFile,
-                              heptamerNeutralRates: HeptamerRates,
-                              globalIntergenicRate: GlobalIntergenicRate)
+  case class Depletion3dInput(
+      locusData: EColl[LocusVariationCountAndNumNs],
+      fasta: SharedFile,
+      fai: SharedFile,
+      heptamerNeutralRates: HeptamerRates,
+      heptamerIndependentIntergenicRate: HeptamerIndependentIntergenicRate,
+      chromosomeSpecificHeptamerRates: Map[String, HeptamerRates],
+      chromosomeSpecificHeptamerIndependentRates: Map[
+        String,
+        HeptamerIndependentIntergenicRate])
 
   val computeScores = EColl
     .mapSourceWith[Seq[JoinFeatureWithCp.MappedFeatures],
                    Depletion3dInput,
-                   DepletionRow]("depletion3d", 10) {
+                   DepletionRow]("depletion3d", 10)(_ => "") {
       case (source,
             Depletion3dInput(loci,
                              fasta,
                              fai,
                              heptamerRates,
-                             globalIntergenicRate)) =>
+                             heptamerIndependentIntergenicRate,
+                             chromosomeSpecificHeptamerRates,
+                             chromosomeSpecificHeptamerIndependentRates)) =>
         implicit ctx =>
           val futureSoure = for {
             fastaLocal <- fasta.file
             faiLocal <- fai.file
             heptamerRatesLocal <- heptamerRates.sf.file
+            chromosomeSpecificHeptamerRatesLocal <- Future.sequence(
+              chromosomeSpecificHeptamerRates.map {
+                case (chr, hpt) =>
+                  hpt.sf.file.map(file => (chr, file))
+              })
             (lociByCpra, pSyn) <- cacheLocusData(loci)
           } yield {
 
@@ -261,16 +324,26 @@ object depletion3d extends StrictLogging {
             val heptamerRates =
               openSource(heptamerRatesLocal)(HeptamerHelpers.readRates)
 
+            val chromosomeSpecificHeptamerRates =
+              chromosomeSpecificHeptamerRatesLocal.map {
+                case (chr, file) =>
+                  (chr, openSource(file)(HeptamerHelpers.readRates))
+              }.toMap
+
             source.mapConcat { mappedFeatures =>
               val features: Seq[(ChrPos, FeatureKey, Seq[UniId])] =
                 mappedFeatures.map(x => (x._2, x._1, x._5))
 
-              makeScores(lociByCpra,
-                         features,
-                         pSyn,
-                         referenceSequence,
-                         heptamerRates,
-                         globalIntergenicRate)
+              makeScores(
+                lociByCpra,
+                features,
+                pSyn,
+                referenceSequence,
+                heptamerRates,
+                heptamerIndependentIntergenicRate,
+                chromosomeSpecificHeptamerRates,
+                chromosomeSpecificHeptamerIndependentRates
+              )
             }
 
           }

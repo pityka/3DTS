@@ -136,10 +136,10 @@ object NumLoci {
     AnyValPicklers(NumLoci.unapply, NumLoci.apply)
 }
 
-case class GlobalIntergenicRate(v: Double) extends AnyVal
-object GlobalIntergenicRate {
+case class HeptamerIndependentIntergenicRate(v: Double) extends AnyVal
+object HeptamerIndependentIntergenicRate {
   implicit val pickler =
-    AnyValPicklers(GlobalIntergenicRate.unapply, GlobalIntergenicRate.apply)
+    AnyValPicklers(HeptamerIndependentIntergenicRate.unapply, HeptamerIndependentIntergenicRate.apply)
 }
 
 case class NsPostGlobalSynonymousRate(post: Posterior) extends AnyVal
@@ -147,15 +147,25 @@ object NsPostGlobalSynonymousRate {
   implicit val pickler =
     AnyValPicklers(NsPostGlobalSynonymousRate.unapply, NsPostGlobalSynonymousRate.apply)
 }
-case class NsPostGlobalIntergenicRate(post: Posterior) extends AnyVal
-object NsPostGlobalIntergenicRate {
+case class NsPostHeptamerIndependentIntergenicRate(post: Posterior) extends AnyVal
+object NsPostHeptamerIndependentIntergenicRate {
   implicit val pickler =
-    AnyValPicklers(NsPostGlobalIntergenicRate.unapply, NsPostGlobalIntergenicRate.apply)
+    AnyValPicklers(NsPostHeptamerIndependentIntergenicRate.unapply, NsPostHeptamerIndependentIntergenicRate.apply)
+}
+case class NsPostHeptamerIndependentChromosomeSpecificIntergenicRate(post: Posterior) extends AnyVal
+object NsPostHeptamerIndependentChromosomeSpecificIntergenicRate {
+  implicit val pickler =
+    AnyValPicklers(NsPostHeptamerIndependentChromosomeSpecificIntergenicRate.unapply, NsPostHeptamerIndependentChromosomeSpecificIntergenicRate.apply)
 }
 case class NsPostHeptamerSpecificIntergenicRate(post: Posterior) extends AnyVal
 object NsPostHeptamerSpecificIntergenicRate {
   implicit val pickler =
     AnyValPicklers(NsPostHeptamerSpecificIntergenicRate.unapply, NsPostHeptamerSpecificIntergenicRate.apply)
+}
+case class NsPostHeptamerSpecificChromosomeSpecificIntergenicRate(post: Posterior) extends AnyVal
+object NsPostHeptamerSpecificChromosomeSpecificIntergenicRate {
+  implicit val pickler =
+    AnyValPicklers(NsPostHeptamerSpecificChromosomeSpecificIntergenicRate.unapply, NsPostHeptamerSpecificChromosomeSpecificIntergenicRate.apply)
 }
 case class MyColor(r: Int, g: Int, b: Int)
 case class ExpS(v: Double) extends AnyVal
@@ -203,7 +213,9 @@ case class DepletionRow(featureKey: FeatureKey,
                         numLoci: NumLoci,
                         nsPostGlobalSynonymousRate: NsPostGlobalSynonymousRate,
                         nsPostHeptamerSpecificIntergenicRate: NsPostHeptamerSpecificIntergenicRate     ,   
-                        nsPostGlobalIntergenicRate: NsPostGlobalIntergenicRate     ,   
+                        nsPostHeptamerIndependentIntergenicRate: NsPostHeptamerIndependentIntergenicRate     ,   
+                        nsPostHeptamerSpecificChromosomeSpecificIntergenicRate: NsPostHeptamerSpecificChromosomeSpecificIntergenicRate     ,   
+                        nsPostHeptamerIndependentChromosomeSpecificIntergenicRate: NsPostHeptamerIndependentChromosomeSpecificIntergenicRate     ,   
                         uniprotIds: Seq[UniId])
 
 object DepletionRow {

@@ -14,10 +14,26 @@ case class HeptamerRates(sf: SharedFile)
 
 object CountHeptamers {
 
+  val filterToChromosome =
+    EColl.mapSourceWith[GenomeCoverage, Option[String], GenomeCoverage](
+      "filterCoverageToChromosome",
+      1)(mayChromosome => mayChromosome.getOrElse("")) {
+      case (coverageSource, mayChromosome) =>
+        implicit ctx =>
+          coverageSource
+            .filter { coverage =>
+              if (mayChromosome.isEmpty) true
+              else {
+                coverage.chromosome == mayChromosome.get
+              }
+            }
+
+    }
+
   val filterTask =
     EColl.mapSourceWith[GenomeCoverage, SharedFile, GenomeCoverage](
       "filterCoverageToInterGenic",
-      1) {
+      1)(_ => "") {
       case (coverageSource, gencode) =>
         implicit ctx =>
           val futureSource = for {
@@ -51,19 +67,27 @@ object CountHeptamers {
                         calls: EColl[GnomadLine],
                         fasta: SharedFile,
                         fai: SharedFile,
-                        gencode: SharedFile)(
+                        gencode: SharedFile,
+                        chromosomeFilter: Option[String])(
       implicit tc: tasks.TaskSystemComponents,
-      ec: ExecutionContext): Future[(HeptamerRates, GlobalIntergenicRate)] = {
+      ec: ExecutionContext)
+    : Future[(HeptamerRates, HeptamerIndependentIntergenicRate)] = {
     for {
-      filteredCoverage <- filterTask((coverage, gencode))(
+      intergenicCoverage <- filterTask((coverage, gencode))(
         CPUMemoryRequest(12, 5000))
+      coverageOnChromosome <- if (chromosomeFilter.isEmpty)
+        Future.successful(intergenicCoverage)
+      else
+        filterToChromosome((intergenicCoverage, chromosomeFilter))(
+          CPUMemoryRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (filteredCoverage, calls))(CPUMemoryRequest((1, 12), 5000))
+        (intergenicCoverage, calls))(CPUMemoryRequest((1, 12), 5000))
       mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
       grouped <- groupByTask(mapped)(CPUMemoryRequest((1, 12), 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
       concatenated <- concatenate(summed)(CPUMemoryRequest((1, 12), 5000))
-      globalRate <- globalNeutralRate(concatenated)(CPUMemoryRequest(1, 5000))
+      globalRate <- heptamerIndependentNeutralRate(concatenated)(
+        CPUMemoryRequest(1, 5000))
       _ <- heptamerCounts(summed)(CPUMemoryRequest(1, 5000))
       rates <- heptamerNeutralRates(summed)(CPUMemoryRequest(1, 5000))
       file <- heptamerFrequenciesToFile(rates)(CPUMemoryRequest(1, 5000))
@@ -72,40 +96,41 @@ object CountHeptamers {
 
   val groupByTask =
     EColl
-      .groupBy[(String, (Seq[Int], Seq[Int], Int))]("groupHeptamer", 1)(
-        1024 * 1024 * 50,
-        _._1,
-        Some(1))
+      .groupBy[HeptamerOccurences]("groupHeptamer", 1)(1024 * 1024 * 50,
+                                                       _.heptamer,
+                                                       Some(1))
 
   val sum =
-    EColl.reduceSeq[(String, (Seq[Int], Seq[Int], Int))]("sumHeptamer", 1) {
-      seq =>
-        val a = seq.map(_._2._1).flatten
-        val b = seq.map(_._2._2).flatten
-        val heptamerCount = seq.map(_._2._3).sum
-        assert(seq.map(_._1).toSet.size == 1)
-        assert(heptamerCount == a.size,
-               a.size.toString + " != " + heptamerCount)
-        assert(heptamerCount == b.size,
-               a.size.toString + " != " + heptamerCount)
-        (seq.head._1, (a, b, heptamerCount))
+    EColl.reduceSeq[HeptamerOccurences]("sumHeptamer", 1) { seq =>
+      val a = seq.toVector.map(_.sampleSizes).flatten
+      val b = seq.toVector.map(_.variantAlleleCounts).flatten
+      val heptamerCount = seq.map(_.heptamerCount).sum
+      assert(seq.map(_.heptamer).toSet.size == 1)
+      assert(heptamerCount == a.size, a.size.toString + " != " + heptamerCount)
+      assert(heptamerCount == b.size, a.size.toString + " != " + heptamerCount)
+      HeptamerOccurences(seq.head.heptamer, a, b, heptamerCount)
     }
 
   val heptamerCounts = EColl
-    .map[(String, (Seq[Int], Seq[Int], Int)), (String, Int)]("hepCounts", 1) {
-      case (hep, (_, _, c)) => (hep, c)
+    .map[HeptamerOccurences, (String, Int)]("hepCounts", 1) {
+      case HeptamerOccurences(hep, _, _, c) => (hep, c)
     }
+
+  case class HeptamerOccurences(heptamer: String,
+                                sampleSizes: Vector[Int],
+                                variantAlleleCounts: Vector[Int],
+                                heptamerCount: Int)
 
   val mapTask =
     EColl
       .mapSourceWith[(Option[GenomeCoverage], Option[GnomadLine]),
                      (SharedFile, SharedFile),
-                     (String, (Seq[Int], Seq[Int], Int))]("mapHeptamer", 2) {
+                     HeptamerOccurences]("mapHeptamer", 2)(_ => "") {
         case (variants, (fasta, fai)) =>
           implicit ctx =>
             implicit val mat = ctx.components.actorMaterializer
 
-            val countTable: Future[List[(String, (Seq[Int], List[Int], Int))]] =
+            val countTable: Future[List[HeptamerOccurences]] =
               for {
                 fasta <- fasta.file
                 fai <- fai.file
@@ -176,7 +201,15 @@ object CountHeptamers {
                     }
                     .map(_.toList)
                 }
-              } yield counts
+              } yield
+                counts.map {
+                  case (heptamer,
+                        (sampleSizes, variantAlleleCounts, heptamerCount)) =>
+                    HeptamerOccurences(heptamer,
+                                       sampleSizes.toVector,
+                                       variantAlleleCounts.toVector,
+                                       heptamerCount)
+                }
 
             Source.fromFuture(countTable).flatMapConcat(list => Source(list))
 
@@ -195,7 +228,7 @@ object CountHeptamers {
   }
 
   val heptamerFrequenciesToFile =
-    AsyncTask[EColl[(String, Double, Int, Seq[Int])], HeptamerRates](
+    AsyncTask[EColl[HeptamerNeutralRateAndVariableCount], HeptamerRates](
       "writeHeptamerRates",
       3) { ecoll => implicit ctx =>
       implicit val mat = ctx.components.actorMaterializer
@@ -205,7 +238,7 @@ object CountHeptamers {
       ecoll
         .source(resourceAllocated.cpu)
         .map {
-          case (hept, rate, counts, _) =>
+          case HeptamerNeutralRateAndVariableCount(hept, rate, counts, _) =>
             if ((hept.toSet &~ accepted).isEmpty) {
               val str = s"$hept\t$rate\t$counts\n"
               ByteString(str)
@@ -221,26 +254,32 @@ object CountHeptamers {
         }
     }
 
+  case class HeptamerNeutralRateAndVariableCount(heptamer: String,
+                                                 rate: Double,
+                                                 countOfVariableLoci: Int,
+                                                 samples: Vector[Int])
+
   val heptamerNeutralRates =
-    EColl.map[(String, (Seq[Int], Seq[Int], Int)),
-              (String, Double, Int, Seq[Int])]("heptamerNeutralRates", 1) {
-      case (heptamer, (samples, alleleCounts, _)) =>
+    EColl.map[HeptamerOccurences, HeptamerNeutralRateAndVariableCount](
+      "heptamerNeutralRates",
+      1) {
+      case HeptamerOccurences(heptamer, samples, alleleCounts, _) =>
         val countOfVariableLoci = alleleCounts.count(_ > 0)
         val p =
           Model.mlNeutral(samples.toArray, countOfVariableLoci)
-        (heptamer, p, countOfVariableLoci, samples)
+        HeptamerNeutralRateAndVariableCount(heptamer,
+                                            p,
+                                            countOfVariableLoci,
+                                            samples)
     }
 
   val concatenate =
-    EColl.foldLeft[(String, (Seq[Int], Seq[Int], Int)), (Vector[Int], Int)](
-      "concatenate",
-      2)(
+    EColl.foldLeft[HeptamerOccurences, (Vector[Int], Int)]("concatenate", 2)(
       (Vector[Int](), 0), {
         case ((accumulatedListOfSamples, accumulatedAlleleCounts),
-              (hepta, (samples, alleleCounts, _))) =>
+              HeptamerOccurences(hepta, samples, alleleCounts, _)) =>
           val accepted = Set('A', 'T', 'G', 'C')
           if ((hepta.toSet &~ accepted).isEmpty) {
-            println(s"concat $hepta " + accumulatedListOfSamples.size)
             val rnd = new scala.util.Random(1)
             val idx = rnd.shuffle((0 until alleleCounts.size).toList).take(2000)
             val countOfVariableLoci = idx.map(alleleCounts).count(_ > 0)
@@ -251,13 +290,15 @@ object CountHeptamers {
       }
     )
 
-  val globalNeutralRate =
-    AsyncTask[(Seq[Int], Int), GlobalIntergenicRate]("globalNeutralRate", 1) {
+  val heptamerIndependentNeutralRate =
+    AsyncTask[(Seq[Int], Int), HeptamerIndependentIntergenicRate](
+      "heptamerIndependentNeutralRate",
+      1) {
       case (samples, alleleCounts) =>
         implicit ctx =>
           val g = Model.mlNeutral(samples.toArray, alleleCounts)
           ctx.log.info("Global neutral rate " + g)
-          Future.successful(GlobalIntergenicRate(g))
+          Future.successful(HeptamerIndependentIntergenicRate(g))
 
     }
 

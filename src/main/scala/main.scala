@@ -104,14 +104,27 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       ConvertGnomadToHLI
         .gnomadToEColl(gnomadWGSVCF)(CPUMemoryRequest(12, 5000))
 
+    val chromosomes = None :: ("chrX" :: (1 to 22 map (i => "chr" + i)).toList)
+      .map(Some(_))
+
     val heptamerRatesWithGlobalIntergenicRate =
       gnomadWGSConvertedCoverage.flatMap { coverage =>
         gnomadWGSConvertedVCF.flatMap { calls =>
-          CountHeptamers.calculateHeptamer(coverage,
-                                           calls,
-                                           referenceFasta,
-                                           referenceFai,
-                                           gencodeGtf)
+          Future.sequence(
+            chromosomes.map(
+              chromosomeFilter =>
+                CountHeptamers
+                  .calculateHeptamer(coverage,
+                                     calls,
+                                     referenceFasta,
+                                     referenceFai,
+                                     gencodeGtf,
+                                     chromosomeFilter)
+                  .map {
+                    case (heptamerRates, heptamerIndependentRate) =>
+                      (heptamerRates, heptamerIndependentRate, chromosomeFilter)
+                })
+          )
         }
       }
 
@@ -228,16 +241,38 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           features2cpEcoll: Future[EColl[JoinFeatureWithCp.MappedFeatures]]) =
         features2cpEcoll.flatMap { feature2cp =>
           variationsJoinedEColl.flatMap { variationsJoined =>
-            heptamerRatesWithGlobalIntergenicRate.flatMap {
-              case (heptamerRates, globalIntergenicRate) =>
-                depletion3d.computeDepletionScores(variationsJoined,
-                                                   feature2cp,
-                                                   fasta = referenceFasta,
-                                                   fai = referenceFai,
-                                                   heptamerNeutralRates =
-                                                     heptamerRates,
-                                                   globalIntergenicRate =
-                                                     globalIntergenicRate)
+            heptamerRatesWithGlobalIntergenicRate.flatMap { listOfRates =>
+              val (chromosomeIndependentHeptamer,
+                   chromosomeIndependentHeptamerIndependent,
+                   _) =
+                listOfRates.find {
+                  case (_, _, chromosomeFilter) => chromosomeFilter.isEmpty
+                }.get
+
+              val chromosomeSpecificHeptamerRates = listOfRates.collect {
+                case (heptamerRates, _, Some(chromosomeFilter)) =>
+                  (chromosomeFilter, heptamerRates)
+              }
+
+              val chromosomeSpecificHeptamerIndependentRates =
+                listOfRates.collect {
+                  case (_, heptamerIndependentRate, Some(chromosomeFilter)) =>
+                    (chromosomeFilter, heptamerIndependentRate)
+                }
+
+              depletion3d.computeDepletionScores(
+                variationsJoined,
+                feature2cp,
+                fasta = referenceFasta,
+                fai = referenceFai,
+                heptamerNeutralRates = chromosomeIndependentHeptamer,
+                heptamerIndependentIntergenicRate =
+                  chromosomeIndependentHeptamerIndependent,
+                chromosomeSpecificHeptamerRates =
+                  chromosomeSpecificHeptamerRates.toMap,
+                chromosomeSpecificHeptamerIndependentRates =
+                  chromosomeSpecificHeptamerIndependentRates.toMap
+              )
             }
           }
         }
