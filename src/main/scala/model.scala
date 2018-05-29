@@ -38,7 +38,8 @@ object Model extends StrictLogging {
     val ps = {
       var s = 0d
       var i = 0
-      while (i < lociRounds.size) {
+      val N = lociRounds.length
+      while (i < N) {
         s += probabilityOfLocusHasAtLeast1(rounds = lociRounds(i),
                                            numNs = lociNumNs(i),
                                            p = p(i),
