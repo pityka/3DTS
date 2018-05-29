@@ -30,6 +30,20 @@ object JoinVariations {
 
     }
 
+  val siteFrequencySpectrum =
+    EColl.foldLeft[LocusVariationCountAndNumNs, Map[Int, Int]](
+      "sitefrequencyspectrum",
+      1)(
+      Map.empty[Int, Int], {
+        case (acc, locus) =>
+          val ac = locus.alleleCountSyn + locus.alleleCountNonSyn
+          acc.get(ac) match {
+            case None    => acc.updated(ac, 1)
+            case Some(c) => acc.updated(ac, c + 1)
+          }
+      }
+    )
+
   val task =
     AsyncTask[JoinVariationsInput, JsDump[LocusVariationCountAndNumNs]](
       "joinvariation-1",

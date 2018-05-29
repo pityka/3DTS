@@ -169,6 +169,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       JoinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
     }
 
+    val siteFrequencySpectrum = variationsJoinedEColl.flatMap {
+      variationsJoinedEColl =>
+        JoinVariations.siteFrequencySpectrum(variationsJoinedEColl)(
+          CPUMemoryRequest(12, 5000))
+    }
+
     val uniprotpdbmap = uniprotgencodemap.flatMap { uniprotgencodemap =>
       sd.steps.JoinUniprotWithPdb
         .task(UniProtPdbFullInput(uniprotKbOriginal, uniprotgencodemap))(
@@ -317,7 +323,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
            uniprotpdbmap,
            variationsJoined,
            uniprotgencodemap,
-           assemblies) ++ scores)
+           assemblies,
+           siteFrequencySpectrum) ++ scores)
 
   }
 }
