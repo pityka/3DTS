@@ -30,6 +30,15 @@ object CountHeptamers {
 
     }
 
+  val autosomes = 1 to 22 map (i => "chr" + i) toSet
+
+  val filterToAutosome =
+    EColl
+      .filter[GenomeCoverage]("filterCoverageToAutosome", 1) {
+        case (coverage) =>
+          sd.steps.CountHeptamers.autosomes.contains(coverage.chromosome)
+      }
+
   val filterTask =
     EColl.mapSourceWith[GenomeCoverage, SharedFile, GenomeCoverage](
       "filterCoverageToInterGenic",
@@ -76,12 +85,12 @@ object CountHeptamers {
       intergenicCoverage <- filterTask((coverage, gencode))(
         CPUMemoryRequest(12, 5000))
       coverageOnChromosome <- if (chromosomeFilter.isEmpty)
-        Future.successful(intergenicCoverage)
+        filterToAutosome(intergenicCoverage)(CPUMemoryRequest(12, 5000))
       else
         filterToChromosome((intergenicCoverage, chromosomeFilter))(
           CPUMemoryRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (intergenicCoverage, calls))(CPUMemoryRequest((1, 12), 5000))
+        (coverageOnChromosome, calls))(CPUMemoryRequest((1, 12), 5000))
       mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
       grouped <- groupByTask(mapped)(CPUMemoryRequest((1, 12), 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))

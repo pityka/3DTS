@@ -11,7 +11,13 @@ case class Feature2CPInput(featureContext: JsDump[StructuralContext.T1],
 object JoinFeatureWithCp {
 
   type MappedFeatures =
-    (FeatureKey, ChrPos, PdbChain, PdbResidueNumberUnresolved, Seq[UniId])
+    (FeatureKey,
+     ChrPos,
+     PdbChain,
+     PdbResidueNumberUnresolved,
+     Seq[UniId],
+     MappedPdbResidueCount,
+     TotalPdbResidueCount)
 
   val toEColl =
     AsyncTask[JsDump[MappedFeatures], EColl[MappedFeatures]](
@@ -27,7 +33,7 @@ object JoinFeatureWithCp {
     }
 
   val task =
-    AsyncTask[Feature2CPInput, JsDump[MappedFeatures]]("feature2cpsecond-2", 2) {
+    AsyncTask[Feature2CPInput, JsDump[MappedFeatures]]("feature2cpsecond-2", 3) {
 
       case Feature2CPInput(
           featureContextJsDump,
@@ -63,16 +69,14 @@ object JoinFeatureWithCp {
                     featureIterator.flatMap {
 
                       case (featureKey, pdbResidues, uniIds) =>
-                        pdbResidues.iterator.flatMap {
+                        val joined = pdbResidues.map {
                           case (PdbChain(pdbChain),
                                 PdbResidueNumberUnresolved(pdbResidue)) =>
                             log.debug(
                               s"Join $featureKey with CPs.  $pdbChain:$pdbResidue")
                             map
                               .get(featureKey.pdbId.s + "_" + pdbChain + "_" + pdbResidue)
-                              .toList
-                              .iterator
-                              .flatMap(_.map { chrpos =>
+                              .map(_.map { chrpos =>
                                 (featureKey,
                                  ChrPos(chrpos),
                                  PdbChain(pdbChain),
@@ -80,7 +84,29 @@ object JoinFeatureWithCp {
                                  uniIds)
                               })
 
-                        }
+                        }.toList
+
+                        val success = joined.count(_.isDefined)
+                        val total = joined.size
+
+                        joined.flatMap {
+                          case Some(list) =>
+                            list.map {
+                              case (featureKey,
+                                    chrpos,
+                                    pdbchain,
+                                    pdbnumber,
+                                    uniids) =>
+                                (featureKey,
+                                 chrpos,
+                                 pdbchain,
+                                 pdbnumber,
+                                 uniids,
+                                 MappedPdbResidueCount(success),
+                                 TotalPdbResidueCount(total))
+                            }
+                          case None => Nil
+                        }.iterator
 
                     }
                   JsDump.fromIterator(

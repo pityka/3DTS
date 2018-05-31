@@ -267,10 +267,19 @@ object JoinUniprotWithPdb {
                           .count { case (a, b) => a == b }
                       matches.toDouble / alignedUniSeq.s.size
                     }
+                    val percentIdentityPDB = {
+                      val matches =
+                        (alignedUniSeq.s.toSeq zip alignedPdbSeq.s.toSeq)
+                          .filter { case (_, pdbChar) => pdbChar != '-' }
+                          .count { case (a, b) => a == b }
+                      matches.toDouble / alignedPdbSeq.s.count(pdbChar =>
+                        pdbChar != '-')
+                    }
                     AlignmentDetails(uniId,
                                      pdbId,
                                      pdbChain,
                                      percentIdentity,
+                                     percentIdentityPDB,
                                      alignedUniSeq,
                                      alignedPdbSeq)
                 },

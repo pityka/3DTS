@@ -167,6 +167,18 @@ object NsPostHeptamerSpecificChromosomeSpecificIntergenicRate {
   implicit val pickler =
     AnyValPicklers(NsPostHeptamerSpecificChromosomeSpecificIntergenicRate.unapply, NsPostHeptamerSpecificChromosomeSpecificIntergenicRate.apply)
 }
+
+case class MappedPdbResidueCount(v:Int) extends AnyVal
+object MappedPdbResidueCount {
+  implicit val pickler =
+    AnyValPicklers(MappedPdbResidueCount.unapply, MappedPdbResidueCount.apply)
+}
+
+case class TotalPdbResidueCount(v:Int) extends AnyVal
+object TotalPdbResidueCount {
+  implicit val pickler =
+    AnyValPicklers(TotalPdbResidueCount.unapply, TotalPdbResidueCount.apply)
+}
 case class MyColor(r: Int, g: Int, b: Int)
 case class ExpS(v: Double) extends AnyVal
 object ExpS {
@@ -222,7 +234,7 @@ object DepletionRow {
   implicit val rw = upickle.default.macroRW[DepletionRow]
 }
 
-case class AlignmentDetails(uniId : UniId, pdbId: PdbId, pdbChain: PdbChain, percentIdentity: Double,alignedUniSeq: UniSeq,alignedPdbSeq:PdbSeq)
+case class AlignmentDetails(uniId : UniId, pdbId: PdbId, pdbChain: PdbChain, percentIdentity: Double, percentIdentityPDB: Double, alignedUniSeq: UniSeq,alignedPdbSeq:PdbSeq)
 object AlignmentDetails {
   implicit val rw = upickle.default.macroRW[AlignmentDetails]
 }
