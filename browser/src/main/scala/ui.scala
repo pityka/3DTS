@@ -371,16 +371,19 @@ class ProteinUI(
         x._1 -> x._2.map(_.featureScores)
       }
 
-    def colorByResidue(colorString: String)
+    def colorByResidue(selector: DepletionRow => Double)
       : Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] = {
-      println(colorString)
       byResidue.map {
-        case (key, _) =>
-          key -> Array(1d, 1d, 1d)
+        case (key, depletionRows) =>
+          val value =
+            depletionRows.map(depletionRow => selector(depletionRow)).min
+          val grayScale = value * 240
+          key -> Array(grayScale, grayScale, grayScale)
       }
     }
 
-    val colorByResidue_Mean1DLocal = colorByResidue("PMean_2d_local")
+    val colorByResidue_Mean1DLocal =
+      colorByResidue(_.nsPostHeptamerSpecificIntergenicRate.post.mean)
 
     data._2.headOption
       .map(_.pdbId)

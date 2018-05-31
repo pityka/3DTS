@@ -11,7 +11,7 @@ import akka.http.scaladsl.server._
 import akka.event.Logging
 import tasks._
 import index2._
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{Future}
 import java.io.File
 import SharedTypes._
 import tasks.util.TempFile
@@ -19,7 +19,6 @@ import tasks.util.TempFile
 object Server {
 
   def makeQuery(scoresReader: IndexReader,
-                cpPdbReader: IndexReader,
                 geneNameReader: IndexReader,
                 q: String): ServerReturn = {
 
@@ -33,112 +32,51 @@ object Server {
       if (q.isEmpty) Vector[Doc]()
       else scoresReader.getDocs(q)
 
-    println(cpPdbReader)
-
-    // val cppdb =
-    //   if (q.isEmpty) Vector[Doc]()
-    //   else cpPdbReader.getDocs(q)
-
-    (
-     //cppdb.map {
-     //case Doc(str) =>
-     //  upickle.default.read[PdbUniGencodeRow](str)
-     //},
-     pdbs,
-     scores.map {
-       case Doc(str) =>
-         upickle.default.read[DepletionScoresByResidue](str)
-     })
+    (pdbs, scores.map {
+      case Doc(str) =>
+        upickle.default.read[DepletionScoresByResidue](str)
+    })
 
   }
 
-  def asCSV(triples: Seq[
-    (DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow)]): String = {
+  def asCSV(
+      triples: Seq[(DepletionScoresByResidue, PdbUniGencodeRow)]): String = {
+
     def asCSVRow(
-        triple: (DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow))
-      : String = {
-      val (scores, pdbuni, ligand) = triple
+        triple: (DepletionScoresByResidue, PdbUniGencodeRow)): String = {
+      val (scores, pdbuni) = triple
       (List(scores.pdbId,
             scores.pdbChain,
             scores.pdbResidue,
             pdbuni.uniId.s,
             pdbuni.uniNumber.i + 1,
             pdbuni.uniprotSequenceFromPdbJoin.s) ++ List(
-        // scores.featureScores._1.toString,
-        // scores.featureScores._2.v,
-        // scores.featureScores._3.v,
-        // scores.featureScores._4.v,
-        // scores.featureScores._5.v,
-        // scores.featureScores._6.v,
-        // scores.featureScores._9.v,
-        // scores.featureScores._12.v
-      ) ++ ligand.data
-        .map(x => x._1 + ":" + x._2)).mkString(",")
+        scores.featureScores.featureKey.toString,
+        scores.featureScores.obsNs.v,
+        scores.featureScores.expNs.v,
+        scores.featureScores.obsS.v,
+        scores.featureScores.expS.v,
+        scores.featureScores.numLoci.v,
+        scores.featureScores.nsPostGlobalSynonymousRate.post.mean,
+        scores.featureScores.nsPostHeptamerSpecificIntergenicRate.post.mean,
+        scores.featureScores.nsPostHeptamerIndependentIntergenicRate.post.mean,
+        scores.featureScores.nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean,
+        scores.featureScores.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
+        scores.featureScores.uniprotIds.mkString(":")
+      )).mkString(",")
     }
 
     val header =
-      "PDBID,PDBCHAIN,PDBRES,UNIID,UNINUM,UNIAA,FEATURE,OBSNS,EXPNS,OBSS,EXPS,NUMLOCI,SCORE_global_rate,SCORE_local_rate,LIGANDABILITY"
+      "PDBID,PDBCHAIN,PDBRES,UNIID,UNINUM,UNIAA,FEATURE,OBSNS,EXPNS,OBSS_IN_CHAIN,EXPS_IN_CHAIN,NUMLOCI,nsPostGlobalSynonymousRate,nsPostHeptamerSpecificIntergenicRate,nsPostHeptamerIndependentIntergenicRate,nsPostHeptamerSpecificChromosomeSpecificIntergenicRate,nsPostHeptamerIndependentChromosomeSpecificIntergenicRate,uniprotIds"
 
     header + "\n" + triples.map(asCSVRow).distinct.mkString("\n")
-
-  }
-
-  def makeLigandibilityQuery(scoresReader: IndexReader,
-                             cpPdbReader: IndexReader,
-                             ligandabilityReader: IndexReader,
-                             pdbQuery: String)
-    : Seq[(DepletionScoresByResidue, PdbUniGencodeRow, LigandabilityRow)] = {
-
-    val scores: Seq[DepletionScoresByResidue] =
-      if (pdbQuery.isEmpty) Vector()
-      else
-        scoresReader.getDocs(pdbQuery).map {
-          case Doc(str) =>
-            upickle.default.read[DepletionScoresByResidue](str)
-        }
-
-    val pdbUni: Seq[PdbUniGencodeRow] =
-      if (pdbQuery.isEmpty) Vector()
-      else
-        cpPdbReader.getDocs(pdbQuery).map {
-          case Doc(str) =>
-            upickle.default.read[PdbUniGencodeRow](str)
-        }
-
-    val uniId: Option[UniId] = pdbUni.headOption.map(_.uniId)
-
-    val ligandabilityRows: Seq[LigandabilityRow] = uniId match {
-      case None => Vector()
-      case Some(uni) =>
-        ligandabilityReader.getDocs(uni.s).map {
-          case Doc(str) =>
-            upickle.default.read[LigandabilityRow](str)
-        }
-    }
-
-    (scores.iterator
-      .flatMap { scores =>
-        pdbUni.iterator.flatMap { pdbUni =>
-          ligandabilityRows.flatMap { ligandability =>
-            if ((scores.pdbId: String) == pdbUni.pdbId.s &&
-                (scores.pdbChain: String) == pdbUni.pdbChain.s &&
-                (scores.pdbResidue: String) == pdbUni.pdbResidueNumberUnresolved.s &&
-                (pdbUni.uniId: UniId) == ligandability.uniid &&
-                (pdbUni.uniNumber: UniNumber) == ligandability.uninum)
-              List((scores, pdbUni, ligandability)).iterator
-            else Iterator.empty
-          }
-        }
-      } toList)
-      .distinct
 
   }
 
   def start(port: Int,
             scoresIndex: steps.ScoresIndexedByPdbId,
             cppdbIndex: steps.CpPdbIndex,
-            geneNameIndex: steps.UniprotIndexedByGene,
-            ligandabilityByUniId: Option[steps.LigandabilityIndexedByUniId])(
+            geneNameIndex: steps.UniprotIndexedByGene)(
       implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
@@ -150,20 +88,20 @@ object Server {
     linkFolder.delete
     linkFolder.mkdirs
     Future
-      .sequence((scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files ++ ligandabilityByUniId.toList
-        .flatMap(_.files)).map { sf =>
-        sf.file.map { file =>
-          val filelinkpath =
-            new java.io.File(linkFolder, sf.name)
+      .sequence((scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files)
+        .map { sf =>
+          sf.file.map { file =>
+            val filelinkpath =
+              new java.io.File(linkFolder, sf.name)
 
-          java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
-                                                 file.toPath)
+            java.nio.file.Files.createSymbolicLink(filelinkpath.toPath,
+                                                   file.toPath)
 
-          log.info(
-            "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
-          filelinkpath
-        }
-      })
+            log.info(
+              "File downloaded: " + sf.name + " " + filelinkpath.getAbsolutePath)
+            filelinkpath
+          }
+        })
       .flatMap { files =>
         log.info(s"Index files downloaded. $files")
         implicit val logging = log
@@ -182,26 +120,6 @@ object Server {
     val file = new File(dataFolder + "/pdbassembly/" + pdb + ".assembly.pdb")
     akka.stream.scaladsl.FileIO.fromPath(file.toPath)
 
-  }
-
-  def getFullDepletionScoresAsCSVStream(
-      implicit ec: ExecutionContext): Source[ByteString, _] = {
-    println(ec)
-    ???
-    // val file = new File(
-    //   dataFolder + "/depletion2pdb/full.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.variationdata.json.gz.5.0.2142306777..json.gz.gencode.v26lift37.annotation.gtf.gz.genome.json.gz.-620945037.json.gz.back2pdb.json.gz")
-
-    // Source.single(ByteString(csvHeader + "\n")) ++ akka.stream.scaladsl.FileIO
-    //   .fromFile(file)
-    //   .via(Compression.gunzip())
-    //   .via(Framing.delimiter(ByteString("\n"),
-    //                          maximumFrameLength = Int.MaxValue,
-    //                          allowTruncation = true))
-    //   .map(_.utf8String)
-    //   .map { elem =>
-    //     ByteString(
-    //       csvRow(upickle.default.read[DepletionScoresByResidue](elem)) + "\n")
-    //   }
   }
 
   def csvRow(e: DepletionScoresByResidue) = {
@@ -254,11 +172,8 @@ object Server {
     val tableManager = TableManager(indexFolder)
     val scoresReader =
       tableManager.reader(steps.DepletionToPdb.ScoresByPdbIdTable)
-    val cppdbReadr = tableManager.reader(steps.JoinCPWithPdb.CpPdbTable)
     val geneNameReader =
       tableManager.reader(steps.IndexUniByGeneName.UniEntryByGene)
-    val ligandabilityReader =
-      tableManager.reader(steps.IndexLigandability.LigandabilityByUniId)
 
     log.info("Reader ok")
     val route =
@@ -269,10 +184,7 @@ object Server {
               logRequest(("query", Logging.InfoLevel)) {
                 respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
                   complete {
-                    val res = makeQuery(scoresReader,
-                                        cppdbReadr,
-                                        geneNameReader,
-                                        queryTerm)
+                    val res = makeQuery(scoresReader, geneNameReader, queryTerm)
                     if (format.contains("csv"))
                       HttpEntity(asCSV(res))
                     else
@@ -283,27 +195,6 @@ object Server {
           }
         }
       } ~
-        path("queryligandability") {
-          get {
-            parameters(("q", "format".?)) {
-              case (queryTerm, format) =>
-                logRequest(("query", Logging.InfoLevel)) {
-                  respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
-                    complete {
-                      val res = makeLigandibilityQuery(scoresReader,
-                                                       cppdbReadr,
-                                                       ligandabilityReader,
-                                                       queryTerm)
-                      if (format.contains("csv"))
-                        HttpEntity(asCSV(res))
-                      else
-                        HttpEntity(upickle.default.write(res))
-                    }
-                  }
-                }
-            }
-          }
-        } ~
         pathSingleSlash {
           logRequest(("index", Logging.InfoLevel)) {
             Route.seal(getFromResource("public/index.html"))
@@ -348,18 +239,6 @@ object Server {
 
             }
 
-          }
-        } ~
-        path("depletionscores") {
-          logRequest(("depletionscores", Logging.InfoLevel)) {
-            complete {
-              HttpResponse(
-                entity = HttpEntity.CloseDelimited(
-                  ContentTypes.`text/plain(UTF-8)`,
-                  getFullDepletionScoresAsCSVStream
-                )
-              )
-            }
           }
         } ~
         path(RemainingPath) { segment =>

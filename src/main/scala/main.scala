@@ -18,22 +18,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val referenceFasta = importFile(config.getString("fasta"))
     val referenceFai = importFile(config.getString("fai"))
 
-    val ligandability =
-      if (config.hasPath("ligandability"))
-        Some(importFile(config.getString("ligandability")))
-      else None
-
-    val ligandabilityJs =
-      ligandability.map(LigandabilityCsvToJs.task(_)(CPUMemoryRequest(1, 5000)))
-
-    val indexedLigandability = ligandabilityJs
-      .map(_.flatMap { ligandabilityJs =>
-        IndexLigandability
-          .task(ligandabilityJs)(CPUMemoryRequest(1, 5000))
-          .map(Some(_))
-      })
-      .getOrElse(Future.successful(None))
-
     val uniprotKbOriginal = importFile(config.getString("uniprotKb"))
 
     val uniprotKbAsJS =
@@ -299,21 +283,15 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
       }
 
-      // var server = indexedScores.flatMap { index =>
-      //   cppdbindex.flatMap { cppdb =>
-      //     uniprotByGene.flatMap { uniprotByGene =>
-      //       indexedLigandability.flatMap { indexedLigandability =>
-      //         Server.start(8080,
-      //                      index,
-      //                      cppdb,
-      //                      uniprotByGene,
-      //                      indexedLigandability)
-      //       }
-      //     }
-      //   }
-      // }
+      val server = indexedScores.flatMap { index =>
+        cppdbindex.flatMap { cppdb =>
+          uniprotByGene.flatMap { uniprotByGene =>
+            Server.start(8080, index, cppdb, uniprotByGene)
+          }
+        }
+      }
 
-      List(indexedScores, indexedLigandability, uniprotByGene)
+      List(indexedScores, uniprotByGene, server)
     }
 
     Future.sequence(
@@ -346,12 +324,10 @@ object ProteinDepletion extends App {
 
   withTaskSystem { implicit ts =>
     Await.result(new TaskRunner().run(config), atMost = 168 hours)
-    //if (startServer) {
     println("Pipeline done. Blocking indefinitely to keep the server up.")
     while (true) {
       Thread.sleep(Long.MaxValue)
     }
-  //}
   }
 
 }
