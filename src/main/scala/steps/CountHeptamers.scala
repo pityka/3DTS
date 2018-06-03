@@ -94,11 +94,11 @@ object CountHeptamers {
       mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
       grouped <- groupByTask(mapped)(CPUMemoryRequest((1, 12), 5000))
       summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
-      concatenated <- concatenate(summed)(CPUMemoryRequest((1, 12), 5000))
+      concatenated <- concatenate(summed)(CPUMemoryRequest((1, 12), 30000))
       globalRate <- heptamerIndependentNeutralRate(concatenated)(
-        CPUMemoryRequest(1, 5000))
+        CPUMemoryRequest(1, 30000))
       _ <- heptamerCounts(summed)(CPUMemoryRequest(1, 5000))
-      rates <- heptamerNeutralRates(summed)(CPUMemoryRequest(1, 5000))
+      rates <- heptamerNeutralRates(summed)(CPUMemoryRequest(1, 30000))
       file <- heptamerFrequenciesToFile(rates)(CPUMemoryRequest(1, 5000))
     } yield (file, globalRate)
   }
