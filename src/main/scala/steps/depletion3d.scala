@@ -86,7 +86,7 @@ object depletion3d extends StrictLogging {
 
           val exclude = {
             countSInFullChain == 0 || loci.exists(
-              _.locus.cp.s.split1('\t').head == "chrX")
+              _.locus.s.split1('\t').head == "chrX")
           }
 
           if (!exclude) {
