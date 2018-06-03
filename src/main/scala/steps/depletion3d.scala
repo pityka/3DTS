@@ -85,7 +85,8 @@ object depletion3d extends StrictLogging {
             lociInThisPdbChain.count(x => x.alleleCountSyn > 0)
 
           val exclude = {
-            countSInFullChain == 0
+            countSInFullChain == 0 || loci.exists(
+              _.locus.cp.s.split1('\t').head == "chrX")
           }
 
           if (!exclude) {
