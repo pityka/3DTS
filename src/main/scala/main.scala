@@ -54,6 +54,24 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         .map(s => importFile(s))
         .map(GnomadData(_))
 
+    val swissModelStructures = {
+      val swissModelMetaData = importFile(
+        config.getString("swissModelMetaData"))
+      Swissmodel.filterMetaData(swissModelMetaData)(CPUMemoryRequest(1, 5000))
+    }
+
+    val swissModelLinearFeatures = swissModelStructures.flatMap {
+      swissModelStructures =>
+        Future
+          .sequence(swissModelStructures.pdbFiles.map {
+            case (pdbId, pdbFile) =>
+              Swissmodel
+                .defineSecondaryFeaturesWithDSSP((pdbId, pdbFile))(
+                  CPUMemoryRequest(1, 5000))
+          })
+          .map(_.toSet)
+    }
+
     val convertedGnomadGenome = {
       val gnomadGenome = importFile(config.getString("gnomadGenome"))
       ConvertGnomadToHLI.task(GnomadData(gnomadGenome))(
@@ -195,6 +213,37 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val scores = {
       val radius = 5d
 
+      def joinFeatureWithCp(
+          features: Future[JsDump[steps.StructuralContext.T1]]) = {
+        val feature2cp = cppdb.flatMap { cppdb =>
+          features.flatMap { features =>
+            JoinFeatureWithCp.task(
+              Feature2CPInput(featureContext = features, cppdb = cppdb))(
+              CPUMemoryRequest(1, 120000))
+          }
+        }
+
+        val feature2cpEcoll = feature2cp.flatMap { f =>
+          JoinFeatureWithCp.toEColl(f)(CPUMemoryRequest(12, 5000))
+        }
+        (features, feature2cpEcoll)
+      }
+
+      def makeSwissModelFeatures = {
+        val features = swissModelStructures.flatMap { pdbs =>
+          swissModelLinearFeatures.flatMap { features =>
+            StructuralContext.fromFeaturesAndPdbStructures(
+              StructuralContextFromFeaturesAndPdbsInput(
+                pdbs = pdbs.pdbFiles,
+                mappedUniprotFeatures = features,
+                radius = radius,
+                bothSides = true))(CPUMemoryRequest((1, 12), 1000))
+          }
+        }
+
+        joinFeatureWithCp(features)
+      }
+
       def makeFeatures(includeBothSidesOfPlane: Boolean) = {
         val features = uniprotpdbmap.flatMap { uniprotpdbmap =>
           cifs.flatMap { cifs =>
@@ -208,24 +257,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
-        val feature2cp = cppdb.flatMap { cppdb =>
-          features.flatMap { features =>
-            JoinFeatureWithCp.task(
-              Feature2CPInput(featureContext = features, cppdb = cppdb))(
-              CPUMemoryRequest(1, 120000))
-          }
-        }
-
-        val feature2cpEcoll = feature2cp.flatMap { f =>
-          JoinFeatureWithCp.toEColl(f)(CPUMemoryRequest(12, 5000))
-        }
-
-        (features, feature2cpEcoll)
+        joinFeatureWithCp(features)
 
       }
-
-      val (features, feature2cpEcoll) = makeFeatures(
-        includeBothSidesOfPlane = true)
 
       def makeDepletionScores(
           features2cpEcoll: Future[EColl[JoinFeatureWithCp.MappedFeatures]]) =
@@ -267,10 +301,30 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
-      val depletionScores = makeDepletionScores(feature2cpEcoll)
+      val (cifFeatures, cifFeature2cpEcoll) = makeFeatures(
+        includeBothSidesOfPlane = true)
 
-      val scores2pdb = depletionScores.flatMap { scores =>
-        features.flatMap { features =>
+      val (swissModelFeatures, swissModelFeature2cpEcoll) =
+        makeSwissModelFeatures
+
+      val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
+
+      val swissModelDepletionScores = makeDepletionScores(
+        swissModelFeature2cpEcoll)
+
+      val concatenatedDepletionScores = for {
+        c1 <- cifDepletionScores
+        c2 <- swissModelDepletionScores
+      } yield c1 ++ c2
+
+      val concatenatedFeatures = for {
+        c1 <- swissModelFeatures
+        c2 <- cifFeatures
+        r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
+      } yield r
+
+      val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
+        concatenatedFeatures.flatMap { features =>
           DepletionToPdb.task(
             Depletion2PdbInput(
               scores,

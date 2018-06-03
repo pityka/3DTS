@@ -56,6 +56,7 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "tasks-collection" % "0.0.16-SNAPSHOT",
   "indexlib" %% "indexlib" % "1.2.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
+  "org.apache.commons" % "commons-compress" % "1.16.1",
   "org.spire-math" %% "spire" % "0.13.0",
   "com.github.samtools" % "htsjdk" % "2.14.3",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
