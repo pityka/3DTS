@@ -88,7 +88,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       ConvertGnomadToHLI
         .gnomadToEColl(gnomadWGSVCF)(CPUMemoryRequest(12, 5000))
 
-    val chromosomes = None :: ("chrX" :: (1 to 22 map (i => "chr" + i)).toList)
+    val chromosomes = None :: ((1 to 22 map (i => "chr" + i)).toList)
       .map(Some(_))
 
     val heptamerRatesWithGlobalIntergenicRate =
