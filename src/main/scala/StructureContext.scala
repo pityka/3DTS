@@ -122,7 +122,7 @@ object StructureContext extends StrictLogging {
       .map {
         case (chain, featureName, residuesInFeature) =>
           logger.info(
-            s"$pdbId - $chain - $featureName - $residuesInFeature.size")
+            s"$pdbId - $chain - $featureName - ${residuesInFeature.size}")
           val featureAtoms: List[List[Atom]] = (residuesInFeature map {
             residue =>
               atomsByResidue.get(chain -> residue).toList.flatten
