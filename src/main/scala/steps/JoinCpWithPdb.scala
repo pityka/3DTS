@@ -74,7 +74,6 @@ object JoinCPWithPdb {
           pdbMaps
           ) =>
         implicit ctx =>
-          // implicit val mat = ActorMaterializer()
 
           val uniprot2Genome
             : Future[scala.collection.mutable.Map[String, List[String]]] =
