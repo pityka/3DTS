@@ -4,9 +4,6 @@ import sd._
 import scala.concurrent._
 import tasks._
 import tasks.upicklesupport._
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.utils.IOUtils
-import java.io.FileInputStream
 import stringsplit._
 import fileutils._
 import akka.stream.scaladsl._
@@ -102,6 +99,50 @@ object Swissmodel {
 
     }
 
+  val fakeUniprotPdbMappingFromSwissmodel =
+    AsyncTask[SwissModelPdbFiles, JsDump[JoinUniprotWithPdb.T1]](
+      "swissmodel-uniprot-pdb-map-1",
+      1) {
+      case SwissModelPdbFiles(swissmodelPdbs) =>
+        implicit ctx =>
+          implicit val mat = ctx.components.actorMaterializer
+          Source(swissmodelPdbs.toList)
+            .mapAsync(resourceAllocated.cpu) {
+              case (swissModelPdbId, pdbFile) =>
+                val uniId = UniId(swissModelPdbId.s.split1('_').head)
+                pdbFile.source.runFold(akka.util.ByteString())(_ ++ _).map {
+                  data =>
+                    val atomlist = PdbHelper
+                      .parsePdbLines(scala.io.Source
+                        .fromString(data.utf8String)
+                        .getLines)
+                      .assembly
+                      .atoms
+                    atomlist
+                      .map {
+                        case (_, pdbChain, pdbResidueNumber, _) =>
+                          (uniId,
+                           swissModelPdbId,
+                           pdbChain,
+                           pdbResidueNumber.toUnresolved,
+                           PdbNumber(-1),
+                           PdbSeq(""),
+                           UniNumber(pdbResidueNumber.num - 1),
+                           UniSeq("?"),
+                           true)
+                      }
+                      .distinct
+                      .map { x =>
+                        log.info(s"Swissmodel uni-pdb mapping: $x")
+                        x
+                      }
+                }
+            }
+            .mapConcat(identity)
+            .runWith(JsDump.sink(
+              swissmodelPdbs.hashCode + ".swissmodeluniprotmap.js.gz"))
+    }
+
   val filterMetaData =
     AsyncTask[SharedFile, SwissModelPdbFiles]("filterswissmodel-1", 2) {
       metadata => implicit ctx =>
@@ -111,46 +152,17 @@ object Swissmodel {
         for {
           metadataLocal <- metadata.file
           result <- {
-            val tarInput =
-              new TarArchiveInputStream(
-                new java.util.zip.GZIPInputStream(
-                  new FileInputStream(metadataLocal)))
-            val index = Iterator
-              .continually(tarInput.getNextTarEntry)
-              .take(10)
-              .find(x =>
-                x != null && x.getName == "SWISS-MODEL_Repository/INDEX")
-              .get
-            val data = Array.ofDim[Byte](index.getSize.toInt)
-            IOUtils.readFully(tarInput, data)
-            tarInput.close
-            val indexString = new String(data, "UTF-8")
-            val urls = scala.io.Source
-              .fromString(indexString)
-              .getLines
-              .dropWhile(_.startsWith("#"))
-              .drop(1)
-              .map { _.split1('\t') }
-              .filter(spl => spl(4).trim == "SWISSMODEL")
-              .map { spl =>
-                val uniID = spl(0)
-                val hash = spl(3)
-                val from = spl(5).toInt
-                val to = spl(6).toInt
-                val template = spl(8)
-                val qmean = spl(9).toDouble
-                val url = spl(11)
-                val filename = uniID + "_" + from + "_" + to + "_" + template + "_" + hash
-                (filename, qmean, url)
+            val urls = IOHelpers
+              .readSwissmodelMetadata(metadataLocal)
+              .map {
+                case (filename, _, url, _, _, _) => (filename, url)
               }
-              .filter { case (_, qmean, _) => qmean >= -4.0 }
-              .map { case (filename, _, url) => (filename, url) }
               .toList
 
             log.info(s"Will download ${urls.size} files from swissmodel.")
 
             Source(urls)
-              .mapAsync(1) {
+              .mapAsync(resourceAllocated.cpu) {
                 case (filename, url) =>
                   log.info(s"try $filename $url")
                   Try(

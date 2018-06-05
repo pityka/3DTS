@@ -203,7 +203,7 @@ object depletion3d extends StrictLogging {
 
             Some(row)
           } else {
-            logger.info(s"Excloding $feature from scoring")
+            logger.info(s"uding $feature from scoring")
 
             None
           }

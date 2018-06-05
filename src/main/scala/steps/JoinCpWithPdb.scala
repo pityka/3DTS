@@ -74,7 +74,6 @@ object JoinCPWithPdb {
           pdbMaps
           ) =>
         implicit ctx =>
-
           val uniprot2Genome
             : Future[scala.collection.mutable.Map[String, List[String]]] =
             gencodeUniprot.sf.file.map { localFile =>
@@ -182,7 +181,7 @@ object JoinCPWithPdb {
 
               }
 
-        }
+          }
     }
 
 }

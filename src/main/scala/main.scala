@@ -60,6 +60,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       Swissmodel.filterMetaData(swissModelMetaData)(CPUMemoryRequest(12, 5000))
     }
 
+    val swissModelUniPdbMap = swissModelStructures.flatMap {
+      swissModelStructures =>
+        Swissmodel.fakeUniprotPdbMappingFromSwissmodel(swissModelStructures)(
+          CPUMemoryRequest(12, 5000))
+    }
+
     val swissModelLinearFeatures = swissModelStructures.flatMap {
       swissModelStructures =>
         Future
@@ -199,6 +205,15 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       }
     }
 
+    val swissModelCpPdb =
+      uniprotgencodemap.flatMap { uniprotgencodemap =>
+        swissModelUniPdbMap.flatMap { swissModelUniPdbMap =>
+          JoinCPWithPdb.task(
+            JoinCPWithPdbInput(uniprotgencodemap, List(swissModelUniPdbMap)))(
+            CPUMemoryRequest((1, 3), 60000))
+        }
+      }
+
     val cppdbindex = cppdb.flatMap { cppdb =>
       JoinCPWithPdb.indexCpPdb(cppdb)(CPUMemoryRequest(1, 60000))
     }
@@ -221,7 +236,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       val radius = 5d
 
       def joinFeatureWithCp(
-          features: Future[JsDump[steps.StructuralContext.T1]]) = {
+          features: Future[JsDump[steps.StructuralContext.T1]],
+          cppdb: Future[JsDump[SharedTypes.PdbUniGencodeRow]]) = {
         val feature2cp = cppdb.flatMap { cppdb =>
           features.flatMap { features =>
             JoinFeatureWithCp.task(
@@ -248,7 +264,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
-        joinFeatureWithCp(features)
+        joinFeatureWithCp(features, swissModelCpPdb)
       }
 
       def makeStructuralFeatures(includeBothSidesOfPlane: Boolean) = {
@@ -264,7 +280,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
-        joinFeatureWithCp(features)
+        joinFeatureWithCp(features, cppdb)
 
       }
 
