@@ -47,7 +47,8 @@ object depletion3d extends StrictLogging {
   def makeScores(
       lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs],
       features: Seq[(ChrPos, FeatureKey, Seq[UniId])],
-      pSynonymous: Double,
+      pSynonymousAutosomal: Double,
+      pSynonymousChrX: Double,
       referenceSequence: IndexedFastaSequenceFile,
       heptamerNeutralRates: Map[String, Double],
       heptamerIndependentIntergenicRate: HeptamerIndependentIntergenicRate,
@@ -74,6 +75,20 @@ object depletion3d extends StrictLogging {
             lociByPdbChain(feature.pdbId -> feature.pdbChain)
               .flatMap(cp => lociByCpra.get(cp))
               .distinct
+
+          val chainIsOnChromosomeX = {
+            val chrs: Set[Boolean] = lociInThisPdbChain.map { locus =>
+              locus.locus.s.split1('\t').head == "chrX"
+            }.toSet
+            assert(chrs.size == 1)
+            chrs.contains(true)
+          }
+
+          val pSynonymous =
+            if (chainIsOnChromosomeX)
+              pSynonymousChrX
+            else
+              pSynonymousAutosomal
 
           val unis = cpras.map(_._3).head
 
@@ -224,6 +239,33 @@ object depletion3d extends StrictLogging {
 
   }
 
+  def calculateSynonymousRate(locusData: Seq[LocusVariationCountAndNumNs]) = {
+    val synonymousVariantCount: Int =
+      locusData.count(x => x.alleleCountSyn > 0)
+    // s, numLoci, rounds
+    val totalSynonymousSizes: Seq[(Int, Int, Int)] = {
+      val mmap = scala.collection.mutable.Map[(Int, Int), Int]()
+
+      locusData.foreach { locus =>
+        val numS = locus.numS
+        val sampleSize = locus.sampleSize
+        mmap.get((numS, sampleSize)) match {
+          case None    => mmap.update((numS, sampleSize), 1)
+          case Some(x) => mmap.update((numS, sampleSize), x + 1)
+        }
+
+      }
+      mmap.toSeq.map(x => (x._1._1, x._2, x._1._2))
+    }
+
+    val totalSynSize = totalSynonymousSizes.map(_._2).sum
+
+    println("total syn sizes " + totalSynSize)
+
+    solveForPWithNsWithRounds(size = totalSynonymousSizes,
+                              successes = synonymousVariantCount)
+  }
+
   def cacheLocusData(locusDataJsDump: EColl[LocusVariationCountAndNumNs])(
       implicit ctx: TaskSystemComponents,
       ec: ExecutionContext) =
@@ -234,34 +276,18 @@ object depletion3d extends StrictLogging {
           assert(locusData.map(_.locus).distinct.size == locusData.size)
           val lociByCpra: Map[ChrPos, LocusVariationCountAndNumNs] =
             locusData.map(x => x.locus -> x).toMap
-          val synonymousVariantCount: Int =
-            locusData.count(x => x.alleleCountSyn > 0)
-          // s, numLoci, rounds
-          val totalSynonymousSizes: Seq[(Int, Int, Int)] = {
-            val mmap = scala.collection.mutable.Map[(Int, Int), Int]()
+          val pSynAutosomal = calculateSynonymousRate(locusData.filter {
+            locus =>
+              locus.locus.s.split1('\t').head != "chrX"
+          })
 
-            locusData.foreach { locus =>
-              val numS = locus.numS
-              val sampleSize = locus.sampleSize
-              mmap.get((numS, sampleSize)) match {
-                case None    => mmap.update((numS, sampleSize), 1)
-                case Some(x) => mmap.update((numS, sampleSize), x + 1)
-              }
+          val pSynChrX = calculateSynonymousRate(locusData.filter { locus =>
+            locus.locus.s.split1('\t').head == "chrX"
+          })
 
-            }
-            mmap.toSeq.map(x => (x._1._1, x._2, x._1._2))
-          }
-
-          val totalSynSize = totalSynonymousSizes.map(_._2).sum
-
-          println("total syn sizes " + totalSynSize)
-
-          val pSyn =
-            solveForPWithNsWithRounds(size = totalSynonymousSizes,
-                                      successes = synonymousVariantCount)
-
-          println("pSyn: " + pSyn)
-          (lociByCpra -> pSyn)
+          logger.info("pSynAutosomal: " + pSynAutosomal)
+          logger.info("pSynChrX: " + pSynChrX)
+          (lociByCpra, pSynAutosomal, pSynChrX)
       }
     }
 
@@ -316,7 +342,7 @@ object depletion3d extends StrictLogging {
                 case (chr, hpt) =>
                   hpt.sf.file.map(file => (chr, file))
               })
-            (lociByCpra, pSyn) <- cacheLocusData(loci)
+            (lociByCpra, pSynAutosomal, pSynChrX) <- cacheLocusData(loci)
           } yield {
 
             val referenceSequence =
@@ -338,7 +364,8 @@ object depletion3d extends StrictLogging {
               makeScores(
                 lociByCpra,
                 features,
-                pSyn,
+                pSynAutosomal,
+                pSynChrX,
                 referenceSequence,
                 heptamerRates,
                 heptamerIndependentIntergenicRate,
