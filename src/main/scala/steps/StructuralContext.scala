@@ -102,7 +102,7 @@ object StructuralContext {
             .mapConcat(identity)
 
           s2.runWith(JsDump.sink(
-            radius + "." + bothSides + "." + mappedFeatures.hashCode + "." + ".frompdb.json.gz"))
+            radius + "." + bothSides + "." + mappedFeatures.hashCode + ".frompdb.json.gz"))
     }
 
   val taskfromFeatures =
