@@ -8,7 +8,7 @@ val commonSettings = Seq(
     "-feature", // Emit warning and location for usages of features that should be imported explicitly.
     "-language:postfixOps",
     "-unchecked", // Enable additional warnings where generated code depends on assumptions.
-    "-Xfatal-warnings", // Fail the compilation if there are any warnings.
+    // "-Xfatal-warnings", // Fail the compilation if there are any warnings.
     "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
     "-Xlint:by-name-right-associative", // By-name parameter of right associative operator.
     "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
@@ -44,16 +44,16 @@ val commonSettings = Seq(
 )
 
 libraryDependencies ++= Seq(
-  "io.github.pityka" %% "fileutils" % "1.1.1",
+  "io.github.pityka" %% "fileutils" % "1.2.0",
   "io.github.pityka" %% "stringsplit" % "1.1.0",
   "io.github.pityka" %% "saddle-linalg" % "0.0.23",
   "io.github.pityka" %% "poibin" % "0.0.1",
   "io.github.pityka" %% "intervaltree" % "1.0.0",
   "io.github.pityka" %% "sampling" % "0.0.1",
   "io.github.pityka" %% "saddle-core-fork" % "1.3.4-fork1",
-  "io.github.pityka" %% "tasks-core" % "0.0.16-SNAPSHOT",
-  "io.github.pityka" %% "tasks-upickle" % "0.0.16-SNAPSHOT",
-  "io.github.pityka" %% "tasks-collection" % "0.0.16-SNAPSHOT",
+  "io.github.pityka" %% "tasks-core" % "0.0.17-SNAPSHOT",
+  "io.github.pityka" %% "tasks-upickle" % "0.0.17-SNAPSHOT",
+  "io.github.pityka" %% "tasks-collection" % "0.0.17-SNAPSHOT",
   "indexlib" %% "indexlib" % "1.2.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.apache.commons" % "commons-compress" % "1.16.1",

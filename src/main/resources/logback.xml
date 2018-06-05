@@ -15,6 +15,7 @@
   </appender>
 
   <logger name="tasks.fileservice.StreamHelper" level="DEBUG"/>
+  <logger name="tasks.caching.SharedFileCache" level="INFO"/>
   <logger name="httpqueue.HttpQueueImpl" level="DEBUG"/>
 
   <root level="INFO">          

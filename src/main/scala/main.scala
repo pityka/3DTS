@@ -57,7 +57,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val swissModelStructures = {
       val swissModelMetaData = importFile(
         config.getString("swissModelMetaData"))
-      Swissmodel.filterMetaData(swissModelMetaData)(CPUMemoryRequest(1, 5000))
+      Swissmodel.filterMetaData(swissModelMetaData)(CPUMemoryRequest(12, 5000))
     }
 
     val swissModelLinearFeatures = swissModelStructures.flatMap {
@@ -112,10 +112,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val heptamerRatesWithGlobalIntergenicRate =
       gnomadWGSConvertedCoverage.flatMap { coverage =>
         gnomadWGSConvertedVCF.flatMap { calls =>
-          Future.sequence(
-            chromosomes.map(
-              chromosomeFilter =>
-                CountHeptamers
+            chromosomes.foldLeft(Future.successful(List[(sd.steps.HeptamerRates, sd.HeptamerIndependentIntergenicRate, Option[String])]())){
+              case (prev,chromosomeFilter) =>
+                prev.flatMap{ prev => CountHeptamers
                   .calculateHeptamer(coverage,
                                      calls,
                                      referenceFasta,
@@ -125,8 +124,10 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
                   .map {
                     case (heptamerRates, heptamerIndependentRate) =>
                       (heptamerRates, heptamerIndependentRate, chromosomeFilter)
-                })
-          )
+                }.map(result => result::prev)
+                }
+
+            }
         }
       }
 
@@ -244,7 +245,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         joinFeatureWithCp(features)
       }
 
-      def makeFeatures(includeBothSidesOfPlane: Boolean) = {
+      def makeStructuralFeatures(includeBothSidesOfPlane: Boolean) = {
         val features = uniprotpdbmap.flatMap { uniprotpdbmap =>
           cifs.flatMap { cifs =>
             StructuralContext.taskfromFeatures(
@@ -301,21 +302,21 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
-      val (cifFeatures, cifFeature2cpEcoll) = makeFeatures(
+      val (cifFeatures, cifFeature2cpEcoll) = makeStructuralFeatures(
         includeBothSidesOfPlane = true)
 
       val (swissModelFeatures, swissModelFeature2cpEcoll) =
         makeSwissModelFeatures
 
-      val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
+      // val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
 
-      val swissModelDepletionScores = makeDepletionScores(
-        swissModelFeature2cpEcoll)
+      // val swissModelDepletionScores = makeDepletionScores(
+      //   swissModelFeature2cpEcoll)
 
-      val concatenatedDepletionScores = for {
-        c1 <- cifDepletionScores
-        c2 <- swissModelDepletionScores
-      } yield c1 ++ c2
+      // val concatenatedDepletionScores = for {
+      //   c1 <- cifDepletionScores
+      //   c2 <- swissModelDepletionScores
+      // } yield c1 ++ c2
 
       val concatenatedFeatures = for {
         c1 <- swissModelFeatures
@@ -323,29 +324,34 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
       } yield r
 
-      val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
-        concatenatedFeatures.flatMap { features =>
-          DepletionToPdb.task(
-            Depletion2PdbInput(
-              scores,
-              features
-            ))(CPUMemoryRequest(1, 10000))
-        }
-      }
+      // val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
+      //   concatenatedFeatures.flatMap { features =>
+      //     DepletionToPdb.task(
+      //       Depletion2PdbInput(
+      //         scores,
+      //         features
+      //       ))(CPUMemoryRequest(1, 10000))
+      //   }
+      // }
 
-      val indexedScores = scores2pdb.flatMap { scores =>
-        DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
-      }
+      // val indexedScores = scores2pdb.flatMap { scores =>
+      //   DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
+      // }
 
-      val server = indexedScores.flatMap { index =>
-        cppdbindex.flatMap { cppdb =>
-          uniprotByGene.flatMap { uniprotByGene =>
-            Server.start(8080, index, cppdb, uniprotByGene)
-          }
-        }
-      }
+      // val server = indexedScores.flatMap { index =>
+      //   cppdbindex.flatMap { cppdb =>
+      //     uniprotByGene.flatMap { uniprotByGene =>
+      //       Server.start(8080, index, cppdb, uniprotByGene)
+      //     }
+      //   }
+      // }
 
-      List(indexedScores, uniprotByGene, server)
+      List(
+        concatenatedFeatures,
+        // indexedScores,
+         uniprotByGene, 
+        //  server
+         )
     }
 
     Future.sequence(

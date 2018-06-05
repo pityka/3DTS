@@ -8,18 +8,18 @@ object PdbHelper {
     val atoms = lines
       .filter(_.startsWith("ATOM  "))
       .map { atomLine =>
-        val serial = atomLine.substring(6, 11).toInt
+        val serial = atomLine.substring(6, 11).trim.toInt
         val atomName = atomLine.substring(12, 16).trim
         val residueName = atomLine.substring(17, 20).trim
         val chain = atomLine(21).toString
-        val residueNumber = atomLine.substring(22, 26).toInt
+        val residueNumber = atomLine.substring(22, 26).trim.toInt
         val insertionCode = atomLine(26) match {
           case ' ' => None
           case x   => Some(x.toString)
         }
-        val coordX = atomLine.substring(30, 38).toDouble
-        val coordY = atomLine.substring(38, 46).toDouble
-        val coordZ = atomLine.substring(46, 54).toDouble
+        val coordX = atomLine.substring(30, 38).trim.toDouble
+        val coordY = atomLine.substring(38, 46).trim.toDouble
+        val coordZ = atomLine.substring(46, 54).trim.toDouble
 
         val tempFactor = atomLine.substring(60, 66).trim
 

@@ -18,38 +18,37 @@ case class SwissModelPdbFiles(pdbFiles: Map[PdbId, SharedFile])
 object Swissmodel {
 
   val defineSecondaryFeaturesWithDSSP =
-    AsyncTask[(PdbId, SharedFile), JsDump[JoinUniprotWithPdb.T2]]("dssp-1", 1) {
+    AsyncTask[(PdbId, SharedFile), JsDump[JoinUniprotWithPdb.T2]]("dssp-1", 3) {
       case (swissmodelPdbId, swissmodelPdbFile) =>
         implicit ctx =>
           for {
             swissmodelPdbFileLocal <- swissmodelPdbFile.file
             result <- {
-              val dsspExecutable = TempFile.getExecutableFromJar("mkdssp")
+              val dsspExecutable = TempFile.getExecutableFromJar("/mkdssp")
               val command = List(dsspExecutable.getAbsolutePath,
                                  "-i",
                                  swissmodelPdbFileLocal.getAbsolutePath)
               val (stdout, _, _) =
-                execGetStreamsAndCodeWithLog(command,
-                                             unsuccessfulOnErrorStream = false)
+                execGetStreamsAndCode(command,
+                                      unsuccessfulOnErrorStream = false)
 
               val dsspFeatures = stdout
-                .dropWhile(_.startsWith("#  RESIDUE"))
+                .dropWhile(line => !line.startsWith("  #"))
                 .drop(1)
-                .filterNot(_.contains("!*"))
+                .filterNot(_.contains("!"))
                 .map { dataLine =>
-                  val spl = dataLine.splitM(Set('\t', ' '))
-                  val residueNumber1Based = spl.drop(5).take(4).mkString.toInt
-                  val chain = spl.drop(9).take(2).mkString.trim
-                  val structureCode = spl(17).head
-                  log.info(
-                    residueNumber1Based + " " + chain + " " + structureCode + "///" + dataLine + "///")
+                  val residueNumber1Based = dataLine.substring(5, 10).trim.toInt
+                  val chain = dataLine.substring(10, 12).trim
+                  val structureCode: Char = dataLine(16)
 
                   val feature = structureCode match {
-                    case 'H' | 'G' | 'I' => "dssp_helix"
-                    case 'T'             => "dssp_turn"
-                    case 'E' | 'B'       => "dssp_strand"
+                    case 'H' | 'G' | 'I' => "dssp_helix_" + structureCode
+                    case 'T'             => "dssp_turn_" + structureCode
+                    case 'E' | 'B'       => "dssp_strand" + structureCode
                     case _               => "dssp_other"
                   }
+                  println(
+                    (chain, residueNumber1Based, feature) + "/" + dataLine)
                   (chain, residueNumber1Based, feature)
 
                 }
@@ -71,9 +70,9 @@ object Swissmodel {
                           } else
                             (residueNumber1Based - 1,
                              residueNumber1Based,
-                             currentFeature) :: (currentStart0,
-                                                 currentEnd0Open,
-                                                 currentFeature) :: previousFeatures
+                             feature) :: (currentStart0,
+                                          currentEnd0Open,
+                                          currentFeature) :: previousFeatures
 
                       }
 
@@ -104,7 +103,7 @@ object Swissmodel {
     }
 
   val filterMetaData =
-    AsyncTask[SharedFile, SwissModelPdbFiles]("filterswissmodel-1", 1) {
+    AsyncTask[SharedFile, SwissModelPdbFiles]("filterswissmodel-1", 2) {
       metadata => implicit ctx =>
         implicit val mat = ctx.components.actorMaterializer
 
@@ -113,10 +112,14 @@ object Swissmodel {
           metadataLocal <- metadata.file
           result <- {
             val tarInput =
-              new TarArchiveInputStream(new FileInputStream(metadataLocal))
+              new TarArchiveInputStream(
+                new java.util.zip.GZIPInputStream(
+                  new FileInputStream(metadataLocal)))
             val index = Iterator
               .continually(tarInput.getNextTarEntry)
-              .find(_.getName == "INDEX")
+              .take(10)
+              .find(x =>
+                x != null && x.getName == "SWISS-MODEL_Repository/INDEX")
               .get
             val data = Array.ofDim[Byte](index.getSize.toInt)
             IOUtils.readFully(tarInput, data)
@@ -127,8 +130,9 @@ object Swissmodel {
               .getLines
               .dropWhile(_.startsWith("#"))
               .drop(1)
-              .map { line =>
-                val spl = line.split1('\t')
+              .map { _.split1('\t') }
+              .filter(spl => spl(4).trim == "SWISSMODEL")
+              .map { spl =>
                 val uniID = spl(0)
                 val hash = spl(3)
                 val from = spl(5).toInt
@@ -146,8 +150,9 @@ object Swissmodel {
             log.info(s"Will download ${urls.size} files from swissmodel.")
 
             Source(urls)
-              .mapAsync(resourceAllocated.cpu) {
+              .mapAsync(1) {
                 case (filename, url) =>
+                  log.info(s"try $filename $url")
                   Try(
                     AssemblyToPdb.retry(3)(
                       scalaj.http
@@ -157,6 +162,7 @@ object Swissmodel {
                         .asBytes
                         .body)) match {
                     case Success(pdbData) =>
+                      log.info(s"OK $filename $url")
                       SharedFile(writeToTempFile(new String(pdbData, "UTF-8")),
                                  filename)
                         .map(s => Some(PdbId(filename) -> s))
