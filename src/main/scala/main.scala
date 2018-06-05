@@ -112,9 +112,14 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     val heptamerRatesWithGlobalIntergenicRate =
       gnomadWGSConvertedCoverage.flatMap { coverage =>
         gnomadWGSConvertedVCF.flatMap { calls =>
-            chromosomes.foldLeft(Future.successful(List[(sd.steps.HeptamerRates, sd.HeptamerIndependentIntergenicRate, Option[String])]())){
-              case (prev,chromosomeFilter) =>
-                prev.flatMap{ prev => CountHeptamers
+          chromosomes.foldLeft(
+            Future.successful(
+              List[(sd.steps.HeptamerRates,
+                    sd.HeptamerIndependentIntergenicRate,
+                    Option[String])]())) {
+            case (prev, chromosomeFilter) =>
+              prev.flatMap { prev =>
+                CountHeptamers
                   .calculateHeptamer(coverage,
                                      calls,
                                      referenceFasta,
@@ -124,10 +129,11 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
                   .map {
                     case (heptamerRates, heptamerIndependentRate) =>
                       (heptamerRates, heptamerIndependentRate, chromosomeFilter)
-                }.map(result => result::prev)
-                }
+                  }
+                  .map(result => result :: prev)
+              }
 
-            }
+          }
         }
       }
 
@@ -308,7 +314,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       val (swissModelFeatures, swissModelFeature2cpEcoll) =
         makeSwissModelFeatures
 
-      // val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
+      val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
 
       // val swissModelDepletionScores = makeDepletionScores(
       //   swissModelFeature2cpEcoll)
@@ -318,11 +324,11 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       //   c2 <- swissModelDepletionScores
       // } yield c1 ++ c2
 
-      val concatenatedFeatures = for {
-        c1 <- swissModelFeatures
-        c2 <- cifFeatures
-        r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
-      } yield r
+      // val concatenatedFeatures = for {
+      //   c1 <- swissModelFeatures
+      //   c2 <- cifFeatures
+      //   r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
+      // } yield r
 
       // val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
       //   concatenatedFeatures.flatMap { features =>
@@ -347,11 +353,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       // }
 
       List(
-        concatenatedFeatures,
+        cifDepletionScores
+        // concatenatedFeatures,
         // indexedScores,
-         uniprotByGene, 
-        //  server
-         )
+        // uniprotByGene,
+        // server
+      )
     }
 
     Future.sequence(
