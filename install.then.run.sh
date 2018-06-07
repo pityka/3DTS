@@ -104,6 +104,10 @@ gnomadWGSVCF = [
 	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr21.vcf.bgz"
 	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr22.vcf.bgz"
 	]
+
+swissModelMetaData = "https://swissmodel.expasy.org/repository/download/core_species/9606_meta.tar.gz"
+
+radius = 5.0
 EOF
 
 wget -O input/uniprot.gz  'http://www.uniprot.org/uniprot/?sort=&desc=&compress=yes&query=proteome:UP000005640%20reviewed:yes&fil=&force=yes&format=txt'
