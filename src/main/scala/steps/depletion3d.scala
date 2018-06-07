@@ -15,6 +15,10 @@ import com.typesafe.scalalogging.StrictLogging
 
 object depletion3d extends StrictLogging {
 
+  val repartition =
+    EColl.repartition[DepletionRow]("depletionscorefinalstep", 1)(
+      Long.MaxValue - 1)
+
   def computeDepletionScores(
       locusData: EColl[LocusVariationCountAndNumNs],
       features: EColl[JoinFeatureWithCp.MappedFeatures],

@@ -356,6 +356,10 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         }
       }
 
+      val repartitionedScores = concatenatedDepletionScores.flatMap { ds =>
+        depletion3d.repartition(ds)(CPUMemoryRequest((1, 12), 5000))
+      }
+
       val indexedScores = scores2pdb.flatMap { scores =>
         DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
       }
@@ -373,7 +377,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         // swissModelDepletionScores
         indexedScores,
         uniprotByGene,
-        server
+        server,
+        repartitionedScores
       )
     }
 
