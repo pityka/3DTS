@@ -201,7 +201,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         JoinCPWithPdb.task(
           JoinCPWithPdbInput(uniprotgencodemap,
                              uniprotpdbmap.tables.map(_._2).sortBy(_.sf.name)))(
-          CPUMemoryRequest((1, 3), 60000))
+          CPUMemoryRequest((1, 3), 100000))
       }
     }
 
@@ -210,7 +210,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
         swissModelUniPdbMap.flatMap { swissModelUniPdbMap =>
           JoinCPWithPdb.task(
             JoinCPWithPdbInput(uniprotgencodemap, List(swissModelUniPdbMap)))(
-            CPUMemoryRequest((1, 3), 60000))
+            CPUMemoryRequest((1, 3), 100000))
         }
       }
 
@@ -332,48 +332,48 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
       val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
 
-      // val swissModelDepletionScores = makeDepletionScores(
-      //   swissModelFeature2cpEcoll)
+      val swissModelDepletionScores = makeDepletionScores(
+        swissModelFeature2cpEcoll)
 
-      // val concatenatedDepletionScores = for {
-      //   c1 <- cifDepletionScores
-      //   c2 <- swissModelDepletionScores
-      // } yield c1 ++ c2
+      val concatenatedDepletionScores = for {
+        c1 <- cifDepletionScores
+        c2 <- swissModelDepletionScores
+      } yield c1 ++ c2
 
-      // val concatenatedFeatures = for {
-      //   c1 <- swissModelFeatures
-      //   c2 <- cifFeatures
-      //   r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
-      // } yield r
+      val concatenatedFeatures = for {
+        c1 <- swissModelFeatures
+        c2 <- cifFeatures
+        r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
+      } yield r
 
-      // val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
-      //   concatenatedFeatures.flatMap { features =>
-      //     DepletionToPdb.task(
-      //       Depletion2PdbInput(
-      //         scores,
-      //         features
-      //       ))(CPUMemoryRequest(1, 10000))
-      //   }
-      // }
+      val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
+        concatenatedFeatures.flatMap { features =>
+          DepletionToPdb.task(
+            Depletion2PdbInput(
+              scores,
+              features
+            ))(CPUMemoryRequest(1, 10000))
+        }
+      }
 
-      // val indexedScores = scores2pdb.flatMap { scores =>
-      //   DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
-      // }
+      val indexedScores = scores2pdb.flatMap { scores =>
+        DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
+      }
 
-      // val server = indexedScores.flatMap { index =>
-      //   cppdbindex.flatMap { cppdb =>
-      //     uniprotByGene.flatMap { uniprotByGene =>
-      //       Server.start(8080, index, cppdb, uniprotByGene)
-      //     }
-      //   }
-      // }
+      val server = indexedScores.flatMap { index =>
+        cppdbindex.flatMap { cppdb =>
+          uniprotByGene.flatMap { uniprotByGene =>
+            Server.start(8080, index, cppdb, uniprotByGene)
+          }
+        }
+      }
 
       List(
-        cifDepletionScores
-        // concatenatedFeatures,
-        // indexedScores,
-        // uniprotByGene,
-        // server
+        // cifDepletionScores
+        // swissModelDepletionScores
+        indexedScores,
+        uniprotByGene,
+        server
       )
     }
 
