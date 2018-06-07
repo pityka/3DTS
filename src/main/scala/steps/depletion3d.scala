@@ -79,8 +79,7 @@ object depletion3d extends StrictLogging {
           val chainIsOnChromosomeX = {
             val chrs: Set[Boolean] = lociInThisPdbChain.map { locus =>
               locus.locus.s.split1('\t').head == "chrX"
-            }.toSet
-            assert(chrs.size == 1)
+            }.toSet            
             chrs.contains(true)
           }
 
