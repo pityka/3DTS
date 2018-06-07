@@ -311,7 +311,7 @@ object depletion3d extends StrictLogging {
   val computeScores = EColl
     .mapSourceWith[Seq[JoinFeatureWithCp.MappedFeatures],
                    Depletion3dInput,
-                   DepletionRow]("depletion3d", 11)(_ => "") {
+                   DepletionRow]("depletion3d", 12)(_ => "") {
       case (source,
             Depletion3dInput(loci,
                              fasta,
