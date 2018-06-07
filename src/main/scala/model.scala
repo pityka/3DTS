@@ -4,6 +4,19 @@ import MathHelpers._
 import com.typesafe.scalalogging.StrictLogging
 object Model extends StrictLogging {
 
+  def predictionPoissonWithNsWithRounds(lociNumNs: Array[Int],
+                                        lociRounds: Array[Int],
+                                        p: Array[Double]) = {
+    var s = 0d
+    var i = 0
+    val N = lociNumNs.length
+    while (i < N) {
+      s += (1d - math.exp(-1 * p(i) * lociRounds(i) * lociNumNs(i) / 3d))
+      i += 1
+    }
+    s
+  }
+
   def predictionPoissonWithNsWithRounds(sizes: Seq[(Int, Int, Int)],
                                         p: Double) =
     sizes map {

@@ -76,18 +76,15 @@ object depletion3d extends StrictLogging {
               .flatMap(cp => lociByCpra.get(cp))
               .distinct
 
-          val chainIsOnChromosomeX = {
-            val chrs: Set[Boolean] = lociInThisPdbChain.map { locus =>
-              locus.locus.s.split1('\t').head == "chrX"
-            }.toSet            
-            chrs.contains(true)
-          }
+          def makePSynArray(ls: Seq[LocusVariationCountAndNumNs]) =
+            ls.map { locus =>
+              val cp = locus.locus
+              val chrX = cp.s.split1('\t').head == "chrX"
+              if (chrX) pSynonymousChrX else pSynonymousAutosomal
 
-          val pSynonymous =
-            if (chainIsOnChromosomeX)
-              pSynonymousChrX
-            else
-              pSynonymousAutosomal
+            }.toArray
+
+          val pSynonymousArray = makePSynArray(loci)
 
           val unis = cpras.map(_._3).head
 
@@ -106,30 +103,22 @@ object depletion3d extends StrictLogging {
           if (!exclude) {
             logger.info(s"Scoring $feature")
 
-            // ns, numLoci, rounds
-            val numNsGrouped: Seq[(Int, Int, Int)] = loci
-              .groupBy(x => (x.numNs, x.sampleSize))
-              .toSeq
-              .map(x => (x._1._1, x._2.size, x._1._2))
-
-            val numSGroupedInFullChain: Seq[(Int, Int, Int)] =
-              lociInThisPdbChain
-                .groupBy(x => (x.numS, x.sampleSize))
-                .toSeq
-                .map(x => (x._1._1, x._2.size, x._1._2))
-
             val expectedNs =
-              predictionPoissonWithNsWithRounds(sizes = numNsGrouped,
-                                                p = pSynonymous)
+              predictionPoissonWithNsWithRounds(lociNumNs = numNs,
+                                                lociRounds = sampleSizeNs,
+                                                p = pSynonymousArray)
+
             val expectedSInFullChain =
-              predictionPoissonWithNsWithRounds(sizes = numSGroupedInFullChain,
-                                                p = pSynonymous)
+              predictionPoissonWithNsWithRounds(
+                lociNumNs = lociInThisPdbChain.map(_.numS).toArray,
+                lociRounds = lociInThisPdbChain.map(_.sampleSize).toArray,
+                p = makePSynArray(lociInThisPdbChain))
 
             val postMeanAgainstSynonymousRate =
               posteriorUnderSelection1D(numNs,
                                         sampleSizeNs,
                                         countNs,
-                                        pSynonymous)
+                                        pSynonymousArray)
 
             val postChromosomeIndependentHeptamerSpecific = {
               val pIntergenicByHeptamer = loci.map { locus =>
