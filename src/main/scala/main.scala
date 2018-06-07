@@ -15,6 +15,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
   def run(config: Config) = {
 
+    val contextRadius = config.getDouble("radius")
+
     val referenceFasta = importFile(config.getString("fasta"))
     val referenceFai = importFile(config.getString("fai"))
 
@@ -233,7 +235,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
     }
 
     val scores = {
-      val radius = 5d
+      val radius = contextRadius
 
       def joinFeatureWithCp(
           features: Future[JsDump[steps.StructuralContext.T1]],
