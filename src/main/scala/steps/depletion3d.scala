@@ -15,6 +15,127 @@ import com.typesafe.scalalogging.StrictLogging
 
 object depletion3d extends StrictLogging {
 
+  val formatter = new java.text.DecimalFormat("0.0000000000")
+  val sortDoubles = EColl.sortBy[Double]("sort-double", 1)(
+    1024 * 1024 * 50,
+    d => sd.steps.depletion3d.formatter.format(d))
+
+  val extractCDF =
+    EColl.mapFullSourceWith[Double, Long, Seq[(Double, Double)]]("cdf-1-2", 2)(
+      _ => "")(
+      1024 * 1024 * 50L, {
+        case (source, length) =>
+          implicit ctx =>
+            implicit val mat = ctx.components.actorMaterializer
+            val step = 0.001
+            Source.fromFuture(
+              source.zipWithIndex.runWith(
+                Sink.fold(Vector.empty[(Double, Double)]) {
+                  case (list, (value, index)) =>
+                    val nextValue = list.size * step
+                    if (nextValue < value)
+                      list :+ (value -> index / length.toDouble)
+                    else list
+                }))
+      }
+    )
+
+  val take1 = EColl.toSeq[Seq[(Double, Double)]]("cdf-toseq", 1)
+
+  def computeCDF(numbers: EColl[Double])(
+      implicit tc: tasks.TaskSystemComponents,
+      ec: ExecutionContext): Future[Seq[(Double, Double)]] =
+    for {
+      sorted <- sortDoubles(numbers)(CPUMemoryRequest(1, 5000))
+      cdf <- extractCDF((sorted, sorted.length))(CPUMemoryRequest(1, 5000))
+      cdfSeq <- take1(cdf)(CPUMemoryRequest(1, 5000)).map(_.head)
+    } yield cdfSeq
+
+  val projectPostMeanGlobalSynonymousRate =
+    EColl.map[DepletionRow, Double]("p-global-syn-pm", 1)(
+      _.nsPostGlobalSynonymousRate.post.mean)
+
+  val projectPostMeanHeptamerSpecificIntergenicRate =
+    EColl.map[DepletionRow, Double]("p-hept-intergen-pm", 1)(
+      _.nsPostHeptamerSpecificIntergenicRate.post.mean)
+
+  val projectPostMeanHeptamerIndependentIntergenicRate =
+    EColl.map[DepletionRow, Double]("p-global-intergen-pm", 1)(
+      _.nsPostHeptamerIndependentIntergenicRate.post.mean)
+
+  val projectPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate =
+    EColl.map[DepletionRow, Double]("p-heptchr-intergen-pm", 1)(
+      _.nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean)
+
+  val projectPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate =
+    EColl.map[DepletionRow, Double]("p-chr-intergen-pm", 1)(
+      _.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean)
+
+  def computeCDFs(scores: EColl[DepletionRow])(
+      implicit tc: tasks.TaskSystemComponents,
+      ec: ExecutionContext): Future[DepletionScoreCDFs] = {
+
+    val nsPostMeanGlobalSynonymousRate = for {
+      scores <- projectPostMeanGlobalSynonymousRate(scores)(
+        CPUMemoryRequest(1, 5000))
+      cdf <- computeCDF(scores)
+    } yield cdf
+
+    val nsPostMeanHeptamerSpecificIntergenicRate = for {
+      scores <- projectPostMeanHeptamerSpecificIntergenicRate(scores)(
+        CPUMemoryRequest(1, 5000))
+      cdf <- computeCDF(scores)
+    } yield cdf
+    val nsPostMeanHeptamerIndependentIntergenicRate = for {
+      scores <- projectPostMeanHeptamerIndependentIntergenicRate(scores)(
+        CPUMemoryRequest(1, 5000))
+      cdf <- computeCDF(scores)
+    } yield cdf
+    val nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate = for {
+      scores <- projectPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate(
+        scores)(CPUMemoryRequest(1, 5000))
+      cdf <- computeCDF(scores)
+    } yield cdf
+    val nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate = for {
+      scores <- projectPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate(
+        scores)(CPUMemoryRequest(1, 5000))
+      cdf <- computeCDF(scores)
+    } yield cdf
+
+    for {
+      nsPostMeanGlobalSynonymousRate <- nsPostMeanGlobalSynonymousRate
+      nsPostMeanHeptamerSpecificIntergenicRate <- nsPostMeanHeptamerSpecificIntergenicRate
+      nsPostMeanHeptamerIndependentIntergenicRate <- nsPostMeanHeptamerIndependentIntergenicRate
+      nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate <- nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate
+      nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate <- nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate
+    } yield
+      DepletionScoreCDFs(
+        nsPostMeanGlobalSynonymousRate,
+        nsPostMeanHeptamerSpecificIntergenicRate,
+        nsPostMeanHeptamerIndependentIntergenicRate,
+        nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate,
+        nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate
+      )
+
+  }
+
+  val uniquePdbIds =
+    EColl.foldLeft[DepletionRow, Set[PdbId]]("unique-scored-pdbid", 1)(
+      Set.empty[PdbId], {
+        case (accumulatedSet, depletionRow) =>
+          val pdbId = depletionRow.featureKey.pdbId
+          accumulatedSet + pdbId
+      }
+    )
+
+  val uniqueUniprotIds =
+    EColl.foldLeft[DepletionRow, Set[UniId]]("unique-scored-uniprotid", 1)(
+      Set.empty[UniId], {
+        case (accumulatedSet, depletionRow) =>
+          accumulatedSet ++ depletionRow.uniprotIds
+      }
+    )
+
   val repartition =
     EColl.repartition[DepletionRow]("depletionscorefinalstep", 1)(
       Long.MaxValue - 1)

@@ -217,6 +217,14 @@ case class FeatureKey2(pdbId: PdbId,
     pdbId.s + "_" + pdbChain.s + "_" + uniprotFeatureName.s + "_" + pdbResidueMin.s + "_" + pdbResidueMax.s
 }
 
+case class DepletionScoreCDFs(
+  nsPostMeanGlobalSynonymousRate : Seq[(Double,Double)],
+  nsPostMeanHeptamerSpecificIntergenicRate : Seq[(Double,Double)],
+  nsPostMeanHeptamerIndependentIntergenicRate : Seq[(Double,Double)],
+  nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate : Seq[(Double,Double)],
+  nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate : Seq[(Double,Double)]
+) 
+
 case class DepletionRow(featureKey: FeatureKey,
                         obsNs: ObsNs,
                         expNs: ExpNs,

@@ -8,10 +8,11 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.config._
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.JavaConverters._
 
-class TaskRunner(implicit ts: TaskSystemComponents) {
+class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
 
   def run(config: Config) = {
 
@@ -182,8 +183,40 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       }
     }
 
-    val variationsJoinedEColl = variationsJoined.flatMap { f =>
-      JoinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
+    val variationsJoinedEColl = variationsJoined
+      .flatMap { f =>
+        JoinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
+      }
+      .andThen {
+        case scala.util.Success(variationsJoined) =>
+          logger.info(s"Total coding loci: ${variationsJoined.length}")
+        case _ =>
+      }
+
+    val variationCounts = for {
+      variations <- variationsJoinedEColl
+      _ <- JoinVariations
+        .countMissense(variations)(CPUMemoryRequest(1, 5000))
+        .andThen {
+          case scala.util.Success(missenseCount) =>
+            logger.info(s"Total missense variation: " + missenseCount)
+          case _ =>
+        }
+      _ <- JoinVariations
+        .countSynonymous(variations)(CPUMemoryRequest(1, 5000))
+        .andThen {
+          case scala.util.Success(synCount) =>
+            logger.info(s"Total synonymous variation: " + synCount)
+          case _ =>
+        }
+    } yield ()
+
+    val missenseVariations = variationsJoinedEColl.flatMap { variations =>
+      JoinVariations.filterMissense(variations)(CPUMemoryRequest(1, 5000))
+    }
+
+    val synonymousVariations = variationsJoinedEColl.flatMap { variations =>
+      JoinVariations.filterSynonymous(variations)(CPUMemoryRequest(1, 5000))
     }
 
     val siteFrequencySpectrum = variationsJoinedEColl.flatMap {
@@ -326,6 +359,27 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
           }
         }
 
+      def extractAggregates(tag: String, scores: Future[EColl[DepletionRow]]) =
+        scores.flatMap { scores =>
+          for {
+            _ <- depletion3d
+              .uniquePdbIds(scores)(CPUMemoryRequest(1, 5000))
+              .andThen {
+                case scala.util.Success(set) =>
+                  logger.info(s"$tag Number of unique scored pdbs: ${set.size}")
+                case _ =>
+              }
+            _ <- depletion3d
+              .uniqueUniprotIds(scores)(CPUMemoryRequest(1, 5000))
+              .andThen {
+                case scala.util.Success(set) =>
+                  logger.info(
+                    s"$tag Number of unique scored uniprot: ${set.size}")
+                case _ =>
+              }
+          } yield ()
+        }
+
       val (cifFeatures, cifFeature2cpEcoll) = makeStructuralFeatures(
         includeBothSidesOfPlane = true)
 
@@ -334,13 +388,76 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
 
       val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
 
+      val cifAggregates = extractAggregates("PDB", cifDepletionScores)
+
       val swissModelDepletionScores = makeDepletionScores(
         swissModelFeature2cpEcoll)
+
+      val swissModelAggregates =
+        extractAggregates("swissmodel", swissModelDepletionScores)
+
+      val uniqueMappedCps = (for {
+        swissModelFeature2cp <- swissModelFeature2cpEcoll
+        cifFeature2cp <- cifFeature2cpEcoll
+        concat = swissModelFeature2cp ++ cifFeature2cp
+        cps <- JoinFeatureWithCp.mappedCps(concat)(CPUMemoryRequest(1, 5000))
+        sorted <- JoinFeatureWithCp.sortedCps(cps)(CPUMemoryRequest(1, 5000))
+        unique <- JoinFeatureWithCp.uniqueCps(sorted)(CPUMemoryRequest(1, 5000))
+      } yield unique).andThen {
+        case scala.util.Success(unique) =>
+          logger.info(
+            "Total number of loci mapped to any protein : " + unique.length)
+      }
+
+      val uniqueMappedMissenseVariations = for {
+        cps <- uniqueMappedCps
+        missense <- missenseVariations
+        synonymous <- synonymousVariations
+        joinedMissense <- JoinFeatureWithCp
+          .joinCpWithLocus((cps, missense))(CPUMemoryRequest(1, 100000))
+          .andThen {
+            case scala.util.Success(joinedMissense) =>
+              logger.info(
+                "Total number of mapped missense: " + joinedMissense.length)
+          }
+        joinedSynonymous <- JoinFeatureWithCp
+          .joinCpWithLocus((cps, synonymous))(CPUMemoryRequest(1, 100000))
+          .andThen {
+            case scala.util.Success(joinedSyn) =>
+              logger.info(
+                "Total number of mapped synonymous: " + joinedSyn.length)
+          }
+      } yield ()
 
       val concatenatedDepletionScores = for {
         c1 <- cifDepletionScores
         c2 <- swissModelDepletionScores
       } yield c1 ++ c2
+
+      val cdfs = concatenatedDepletionScores
+        .flatMap { s =>
+          depletion3d.computeCDFs(s)
+        }
+        .andThen {
+          case scala.util.Success(cdf) =>
+            logger.info(
+              "Score cdfs:"
+                + "\nnsPostMeanGlobalSynonymousRate:\n" + cdf.nsPostMeanGlobalSynonymousRate
+                .map(x => x._1 + "\t" + x._2)
+                .mkString("\n")
+                + "\nnsPostMeanHeptamerSpecificIntergenicRate:\n" + cdf.nsPostMeanHeptamerSpecificIntergenicRate
+                .map(x => x._1 + "\t" + x._2)
+                .mkString("\n")
+                + "\nnsPostMeanHeptamerIndependentIntergenicRate:\n" + cdf.nsPostMeanHeptamerIndependentIntergenicRate
+                .map(x => x._1 + "\t" + x._2)
+                .mkString("\n")
+                + "\nnsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate:\n" + cdf.nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate
+                .map(x => x._1 + "\t" + x._2)
+                .mkString("\n")
+                + "\nnsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate:\n" + cdf.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate
+                .map(x => x._1 + "\t" + x._2)
+                .mkString("\n"))
+        }
 
       val concatenatedFeatures = for {
         c1 <- swissModelFeatures
@@ -377,15 +494,21 @@ class TaskRunner(implicit ts: TaskSystemComponents) {
       List(
         // cifDepletionScores
         // swissModelDepletionScores
+        uniqueMappedCps,
+        uniqueMappedMissenseVariations,
+        cdfs,
         indexedScores,
         uniprotByGene,
         server,
-        repartitionedScores
+        repartitionedScores,
+        cifAggregates,
+        swissModelAggregates
       )
     }
 
     Future.sequence(
-      List(cppdbindex,
+      List(variationCounts,
+           cppdbindex,
            uniprotgencodemap,
            cppdb,
            uniprotpdbmap,

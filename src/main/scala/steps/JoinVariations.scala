@@ -16,6 +16,30 @@ case class JoinVariationsInput(
 
 object JoinVariations {
 
+  val countMissense = EColl.foldLeft[LocusVariationCountAndNumNs, Long](
+    "count-missense-variation-1",
+    1)(0L, {
+    case (count, locus) =>
+      if (locus.alleleCountNonSyn > 0) count + 1
+      else count
+  })
+
+  val filterMissense =
+    EColl.filter[LocusVariationCountAndNumNs]("filter-missense-variation-1", 1)(
+      _.alleleCountNonSyn > 0)
+
+  val filterSynonymous =
+    EColl.filter[LocusVariationCountAndNumNs]("filter-synonymous-variation-1",
+                                              1)(_.alleleCountSyn > 0)
+
+  val countSynonymous = EColl.foldLeft[LocusVariationCountAndNumNs, Long](
+    "count-synonymous-variation-1",
+    1)(0L, {
+    case (count, locus) =>
+      if (locus.alleleCountSyn > 0) count + 1
+      else count
+  })
+
   val toEColl =
     AsyncTask[JsDump[LocusVariationCountAndNumNs],
               EColl[LocusVariationCountAndNumNs]](

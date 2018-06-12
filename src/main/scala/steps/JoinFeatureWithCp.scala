@@ -19,6 +19,17 @@ object JoinFeatureWithCp {
      MappedPdbResidueCount,
      TotalPdbResidueCount)
 
+  val joinCpWithLocus = EColl.innerJoinBy2[ChrPos, LocusVariationCountAndNumNs](
+    "innerjoin-cp-locus-1",
+    1)(1024 * 1024 * 50, _.s, _.locus.s, Some(1))
+
+  val mappedCps = EColl.map[MappedFeatures, ChrPos]("mappedcps-1", 1)(_._2)
+
+  val sortedCps = EColl.sortBy[ChrPos]("sortcps-1", 1)(1024 * 1024 * 50L, _.s)
+
+  val uniqueCps =
+    EColl.uniqueSorted[ChrPos]("uniquecps-1", 1)(1024 * 1024 * 50L)
+
   val toEColl =
     AsyncTask[JsDump[MappedFeatures], EColl[MappedFeatures]](
       "convertfeature2cp-ecoll-1",
