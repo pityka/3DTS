@@ -7,6 +7,11 @@ import scala.concurrent.Future
 import SharedTypes._
 
 object Server {
+  def getCdfs: Future[DepletionScoreCDFs] =
+    Ajax.get("/cdfs").map(_.responseText).map { r =>
+      println(r.take(100))
+      upickle.default.read[DepletionScoreCDFs](r)
+    }
   def query(qt: String): Future[ServerReturn] =
     Ajax.get("/query?q=" + qt).map(_.responseText).map { responseText =>
       println("received data" + responseText.size)

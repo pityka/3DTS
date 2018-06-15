@@ -103,6 +103,13 @@ class ProteinUI(
   }
 
   class UIState(implicit ctx: Ctx.Owner) {
+
+    val cdfs: Var[Option[DepletionScoreCDFs]] = Var(None)
+
+    Server.getCdfs.foreach { d =>
+      cdfs() = Some(d)
+    }
+
     val currentData =
       Var[(Seq[PdbId], Seq[DepletionScoresByResidue])]((Nil, Nil))
 
@@ -245,18 +252,20 @@ class ProteinUI(
             td("score"),
             // td("postmean_2"),
             td("uniprot")))(scores.map {
-      case DepletionRow(feature,
-                        ObsNs(obsns),
-                        ExpNs(expns),
-                        ObsS(obss),
-                        ExpS(exps),
-                        NumLoci(size),
-                        NsPostGlobalSynonymousRate(Posterior(nsPostmean, _)),
-                        _,
-                        _,
-                        _,
-                        _,
-                        unis) =>
+      case DepletionRow(
+          feature,
+          ObsNs(obsns),
+          ExpNs(expns),
+          ObsS(obss),
+          ExpS(exps),
+          NumLoci(size),
+          NsPostGlobalSynonymousRate(_),
+          _,
+          _,
+          _,
+          NsPostHeptamerIndependentChromosomeSpecificIntergenicRate(
+            Posterior(nsPostmean, _)),
+          unis) =>
         val btn = button(
           `class` := "uk-button uk-button-default uk-button-small uk-button-primary",
           `type` := "button")("Send").render
@@ -360,6 +369,7 @@ class ProteinUI(
 
   val proteinView = Rx {
     val data = UIState.currentData()
+    val cdfs = UIState.cdfs()
     println("update protein view")
     val byResidue
       : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
@@ -371,19 +381,36 @@ class ProteinUI(
         x._1 -> x._2.map(_.featureScores)
       }
 
-    def colorByResidue(selector: DepletionRow => Double)
+    def colorByResidue(selector: DepletionRow => Double,
+                       cdf: Seq[(Double, Double)])
       : Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] = {
       byResidue.map {
         case (key, depletionRows) =>
           val value =
             depletionRows.map(depletionRow => selector(depletionRow)).min
-          val grayScale = value * 240
-          key -> Array(grayScale, grayScale, grayScale)
+          val valueInCdf = cdf
+            .sliding(2, 1)
+            .find {
+              case l =>
+                l(0)._1 <= value && value <= l(1)._1
+            }
+            .map(_.head._2)
+            .getOrElse(0d)
+
+          println((value, valueInCdf))
+
+          val color = org.nspl.HeatMapColors().apply(1 - valueInCdf)
+          key -> Array(color.r / 255d, color.g / 255d, color.b / 255d)
       }
     }
 
     val colorByResidue_Mean1DLocal =
-      colorByResidue(_.nsPostHeptamerSpecificIntergenicRate.post.mean)
+      colorByResidue(
+        _.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
+        cdfs
+          .map(_.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate)
+          .getOrElse(Nil)
+      )
 
     data._2.headOption
       .map(_.pdbId)

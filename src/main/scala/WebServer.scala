@@ -76,8 +76,8 @@ object Server {
   def start(port: Int,
             scoresIndex: steps.ScoresIndexedByPdbId,
             cppdbIndex: steps.CpPdbIndex,
-            geneNameIndex: steps.UniprotIndexedByGene)(
-      implicit tsc: TaskSystemComponents) = {
+            geneNameIndex: steps.UniprotIndexedByGene,
+            cdfs: DepletionScoreCDFs)(implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
     implicit val mat = tsc.actorMaterializer
@@ -106,7 +106,7 @@ object Server {
         log.info(s"Index files downloaded. $files")
         implicit val logging = log
         val indexFolder = files.head.getParentFile
-        httpFromFolder(indexFolder, port)
+        httpFromFolder(indexFolder, port, cdfs)
       }
   }
 
@@ -159,7 +159,7 @@ object Server {
     csvHeader + "\n" + rows
   }
 
-  def httpFromFolder(indexFolder: File, port: Int)(
+  def httpFromFolder(indexFolder: File, port: Int, cdfs: DepletionScoreCDFs)(
       implicit log: akka.event.LoggingAdapter,
       acs: ActorSystem,
       mat: Materializer) = {
@@ -241,6 +241,11 @@ object Server {
 
           }
         } ~
+        path("cdfs") {
+          get {
+            complete((StatusCodes.OK, upickle.default.write(cdfs)))
+          }
+        } ~
         path(RemainingPath) { segment =>
           logRequest(("other", Logging.InfoLevel)) {
             Route.seal(getFromResource("public/" + segment))
@@ -254,12 +259,12 @@ object Server {
   }
 }
 
-object StandaloneHttp extends App {
-  val indexFolder = new File(args(0))
-  val port = args(1).toInt
-  implicit val system = ActorSystem()
-  implicit val mat = ActorMaterializer()
-  implicit val log = akka.event.Logging(system, "http")
-  Server.httpFromFolder(indexFolder, port)
+// object StandaloneHttp extends App {
+//   val indexFolder = new File(args(0))
+//   val port = args(1).toInt
+//   implicit val system = ActorSystem()
+//   implicit val mat = ActorMaterializer()
+//   implicit val log = akka.event.Logging(system, "http")
+//   Server.httpFromFolder(indexFolder, port)
 
-}
+// }

@@ -486,7 +486,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       val server = indexedScores.flatMap { index =>
         cppdbindex.flatMap { cppdb =>
           uniprotByGene.flatMap { uniprotByGene =>
-            Server.start(8080, index, cppdb, uniprotByGene)
+            cdfs.flatMap { cdfs =>
+              Server.start(8080, index, cppdb, uniprotByGene, cdfs)
+            }
           }
         }
       }
