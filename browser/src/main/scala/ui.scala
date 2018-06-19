@@ -102,9 +102,35 @@ class ProteinUI(
     (viewContainer)
   }
 
+  case class ScoreSelector(score: DepletionRow => Double,
+                           cdf: DepletionScoreCDFs => Seq[(Double, Double)])
+  object ScoreSelector {
+    val globalSynonymous = ScoreSelector(_.nsPostGlobalSynonymousRate.post.mean,
+                                         _.nsPostMeanGlobalSynonymousRate)
+
+    val heptamerSpecificIntergenic = ScoreSelector(
+      _.nsPostHeptamerSpecificIntergenicRate.post.mean,
+      _.nsPostMeanHeptamerSpecificIntergenicRate)
+
+    val heptamerIndependentIntergenic = ScoreSelector(
+      _.nsPostHeptamerIndependentIntergenicRate.post.mean,
+      _.nsPostMeanHeptamerIndependentIntergenicRate)
+
+    val heptamerSpecificChromosomeSpecificIntergenic = ScoreSelector(
+      _.nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean,
+      _.nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate)
+
+    val heptamerIndependentChromosomeSpecificIntergenic = ScoreSelector(
+      _.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
+      _.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate)
+
+  }
+
   class UIState(implicit ctx: Ctx.Owner) {
 
     val cdfs: Var[Option[DepletionScoreCDFs]] = Var(None)
+
+    val selectedScore: Var[ScoreSelector] = Var(ScoreSelector.globalSynonymous)
 
     Server.getCdfs.foreach { d =>
       cdfs() = Some(d)
@@ -148,13 +174,44 @@ class ProteinUI(
     }
   }
 
+  val scoreSelectorInput = select(
+    style := "border: 1px solid #ddd",
+    height := "30",
+    width := "100"
+  )(
+    option(value := "s5", selected := true)(
+      "Non coding heptamer independent chromosome specific variation"),
+    option(value := "s1")("Synonymous Coding variation"),
+    option(value := "s2")("Non coding heptamer specific variation"),
+    option(value := "s3")("Non coding heptamer independent variation"),
+    option(value := "s4")(
+      "Non coding heptamer specific chromosome specific variation")
+  ).render
+
+  scoreSelectorInput.onchange = (e: Event) => {
+    scoreSelectorInput.value match {
+      case "s1" => UIState.selectedScore() = ScoreSelector.globalSynonymous
+      case "s2" =>
+        UIState.selectedScore() = ScoreSelector.heptamerSpecificIntergenic
+      case "s3" =>
+        UIState.selectedScore() = ScoreSelector.heptamerIndependentIntergenic
+      case "s4" =>
+        UIState.selectedScore() =
+          ScoreSelector.heptamerSpecificChromosomeSpecificIntergenic
+      case "s5" =>
+        UIState.selectedScore() =
+          ScoreSelector.heptamerIndependentChromosomeSpecificIntergenic
+    }
+
+  }
+
   val queryBox = input(
     `class` := "uk-search-input",
     style := "border: 1px solid #ddd",
     `type` := "text",
     height := "30",
     width := "100",
-    placeholder := "Pdb, UniProt ID, Ensemble Transcript Id, hg38 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
+    placeholder := "You can search for PDP identifier, UniProt ID, Ensemble Transcript ID, hg38 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
   ).render
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
@@ -239,7 +296,9 @@ class ProteinUI(
 
   // }
 
-  def renderTable(click: String, scores: Seq[DepletionRow]) =
+  def renderTable(click: String,
+                  scores: Seq[DepletionRow],
+                  scoreSelector: ScoreSelector) =
     table(`class` := "uk-table uk-table-striped uk-table-hover uk-table-small")(
       thead(td("clicked"),
             td("remarks"),
@@ -252,20 +311,18 @@ class ProteinUI(
             td("score"),
             // td("postmean_2"),
             td("uniprot")))(scores.map {
-      case DepletionRow(
-          feature,
-          ObsNs(obsns),
-          ExpNs(expns),
-          ObsS(obss),
-          ExpS(exps),
-          NumLoci(size),
-          NsPostGlobalSynonymousRate(_),
-          _,
-          _,
-          _,
-          NsPostHeptamerIndependentChromosomeSpecificIntergenicRate(
-            Posterior(nsPostmean, _)),
-          unis) =>
+      case drow @ DepletionRow(feature,
+                               ObsNs(obsns),
+                               ExpNs(expns),
+                               ObsS(obss),
+                               ExpS(exps),
+                               NumLoci(size),
+                               NsPostGlobalSynonymousRate(_),
+                               _,
+                               _,
+                               _,
+                               _,
+                               unis) =>
         val btn = button(
           `class` := "uk-button uk-button-default uk-button-small uk-button-primary",
           `type` := "button")("Send").render
@@ -304,6 +361,8 @@ class ProteinUI(
 
         val featureElem =
           td(feature.toString, small("(Click to center)")).render
+
+        val nsPostmean = scoreSelector.score(drow)
 
         val row = tr(
           td(click),
@@ -349,15 +408,19 @@ class ProteinUI(
     val byResidue
       : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
       UIState.byResidue()
+    val scoreSelector = UIState.selectedScore()
     UIState
       .clicked()
       .map {
         case (pdbId, pdbChain, pdbRes) =>
           val scores =
             byResidue.get((pdbChain -> pdbRes)).toList.flatten.distinct
-          renderTable(pdbId.s + "/" + pdbChain.s + "/" + pdbRes.s, scores)
+          renderTable(pdbId.s + "/" + pdbChain.s + "/" + pdbRes.s,
+                      scores,
+                      scoreSelector)
       }
-      .getOrElse(renderTable("", byResidue.values.flatten.toSeq.distinct))
+      .getOrElse(
+        renderTable("", byResidue.values.flatten.toSeq.distinct, scoreSelector))
   }
 
   val resetClickButton =
@@ -370,6 +433,7 @@ class ProteinUI(
   val proteinView = Rx {
     val data = UIState.currentData()
     val cdfs = UIState.cdfs()
+    val scoreSelector = UIState.selectedScore()
     println("update protein view")
     val byResidue
       : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
@@ -406,9 +470,9 @@ class ProteinUI(
 
     val colorByResidue_Mean1DLocal =
       colorByResidue(
-        _.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
+        scoreSelector.score,
         cdfs
-          .map(_.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate)
+          .map(scoreSelector.cdf)
           .getOrElse(Nil)
       )
 
@@ -446,8 +510,7 @@ class ProteinUI(
   val ui =
     div(
       // renderProtein("3DZY"),
-      div(queryBox, waitIndicator),
-      div(a(href := "/depletionscores")("or download all")),
+      div(queryBox, waitIndicator, scoreSeletorInput),
       div(resolvedPDBs),
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),

@@ -39,40 +39,6 @@ object Server {
 
   }
 
-  def asCSV(
-      triples: Seq[(DepletionScoresByResidue, PdbUniGencodeRow)]): String = {
-
-    def asCSVRow(
-        triple: (DepletionScoresByResidue, PdbUniGencodeRow)): String = {
-      val (scores, pdbuni) = triple
-      (List(scores.pdbId,
-            scores.pdbChain,
-            scores.pdbResidue,
-            pdbuni.uniId.s,
-            pdbuni.uniNumber.i + 1,
-            pdbuni.uniprotSequenceFromPdbJoin.s) ++ List(
-        scores.featureScores.featureKey.toString,
-        scores.featureScores.obsNs.v,
-        scores.featureScores.expNs.v,
-        scores.featureScores.obsS.v,
-        scores.featureScores.expS.v,
-        scores.featureScores.numLoci.v,
-        scores.featureScores.nsPostGlobalSynonymousRate.post.mean,
-        scores.featureScores.nsPostHeptamerSpecificIntergenicRate.post.mean,
-        scores.featureScores.nsPostHeptamerIndependentIntergenicRate.post.mean,
-        scores.featureScores.nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean,
-        scores.featureScores.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
-        scores.featureScores.uniprotIds.mkString(":")
-      )).mkString(",")
-    }
-
-    val header =
-      "PDBID,PDBCHAIN,PDBRES,UNIID,UNINUM,UNIAA,FEATURE,OBSNS,EXPNS,OBSS_IN_CHAIN,EXPS_IN_CHAIN,NUMLOCI,nsPostGlobalSynonymousRate,nsPostHeptamerSpecificIntergenicRate,nsPostHeptamerIndependentIntergenicRate,nsPostHeptamerSpecificChromosomeSpecificIntergenicRate,nsPostHeptamerIndependentChromosomeSpecificIntergenicRate,uniprotIds"
-
-    header + "\n" + triples.map(asCSVRow).distinct.mkString("\n")
-
-  }
-
   def start(port: Int,
             scoresIndex: steps.ScoresIndexedByPdbId,
             cppdbIndex: steps.CpPdbIndex,
@@ -122,21 +88,6 @@ object Server {
 
   }
 
-  def csvRow(e: DepletionScoresByResidue) = {
-    List(
-      e.pdbId,
-      e.pdbChain,
-      e.pdbResidue
-      // e.featureScores._2.v,
-      // e.featureScores._3.v,
-      // e.featureScores._4.v,
-      // e.featureScores._5.v,
-      // e.featureScores._6.v,
-      // e.featureScores._9.v,
-      // e.featureScores._12.v
-    ).map(_.toString).mkString(",")
-  }
-
   val csvHeader = List("PDB",
                        "CHAIN",
                        "PDBRES",
@@ -148,15 +99,30 @@ object Server {
                        "SCORE_global_rate",
                        "SCORE_local_rate").mkString(",")
 
-  def asCSV(data: ServerReturn) = {
-    val scores = data._2
-    val rows = scores
-      .map(
-        csvRow
-      )
-      .mkString("\n")
+  def asCSV(data: ServerReturn): String = {
 
-    csvHeader + "\n" + rows
+    def asCSVRow(scores: DepletionScoresByResidue): String = {
+      (List(scores.pdbId, scores.pdbChain, scores.pdbResidue) ++ List(
+        scores.featureScores.featureKey.toString,
+        scores.featureScores.obsNs.v,
+        scores.featureScores.expNs.v,
+        scores.featureScores.obsS.v,
+        scores.featureScores.expS.v,
+        scores.featureScores.numLoci.v,
+        scores.featureScores.nsPostGlobalSynonymousRate.post.mean,
+        scores.featureScores.nsPostHeptamerSpecificIntergenicRate.post.mean,
+        scores.featureScores.nsPostHeptamerIndependentIntergenicRate.post.mean,
+        scores.featureScores.nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean,
+        scores.featureScores.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
+        scores.featureScores.uniprotIds.mkString(":")
+      )).mkString(",")
+    }
+
+    val header =
+      "PDBID,PDBCHAIN,PDBRES,FEATURE,OBSNS,EXPNS,OBSS_IN_CHAIN,EXPS_IN_CHAIN,NUMLOCI,nsPostGlobalSynonymousRate,nsPostHeptamerSpecificIntergenicRate,nsPostHeptamerIndependentIntergenicRate,nsPostHeptamerSpecificChromosomeSpecificIntergenicRate,nsPostHeptamerIndependentChromosomeSpecificIntergenicRate,uniprotIds"
+
+    header + "\n" + data._2.map(asCSVRow).distinct.mkString("\n")
+
   }
 
   def httpFromFolder(indexFolder: File, port: Int, cdfs: DepletionScoreCDFs)(
