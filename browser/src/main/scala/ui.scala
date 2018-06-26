@@ -128,7 +128,8 @@ class ProteinUI(
 
     val cdfs: Var[Option[DepletionScoreCDFs]] = Var(None)
 
-    val selectedScore: Var[ScoreSelector] = Var(ScoreSelector.heptamerIndependentChromosomeSpecificIntergenic)
+    val selectedScore: Var[ScoreSelector] = Var(
+      ScoreSelector.heptamerIndependentChromosomeSpecificIntergenic)
 
     Server.getCdfs.foreach { d =>
       cdfs() = Some(d)
@@ -426,6 +427,43 @@ class ProteinUI(
     UIState.clicked() = None
   }
 
+  val colorkey = Rx {
+    val cdfs = UIState.cdfs()
+    val scoreSelector = UIState.selectedScore()
+    val cdf = cdfs
+      .map(scoreSelector.cdf)
+      .getOrElse(Nil)
+    val colorkeyData = ((1 to 9) map { i =>
+      i / 10d
+    }).map { value =>
+      val valueInCdf = cdf
+        .sliding(2, 1)
+        .find {
+          case l =>
+            l(0)._1 <= value && value <= l(1)._1
+        }
+        .map(_.head._2)
+        .getOrElse(0d)
+
+      val color = org.nspl.HeatMapColors().apply(1 - valueInCdf)
+      (value, (color.r, color.g, color.b))
+    }
+
+    div(style := "display:flex;flex-direction:column;")(
+      div(style := "display:flex;flex-direction:row")(colorkeyData.map {
+        case (_, (r, g, b)) =>
+          div(
+            style := s"height:10px;width:30px;background-color: rgb($r,$g,$b);")
+      }),
+      div(
+        style := "display:flex;flex-direction:row;justify-content:space-between; width:300px;")(
+        colorkeyData.map {
+          case (value, _) => span(style := "width:30px")(value.toString)
+        })
+    )
+
+  }
+
   val proteinView = Rx {
     val data = UIState.currentData()
     val cdfs = UIState.cdfs()
@@ -433,12 +471,6 @@ class ProteinUI(
     val byResidue
       : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
       UIState.byResidue()
-    data._2
-      .groupBy(x =>
-        (PdbChain(x.pdbChain) -> PdbResidueNumberUnresolved(x.pdbResidue)))
-      .map { x =>
-        x._1 -> x._2.map(_.featureScores)
-      }
 
     def colorByResidue(selector: DepletionRow => Double,
                        cdf: Seq[(Double, Double)])
@@ -511,7 +543,9 @@ class ProteinUI(
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),
         downloadLink,
-        div(style := "width: 80%")(div(proteinView), resetClickButton),
+        div(style := "width: 80%")(div(proteinView),
+                                   colorkey,
+                                   resetClickButton),
         div(
           h3(`class` := "uk-heading")("Depletion scores in the protein"),
           clickedTable
