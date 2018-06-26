@@ -14,6 +14,54 @@ case class GencodeUniprotInput(
 
 object JoinGencodeToUniprot {
 
+  val countMappedUniprot =
+    AsyncTask[JsDump[sd.JoinGencodeToUniprot.MapResult], Int](
+      "joingencodeuniprot-count-mapped-uniprot",
+      2) {
+      case js =>
+        implicit ctx =>
+          implicit val mat = ctx.components.actorMaterializer
+
+          val set = scala.collection.mutable.Set[UniId]()
+
+          js.source
+            .collect {
+              case sd.JoinGencodeToUniprot.Success(mapped) => mapped
+            }
+            .mapConcat(_.map(_.uniId).toList)
+            .runForeach { uniid =>
+              set.add(uniid)
+            }
+            .map { _ =>
+              set.size
+            }
+
+    }
+
+  val countMappedEnst =
+    AsyncTask[JsDump[sd.JoinGencodeToUniprot.MapResult], Int](
+      "joingencodeuniprot-count-mapped-enst",
+      2) {
+      case js =>
+        implicit ctx =>
+          implicit val mat = ctx.components.actorMaterializer
+
+          val set = scala.collection.mutable.Set[EnsT]()
+
+          js.source
+            .collect {
+              case sd.JoinGencodeToUniprot.Success(mapped) => mapped
+            }
+            .mapConcat(_.map(_.ensT).toList)
+            .runForeach { enst =>
+              set.add(enst)
+            }
+            .map { _ =>
+              set.size
+            }
+
+    }
+
   val task =
     AsyncTask[GencodeUniprotInput, JsDump[sd.JoinGencodeToUniprot.MapResult]](
       "gencodeuniprot-3",

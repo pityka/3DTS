@@ -165,6 +165,28 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                           gencodeTranscripts,
                           uniprotKbOriginal))(CPUMemoryRequest(1, 30000))
 
+    val uniprotgencodeCountUni = uniprotgencodemap
+      .flatMap { uniprotgencodemap =>
+        sd.steps.JoinGencodeToUniprot
+          .countMappedUniprot(uniprotgencodemap)(CPUMemoryRequest(1, 5000))
+      }
+      .andThen {
+        case count =>
+          logger.info(
+            s"Total number of unique uniprot ids joined in the uniprot-gencode: $count")
+      }
+
+    val uniprotgencodeCountEnsT = uniprotgencodemap
+      .flatMap { uniprotgencodemap =>
+        sd.steps.JoinGencodeToUniprot
+          .countMappedEnst(uniprotgencodemap)(CPUMemoryRequest(1, 5000))
+      }
+      .andThen {
+        case count =>
+          logger.info(
+            s"Total number of unique ensts joined in the uniprot-gencode $count")
+      }
+
     val variationsJoined = uniprotgencodemap.flatMap { uniprotgencodemap =>
       filteredGnomadGenome.flatMap { filteredGnomadGenome =>
         filteredGnomadExome.flatMap { filteredGnomadExome =>
@@ -512,15 +534,19 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     }
 
     Future.sequence(
-      List(variationCounts,
-           cppdbindex,
-           uniprotgencodemap,
-           cppdb,
-           uniprotpdbmap,
-           variationsJoined,
-           uniprotgencodemap,
-           assemblies,
-           siteFrequencySpectrum) ++ scores)
+      List(
+        uniprotgencodeCountEnsT,
+        uniprotgencodeCountUni,
+        variationCounts,
+        cppdbindex,
+        uniprotgencodemap,
+        cppdb,
+        uniprotpdbmap,
+        variationsJoined,
+        uniprotgencodemap,
+        assemblies,
+        siteFrequencySpectrum
+      ) ++ scores)
 
   }
 }
