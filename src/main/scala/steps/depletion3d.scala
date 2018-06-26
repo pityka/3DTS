@@ -119,6 +119,13 @@ object depletion3d extends StrictLogging {
 
   }
 
+  val cdfs2file =
+    AsyncTask[DepletionScoreCDFs, SharedFile]("cdfs-serialized", 2) {
+      cdf => implicit ctx =>
+        val tmp = IOHelpers.writeCDFs(cdf)
+        SharedFile(tmp, "scorecdfs.txt")
+    }
+
   val uniquePdbIds =
     EColl.foldLeft[DepletionRow, Set[PdbId]]("unique-scored-pdbid", 1)(
       Set.empty[PdbId], {

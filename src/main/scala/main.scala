@@ -458,6 +458,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 .map(x => x._1 + "\t" + x._2)
                 .mkString("\n"))
         }
+        .flatMap { cdf =>
+          depletion3d.cdfs2file(cdf)(CPUMemoryRequest(1, 5000))
+        }
 
       val concatenatedFeatures = for {
         c1 <- swissModelFeatures

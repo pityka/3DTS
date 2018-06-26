@@ -43,7 +43,7 @@ object Server {
             scoresIndex: steps.ScoresIndexedByPdbId,
             cppdbIndex: steps.CpPdbIndex,
             geneNameIndex: steps.UniprotIndexedByGene,
-            cdfs: DepletionScoreCDFs)(implicit tsc: TaskSystemComponents) = {
+            cdfFile: SharedFile)(implicit tsc: TaskSystemComponents) = {
 
     implicit val system = tsc.actorsystem
     implicit val mat = tsc.actorMaterializer
@@ -53,6 +53,7 @@ object Server {
     val linkFolder = TempFile.createTempFile("links")
     linkFolder.delete
     linkFolder.mkdirs
+    val cdfs = cdfFile.file
     Future
       .sequence((scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files)
         .map { sf =>
@@ -69,10 +70,16 @@ object Server {
           }
         })
       .flatMap { files =>
-        log.info(s"Index files downloaded. $files")
-        implicit val logging = log
-        val indexFolder = files.head.getParentFile
-        httpFromFolder(indexFolder, port, cdfs)
+        cdfs.flatMap { cdfFile =>
+          implicit val logging = log
+          val indexFolder = files.head.getParentFile
+          val cdfs =
+            IOHelpers.readCDFs(cdfFile)
+
+          log.info(
+            s"Restart standalone http server with \n saturation -main sd.StandaloneHttp ${indexFolder.getAbsolutePath} $port ${cdfFile.getAbsolutePath} \n")
+          httpFromFolder(indexFolder, port, cdfs)
+        }
       }
   }
 
@@ -225,12 +232,14 @@ object Server {
   }
 }
 
-// object StandaloneHttp extends App {
-//   val indexFolder = new File(args(0))
-//   val port = args(1).toInt
-//   implicit val system = ActorSystem()
-//   implicit val mat = ActorMaterializer()
-//   implicit val log = akka.event.Logging(system, "http")
-//   Server.httpFromFolder(indexFolder, port)
+object StandaloneHttp extends App {
+  val indexFolder = new File(args(0))
+  val port = args(1).toInt
+  val cdfFile = args(2)
+  val cdfs = IOHelpers.readCDFs(new java.io.File(cdfFile))
+  implicit val system = ActorSystem()
+  implicit val mat = ActorMaterializer()
+  implicit val log = akka.event.Logging(system, "http")
+  Server.httpFromFolder(indexFolder, port, cdfs)
 
-// }
+}

@@ -21,7 +21,6 @@ class ProteinUI(
       colors: Map[(PdbChain, PdbResidueNumberUnresolved), Array[Double]] = Map(),
       onClick: (String, String, Int, js.Dynamic, js.Dynamic, String) => Unit =
         (_, _, _, _, _, _) => ()) = {
-
     val colorByResidueIdentityRgb =
       (callback: (String, Int) => Array[Double]) => {
         js.Dynamic.newInstance(js.Dynamic.global.pv.color.ColorOp)(
@@ -68,7 +67,6 @@ class ProteinUI(
       viewer.addListener(
         "click",
         (picked: js.Dynamic) => {
-          println("clicked on " + picked)
           if (picked == null) ()
           else {
             val target = picked.target()
@@ -130,7 +128,7 @@ class ProteinUI(
 
     val cdfs: Var[Option[DepletionScoreCDFs]] = Var(None)
 
-    val selectedScore: Var[ScoreSelector] = Var(ScoreSelector.globalSynonymous)
+    val selectedScore: Var[ScoreSelector] = Var(ScoreSelector.heptamerIndependentChromosomeSpecificIntergenic)
 
     Server.getCdfs.foreach { d =>
       cdfs() = Some(d)
@@ -168,7 +166,6 @@ class ProteinUI(
     UIState.lastQuery() = Some(q)
     Server.query(q).map { data =>
       UIState.waitState() = false
-      println("Received data " + data._1.size + " " + data._2.size)
       UIState.currentData() = data
       UIState.clicked() = None
     }
@@ -189,6 +186,7 @@ class ProteinUI(
   ).render
 
   scoreSelectorInput.onchange = (e: Event) => {
+    UIState.waitState() = true
     scoreSelectorInput.value match {
       case "s1" => UIState.selectedScore() = ScoreSelector.globalSynonymous
       case "s2" =>
@@ -383,7 +381,6 @@ class ProteinUI(
         ).render
         featureElem.onclick = {
           (e: Event) =>
-            println("clicked " + feature)
             import js.JSConverters._
             val ch: PdbChain = feature.pdbChain
             val res: PdbResidueNumberUnresolved =
@@ -395,7 +392,6 @@ class ProteinUI(
                     js.Dynamic.literal(chains =
                                          chainRemapReverse(ch.s).toJSArray,
                                        rnum = res.s.toInt))
-                println((chainRemapReverse(ch.s).toJSArray, res.s.toInt))
                 viewer.ballsAndSticks("focus", focusResidue)
                 viewer.centerOn(focusResidue)
               case None =>
@@ -434,7 +430,6 @@ class ProteinUI(
     val data = UIState.currentData()
     val cdfs = UIState.cdfs()
     val scoreSelector = UIState.selectedScore()
-    println("update protein view")
     val byResidue
       : Map[(PdbChain, PdbResidueNumberUnresolved), Seq[DepletionRow]] =
       UIState.byResidue()
@@ -461,8 +456,6 @@ class ProteinUI(
             .map(_.head._2)
             .getOrElse(0d)
 
-          println((value, valueInCdf))
-
           val color = org.nspl.HeatMapColors().apply(1 - valueInCdf)
           key -> Array(color.r / 255d, color.g / 255d, color.b / 255d)
       }
@@ -476,10 +469,9 @@ class ProteinUI(
           .getOrElse(Nil)
       )
 
-    data._2.headOption
+    val rendered = data._2.headOption
       .map(_.pdbId)
       .map { pdbId =>
-        println("Render " + pdbId)
         val viewContainer = renderProtein(
           pdbId,
           colorByResidue_Mean1DLocal,
@@ -505,12 +497,16 @@ class ProteinUI(
       }
       .getOrElse(div())
 
+    UIState.waitState() = false
+
+    rendered
+
   }
 
   val ui =
     div(
       // renderProtein("3DZY"),
-      div(queryBox, waitIndicator, scoreSeletorInput),
+      div(queryBox, waitIndicator, scoreSelectorInput),
       div(resolvedPDBs),
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),

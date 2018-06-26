@@ -1,6 +1,7 @@
 package sd
 
 import stringsplit._
+import fileutils.{openFileWriter, openSource}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.utils.IOUtils
 import java.io._
@@ -337,6 +338,49 @@ object IOHelpers {
     }
   }
 
+// case class DepletionScoreCDFs(
+//   nsPostMeanGlobalSynonymousRate : Seq[(Double,Double)],
+//   nsPostMeanHeptamerSpecificIntergenicRate : Seq[(Double,Double)],
+//   nsPostMeanHeptamerIndependentIntergenicRate : Seq[(Double,Double)],
+//   nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate : Seq[(Double,Double)],
+//   nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate : Seq[(Double,Double)]
+// )
+  def writeCDFs(d: DepletionScoreCDFs): File = {
+    (openFileWriter { writer =>
+      writer.write(
+        d.nsPostMeanGlobalSynonymousRate
+          .map(_.productIterator.mkString(","))
+          .mkString(",") + "\n")
+      writer.write(
+        d.nsPostMeanHeptamerSpecificIntergenicRate
+          .map(_.productIterator.mkString(","))
+          .mkString(",") + "\n")
+      writer.write(
+        d.nsPostMeanHeptamerIndependentIntergenicRate
+          .map(_.productIterator.mkString(","))
+          .mkString(",") + "\n")
+      writer.write(
+        d.nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate
+          .map(_.productIterator.mkString(","))
+          .mkString(",") + "\n")
+      writer.write(
+        d.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate
+          .map(_.productIterator.mkString(","))
+          .mkString(",") + "\n")
+    })._1
+  }
+
+  def readCDFs(f: File): DepletionScoreCDFs = openSource(f) { s =>
+    val lines = s.getLines.map { line =>
+      line
+        .split1(',')
+        .map(_.toDouble)
+        .grouped(2)
+        .map(s => s(0) -> s(1))
+        .toVector
+    }.toVector
+    DepletionScoreCDFs(lines(0), lines(1), lines(2), lines(3), lines(4))
+  }
   def readSwissmodelMetadata(tar: File) = {
     val tarInput =
       new TarArchiveInputStream(
