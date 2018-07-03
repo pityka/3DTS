@@ -3,9 +3,11 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
+import tasks.collection._
 import tasks.queue.NodeLocalCache
 import tasks.upicklesupport._
 import fileutils._
+import akka.stream.scaladsl.Source
 
 case class UniProtPdbInput(
     uniprotKb: SharedFile,
@@ -103,6 +105,27 @@ object JoinUniprotWithPdb {
       }
     }
   }
+
+  val extractMapppedFeatures =
+    AsyncTask[UniProtPdbFullOutput, EColl[MappedUniprotFeature]](
+      "uniprot2pdb-extract-features",
+      1) { uniProtPdbFullOutput => implicit ctx =>
+      val source = Source(uniProtPdbFullOutput.tables.toList)
+        .flatMapConcat(_._3.source)
+        .mapConcat {
+          case (uni, pdb, chain, featureSet) =>
+            featureSet.toList.map {
+              case (featureName, residues) =>
+                MappedUniprotFeature(uni, pdb, chain, featureName, residues)
+            }
+
+        }
+
+      EColl.fromSource(source = source,
+                       name = uniProtPdbFullOutput.hashCode + ".mappedfeatures",
+                       partitionSize = 1024 * 1024 * 100,
+                       parallelism = resourceAllocated.cpu)
+    }
 
   val task =
     AsyncTask[UniProtPdbFullInput, UniProtPdbFullOutput](
