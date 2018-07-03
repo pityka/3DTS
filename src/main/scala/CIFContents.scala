@@ -5,6 +5,8 @@ import IOHelpers.three2One
 import org.saddle._
 import org.saddle.linalg._
 import scala.util.Try
+import com.typesafe.scalalogging.StrictLogging
+
 case class PdbAsssemblyId(i: String) extends AnyVal
 
 case class FakePdbChain(s: String) extends AnyVal
@@ -30,6 +32,22 @@ case class Atom(coord: Vec[Double],
   def within(dist: Double, point: Vec[Double]) = euclid(point) < dist
 }
 
+object Atom {
+  implicit val rw = upickle.default
+    .ReadWriter[Atom](
+      atom =>
+        upickle.default.writeJs(
+          (atom.coord.raw(0),
+           atom.coord.raw(1),
+           atom.coord.raw(2),
+           atom.id,
+           atom.name,
+           atom.symbol,
+           atom.residue3,
+           atom.tempFactor)), { case _ => ??? }
+    )
+}
+
 /* Not augmented */
 case class AffineTransformation(m: Mat[Double], b: Vec[Double]) {
   assert(m.numRows == 3)
@@ -51,11 +69,19 @@ object AffineTransformation {
     AffineTransformation(org.saddle.mat.ident(3), org.saddle.vec.zeros(3))
 }
 
-case class Structure(
-    atoms: Vector[(Atom, PdbChain, PdbResidueNumber, FakePdbChain)],
-    pdbChainRemap: Map[FakePdbChain, PdbChain],
-    helix: Seq[PdbHelix] = Nil,
-    sheet: Seq[PdbSheet] = Nil)
+case class AtomWithLabels(atom: Atom,
+                          pdbChain: PdbChain,
+                          pdbResidueNumber: PdbResidueNumber,
+                          fakePdbChain: FakePdbChain)
+
+case class Structure(atoms: Vector[AtomWithLabels],
+                     pdbChainRemap: Map[FakePdbChain, PdbChain],
+                     helix: Seq[PdbHelix] = Nil,
+                     sheet: Seq[PdbSheet] = Nil)
+
+object Structure {
+  implicit val rw = upickle.default.macroRW[Structure]
+}
 
 case class PdbHelix(serial: String,
                     id: String,
@@ -70,6 +96,9 @@ case class PdbHelix(serial: String,
                     helixType: Option[Int],
                     comment: String,
                     helixLength: Option[Int])
+object PdbHelix {
+  implicit val rw = upickle.default.macroRW[PdbHelix]
+}
 
 case class PdbSheet(strand: Int,
                     id: String,
@@ -93,6 +122,10 @@ case class PdbSheet(strand: Int,
                     chain2: Option[String],
                     num2: Option[Int],
                     code2: Option[String])
+
+object PdbSheet {
+  implicit val rw = upickle.default.macroRW[PdbSheet]
+}
 
 case class CIFContents(
     aminoAcidSequence: Map[PdbChain, List[(Char, PdbResidueNumber)]],
@@ -184,10 +217,11 @@ case class CIFContents(
 
     val atomTable = assembly.atoms
       .map {
-        case (Atom(coords, atomId, name, symbol, residueName, temp),
-              _,
-              PdbResidueNumber(residue, maybeInsertionCode),
-              FakePdbChain(chain)) =>
+        case AtomWithLabels(
+            Atom(coords, atomId, name, symbol, residueName, temp),
+            _,
+            PdbResidueNumber(residue, maybeInsertionCode),
+            FakePdbChain(chain)) =>
           List(
             "ATOM  ",
             rightJustify(atomId.toString, 5),
@@ -271,7 +305,9 @@ case class CIFContents(
 
 }
 
-object CIFContents {
+object CIFContents extends StrictLogging {
+
+  implicit val rw = upickle.default.macroRW[CIFContents]
 
   /** Extract necessary information from the protein structure file
     *
@@ -326,7 +362,8 @@ object CIFContents {
     *  _pdbx_struct_assembly_gen.oper_expression field
     * Map each atom with each operation (creating as many images as many operations) in the prescribed chains
     */
-  def parseCIF(allLines: List[String]): Try[CIFContents] = Try {
+  def parseCIF(allLines: List[String],
+               noAssembly: Boolean = false): Try[CIFContents] = Try {
 
     case class CifChain(s: String)
 
@@ -788,18 +825,19 @@ object CIFContents {
           val polyProtein = polyProteinEntities.contains(entityId)
           val modelNumber: Option[Int] = spl(9).map(_.toInt).orElse(None)
 
-          (chain,
-           pdbResidue,
-           Atom(coord,
-                id,
-                name = spl(10).getOrElse(""),
-                symbol = spl(11).getOrElse(""),
-                residue3 = spl(12).getOrElse(""),
-                tempFactor = spl(14).getOrElse("")),
-           occ,
-           polyProtein,
-           modelNumber == representativeModelNumber,
-           cifChain)
+          val r = (chain,
+                   pdbResidue,
+                   Atom(coord,
+                        id,
+                        name = spl(10).getOrElse(""),
+                        symbol = spl(11).getOrElse(""),
+                        residue3 = spl(12).getOrElse(""),
+                        tempFactor = spl(14).getOrElse("")),
+                   occ,
+                   polyProtein,
+                   modelNumber == representativeModelNumber,
+                   cifChain)
+          r
         }
         .filter(x => x._4 > 0.0 && x._5 && x._6)
         .map(x => (x._3, x._1, x._2, x._7))
@@ -887,16 +925,16 @@ object CIFContents {
 
     val assembly: Structure = {
 
-      if (assemblyId.isEmpty)
-        Structure(
-          rawAtomList.map(x => (x._1, x._2, x._3, FakePdbChain(x._2.s))),
-          Map(),
-          helix,
-          sheet)
+      if (assemblyId.isEmpty || noAssembly)
+        Structure(rawAtomList.map(x =>
+                    AtomWithLabels(x._1, x._2, x._3, FakePdbChain(x._2.s))),
+                  Map(),
+                  helix,
+                  sheet)
       else {
         var atomIdx = 0
         val atomsGroupedByChain = rawAtomList.groupBy(_._4: CifChain)
-        val chains: Map[(CifChain, Int), String] =
+        val chains: Map[(CifChain, Int), FakePdbChain] =
           atomsGroupedByChain.toSeq
             .flatMap {
               case (cifChain, _) =>
@@ -909,17 +947,23 @@ object CIFContents {
             }
             .zipWithIndex
             .map {
-              case (k, i) => k -> (97 + i).toChar.toString.toUpperCase
+              case (k, i) =>
+                k -> FakePdbChain((97 + i).toChar.toString.toUpperCase)
             }
             .toMap
-        val cif2pdbchain: Map[CifChain, PdbChain] =
-          rawAtomList.map(x => x._4 -> x._2).distinct.toMap
 
-        val pdbchainRemap: Map[FakePdbChain, PdbChain] = chains.map {
-          case ((cif, _), newchain) =>
-            val pdbchain = cif2pdbchain(cif)
-            FakePdbChain(newchain) -> pdbchain
-        }.toMap
+        val pdbchainRemap: Map[FakePdbChain, PdbChain] = {
+
+          val cif2pdbchain: Map[CifChain, PdbChain] =
+            rawAtomList.map(x => x._4 -> x._2).distinct.toMap
+
+          chains.map {
+            case ((cif, _), newchain) =>
+              val pdbchain = cif2pdbchain(cif)
+              newchain -> pdbchain
+          }.toMap
+        }
+
         val mappedAtomList = atomsGroupedByChain.flatMap {
           case (cifChain, atoms) =>
             assemblyOperations
@@ -939,10 +983,10 @@ object CIFContents {
                              atom.symbol,
                              atom.residue3,
                              atom.tempFactor)
-                      (imageAtom,
-                       chain,
-                       residue,
-                       FakePdbChain(chains(cifChain -> opidx)))
+                      AtomWithLabels(imageAtom,
+                                     chain,
+                                     residue,
+                                     chains(cifChain -> opidx))
                   }
 
               }

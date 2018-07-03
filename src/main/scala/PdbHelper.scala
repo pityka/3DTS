@@ -31,14 +31,14 @@ object PdbHelper {
                         residue3 = residueName,
                         tempFactor = tempFactor)
 
-        (atom,
-         PdbChain(chain),
-         PdbResidueNumber(residueNumber, insertionCode),
-         FakePdbChain(chain))
+        AtomWithLabels(atom,
+                       PdbChain(chain),
+                       PdbResidueNumber(residueNumber, insertionCode),
+                       FakePdbChain(chain))
 
       }
       .toVector
-    val chainremap = atoms.map(r => r._4 -> r._2).distinct.toMap
+    val chainremap = atoms.map(r => r.fakePdbChain -> r.pdbChain).distinct.toMap
     CIFContents(Map(), Structure(atoms, chainremap))
   }
 }
