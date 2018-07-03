@@ -13,24 +13,24 @@ object StructureContext extends StrictLogging {
                              Seq[(PdbChain, PdbResidueNumber)])] = {
     assert(windowSize % 2 == 1, "even windowSize")
     val atomsByResidue = cif.assembly.atoms
-      .groupBy(x => (x._2, x._3))
-      .map(x => x._1 -> x._2.map(_._1))
+      .groupBy(x => (x.pdbChain, x.pdbResidueNumber))
+      .map(x => x._1 -> x._2.map(_.atom))
 
-    type T1 = (Atom, PdbChain, PdbResidueNumber, FakePdbChain)
+    type T1 = AtomWithLabels
 
     implicit val dimensionalOrderingForAtom: DimensionalOrdering[T1] =
       new DimensionalOrdering[T1] {
         val dimensions = 3
 
         def compareProjection(d: Int)(x: T1, y: T1) =
-          x._1.coord.raw(d).compareTo(y._1.coord.raw(d))
+          x.atom.coord.raw(d).compareTo(y.atom.coord.raw(d))
       }
 
     def liftIntoFakeT1(v: Vec[Double]) =
-      (Atom(v, -1, "", "", "", ""),
-       PdbChain("?"),
-       PdbResidueNumber(-1, None),
-       FakePdbChain("?"))
+      AtomWithLabels(Atom(v, -1, "", "", "", ""),
+                     PdbChain("?"),
+                     PdbResidueNumber(-1, None),
+                     FakePdbChain("?"))
 
     val kdtree: KDTree[T1] = KDTree(cif.assembly.atoms: _*)
 
@@ -72,12 +72,13 @@ object StructureContext extends StrictLogging {
                 kdtree
                   .regionQuery(queryRegion)
                   .filter(atomWithPdb =>
-                    fa.within(radius, atomWithPdb._1.coord))
+                    fa.within(radius, atomWithPdb.atom.coord))
               }
               .distinct
               .toVector
 
-          val expandedResidues = expandedAtoms2.map(x => (x._2, x._3)).distinct
+          val expandedResidues =
+            expandedAtoms2.map(x => (x.pdbChain, x.pdbResidueNumber)).distinct
 
           (chain -> centerResidueOfFeature) -> expandedResidues
 
@@ -96,24 +97,24 @@ object StructureContext extends StrictLogging {
             Seq[(PdbChain, PdbResidueNumber)])] = {
 
     val atomsByResidue = cif.assembly.atoms
-      .groupBy(x => (x._2, x._3))
-      .map(x => x._1 -> x._2.map(_._1))
+      .groupBy(x => (x.pdbChain, x.pdbResidueNumber))
+      .map(x => x._1 -> x._2.map(_.atom))
 
-    type T1 = (Atom, PdbChain, PdbResidueNumber, FakePdbChain)
+    type T1 = AtomWithLabels
 
     implicit val dimensionalOrderingForAtom: DimensionalOrdering[T1] =
       new DimensionalOrdering[T1] {
         val dimensions = 3
 
         def compareProjection(d: Int)(x: T1, y: T1) =
-          x._1.coord.raw(d).compareTo(y._1.coord.raw(d))
+          x.atom.coord.raw(d).compareTo(y.atom.coord.raw(d))
       }
 
     def liftIntoFakeT1(v: Vec[Double]) =
-      (Atom(v, -1, "", "", "", ""),
-       PdbChain("?"),
-       PdbResidueNumber(-1, None),
-       FakePdbChain("?"))
+      AtomWithLabels(Atom(v, -1, "", "", "", ""),
+                     PdbChain("?"),
+                     PdbResidueNumber(-1, None),
+                     FakePdbChain("?"))
 
     val kdtree: KDTree[T1] = KDTree(cif.assembly.atoms: _*)
 
@@ -121,12 +122,13 @@ object StructureContext extends StrictLogging {
       .filter(x => x._3.size > 0 && x._3.size < 200)
       .map {
         case (chain, featureName, residuesInFeature) =>
-          logger.info(
-            s"$pdbId - $chain - $featureName - ${residuesInFeature.size}")
           val featureAtoms: List[List[Atom]] = (residuesInFeature map {
             residue =>
               atomsByResidue.get(chain -> residue).toList.flatten
           } toList)
+
+          logger.info(
+            s"$pdbId - $chain - $featureName - ${residuesInFeature.size} - ${featureAtoms.flatten.size}")
 
           val expandedAtoms2: Vector[T1] =
             featureAtoms
@@ -149,17 +151,23 @@ object StructureContext extends StrictLogging {
                   kdtree
                     .regionQuery(queryRegion)
                     .filter(atomWithPdb =>
-                      fa.within(radius, atomWithPdb._1.coord))
+                      fa.within(radius, atomWithPdb.atom.coord))
                     .filter(atomWithPdb =>
                       bothSidesOfSpace || atomAlignsWithSideChain(
-                        atomWithPdb._1,
+                        atomWithPdb.atom,
                         atomsOfFeatureResidue))
                 }
               }
               .distinct
               .toVector
 
-          val expandedResidues = expandedAtoms2.map(x => (x._2, x._3)).distinct
+          if (expandedAtoms2.isEmpty) {
+            logger.error(
+              s"Empty feature. $pdbId - $chain - $featureName $featureAtoms ${cif.assembly.atoms.size} $residuesInFeature $atomsByResidue")
+          }
+
+          val expandedResidues =
+            expandedAtoms2.map(x => (x.pdbChain, x.pdbResidueNumber)).distinct
 
           (chain,
            featureName,
