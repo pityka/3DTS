@@ -191,30 +191,22 @@ object ObsS {
     AnyValPicklers(ObsS.unapply, ObsS.apply)
 }
 
-sealed trait FeatureKey {
-  def pdbId: PdbId
-  def pdbChain: PdbChain
-}
-object FeatureKey {
-  import upickle.default.macroRW
-  implicit val rw = macroRW[FeatureKey1] merge macroRW[FeatureKey2]
-}
 
-case class FeatureKey1(pdbId: PdbId,
-                       pdbChain: PdbChain,
-                       pdbResidue: PdbResidueNumberUnresolved)
-    extends FeatureKey {
-  override def toString = pdbId.s + "_" + pdbChain.s + "_" + pdbResidue.s
-}
 
-case class FeatureKey2(pdbId: PdbId,
+
+case class FeatureKey(pdbId: PdbId,
                        pdbChain: PdbChain,
                        uniprotFeatureName: UniprotFeatureName,
                        pdbResidueMin: PdbResidueNumberUnresolved,
                        pdbResidueMax: PdbResidueNumberUnresolved)
-    extends FeatureKey {
+    {
   override def toString =
     pdbId.s + "_" + pdbChain.s + "_" + uniprotFeatureName.s + "_" + pdbResidueMin.s + "_" + pdbResidueMax.s
+}
+
+object FeatureKey {
+  import upickle.default.macroRW
+  implicit val rw = macroRW[FeatureKey]
 }
 
 case class DepletionScoreCDFs(
@@ -246,6 +238,17 @@ case class AlignmentDetails(uniId : UniId, pdbId: PdbId, pdbChain: PdbChain, per
 object AlignmentDetails {
   implicit val rw = upickle.default.macroRW[AlignmentDetails]
 }
+
+  case class MappedUniprotFeature(
+    uniId: UniId,
+    pdbId: PdbId,
+    pdbChain: PdbChain,
+    featureName: UniprotFeatureName,
+    residues: Set[PdbResidueNumber]
+  )
+  object MappedUniprotFeature {
+    implicit val rw = upickle.default.macroRW[MappedUniprotFeature]
+  }
 
 object SharedTypes {
 

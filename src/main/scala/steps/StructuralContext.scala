@@ -19,10 +19,14 @@ case class StructuralContextFromFeaturesAndPdbsInput(
     radius: Double,
     bothSides: Boolean)
 
+case class StructuralContextFeature(
+    featureKey: FeatureKey,
+    pdbResidues: Seq[(PdbChain, PdbResidueNumberUnresolved)],
+    uniprotIds: Seq[UniId])
+
 object StructuralContext {
 
-  type T1 =
-    (FeatureKey, Seq[(PdbChain, PdbResidueNumberUnresolved)], Seq[UniId])
+  type T1 = StructuralContextFeature
 
   val concatenate =
     AsyncTask[(JsDump[T1], JsDump[T1]), JsDump[T1]](
@@ -36,10 +40,21 @@ object StructuralContext {
 
     }
 
+  val count =
+    AsyncTask[JsDump[T1], Long]("countStructuralFeatures", 1) {
+      case js1 =>
+        implicit ctx =>
+          implicit val mat = ctx.components.actorMaterializer
+          js1.source
+            .fold(0L)((x, _) => x + 1)
+            .runWith(Sink.head)
+
+    }
+
   val fromFeaturesAndPdbStructures =
     AsyncTask[StructuralContextFromFeaturesAndPdbsInput, JsDump[T1]](
       "structuralContextFromPdb-1",
-      1) {
+      2) {
       case StructuralContextFromFeaturesAndPdbsInput(pdbs,
                                                      mappedFeatures,
                                                      radius,
@@ -54,10 +69,7 @@ object StructuralContext {
               s.source
             }
 
-          val s2: Source[(FeatureKey2,
-                          Seq[(PdbChain, PdbResidueNumberUnresolved)],
-                          Seq[UniId]),
-                         _] = source
+          val s2: Source[StructuralContextFeature, _] = source
             .mapAsync(resourceAllocated.cpu) {
               case (uniid, pdbId, pdbchain, features) =>
                 log.info(s"$uniid $pdbId pdb:${pdbs.contains(pdbId)}")
@@ -85,13 +97,14 @@ object StructuralContext {
                           radius,
                           bothSides)
                         .map { x =>
-                          (FeatureKey2(pdbId,
+                          StructuralContextFeature(
+                            FeatureKey(pdbId,
                                        x._1._1,
                                        x._1._2,
                                        x._1._3.toUnresolved,
                                        x._1._4.toUnresolved),
-                           x._2.map(y => y._1 -> y._2.toUnresolved),
-                           List(uniid))
+                            x._2.map(y => y._1 -> y._2.toUnresolved),
+                            List(uniid))
 
                         }
                     }
@@ -108,7 +121,7 @@ object StructuralContext {
   val taskfromFeatures =
     AsyncTask[StructuralContextFromFeaturesInput, JsDump[T1]](
       "structuralcontextfromfeatures",
-      5) {
+      9) {
 
       case StructuralContextFromFeaturesInput(
           cifs,
@@ -126,10 +139,7 @@ object StructuralContext {
               s.source
             }
 
-          val s2: Source[(FeatureKey2,
-                          Seq[(PdbChain, PdbResidueNumberUnresolved)],
-                          Seq[UniId]),
-                         _] = source
+          val s2 = source
             .mapAsync(resourceAllocated.cpu) {
               case (uniid, pdbId, pdbchain, features) =>
                 log.info(s"$uniid $pdbId cif:${cifs.contains(pdbId)}")
@@ -165,13 +175,14 @@ object StructuralContext {
                               radius,
                               bothSides)
                             .map { x =>
-                              (FeatureKey2(pdbId,
+                              StructuralContextFeature(
+                                FeatureKey(pdbId,
                                            x._1._1,
                                            x._1._2,
                                            x._1._3.toUnresolved,
                                            x._1._4.toUnresolved),
-                               x._2.map(y => y._1 -> y._2.toUnresolved),
-                               List(uniid))
+                                x._2.map(y => y._1 -> y._2.toUnresolved),
+                                List(uniid))
 
                             }
                         }

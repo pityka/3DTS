@@ -60,7 +60,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val swissModelStructures = {
       val swissModelMetaData = importFile(
         config.getString("swissModelMetaData"))
-      Swissmodel.filterMetaData(swissModelMetaData)(CPUMemoryRequest(12, 5000))
+      Swissmodel.filterMetaData(
+        SwissModelMetaDataInput(swissModelMetaData, uniprotKbOriginal))(
+        CPUMemoryRequest(12, 5000))
     }
 
     val swissModelUniPdbMap = swissModelStructures.flatMap {
@@ -253,6 +255,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           CPUMemoryRequest(1, 1000))
     }
 
+    val extractedFeatures = uniprotpdbmap.flatMap { uniprotpdbmap =>
+      sd.steps.JoinUniprotWithPdb
+        .extractMapppedFeatures(uniprotpdbmap)(CPUMemoryRequest((1, 12), 5000))
+    }
+
+    extractedFeatures.andThen {
+      case scala.util.Success(c) =>
+        logger.info("Total number of features: " + c.length)
+      case scala.util.Failure(e) => logger.error("???", e)
+    }
+
     val cppdb = uniprotgencodemap.flatMap { uniprotgencodemap =>
       uniprotpdbmap.flatMap { uniprotpdbmap =>
         JoinCPWithPdb.task(
@@ -270,6 +283,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
             CPUMemoryRequest((1, 3), 100000))
         }
       }
+
+    val concatenatedCpPdbJoin = swissModelCpPdb.flatMap { swissModelCpPdb =>
+      cppdb.flatMap { cppdb =>
+        JoinCPWithPdb.concatenate((swissModelCpPdb, cppdb))(
+          CPUMemoryRequest(1, 5000))
+      }
+    }
 
     val cppdbindex = cppdb.flatMap { cppdb =>
       JoinCPWithPdb.indexCpPdb(cppdb)(CPUMemoryRequest(1, 60000))
@@ -490,6 +510,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
       } yield r
 
+      val featureCount = concatenatedFeatures.flatMap { feat =>
+        StructuralContext.count(feat)(CPUMemoryRequest(1, 5000))
+      }
+
+      featureCount.andThen {
+        case scala.util.Success(d) =>
+          logger.info("Total number of structural featrue: " + d)
+        case e =>
+          println("???" + e)
+      }
+
       val scores2pdb = concatenatedDepletionScores.flatMap { scores =>
         concatenatedFeatures.flatMap { features =>
           DepletionToPdb.task(
@@ -521,6 +552,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       List(
         // cifDepletionScores
         // swissModelDepletionScores
+        extractedFeatures,
+        featureCount,
         uniqueMappedCps,
         uniqueMappedMissenseVariations,
         cdfs,
@@ -529,7 +562,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         server,
         repartitionedScores,
         cifAggregates,
-        swissModelAggregates
+        swissModelAggregates,
+        concatenatedCpPdbJoin
       )
     }
 

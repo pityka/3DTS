@@ -79,7 +79,9 @@ object JoinFeatureWithCp {
                   val mappedResidues: Iterator[MappedFeatures] =
                     featureIterator.flatMap {
 
-                      case (featureKey, pdbResidues, uniIds) =>
+                      case StructuralContextFeature(featureKey,
+                                                    pdbResidues,
+                                                    uniIds) =>
                         val joined = pdbResidues.map {
                           case (PdbChain(pdbChain),
                                 PdbResidueNumberUnresolved(pdbResidue)) =>
