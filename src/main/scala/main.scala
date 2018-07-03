@@ -549,6 +549,19 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         }
       }
 
+      val archive = concatenatedFeatures.flatMap { structuralFeatures =>
+        repartitionedScores.flatMap { scores =>
+          concatenatedCpPdbJoin.flatMap { cppdb =>
+            TarArchive.archiveSharedFiles(
+              TarArchiveInput(
+                Map("scores.js.gz" -> scores.files.head,
+                    "structuralFeatures.js.gz" -> structuralFeatures.sf,
+                    "gencodeUniprotPdb.js.gz" -> cppdb.sf),
+                "archive.tar"))(CPUMemoryRequest(1, 5000))
+          }
+        }
+      }
+
       List(
         // cifDepletionScores
         // swissModelDepletionScores
@@ -563,7 +576,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         repartitionedScores,
         cifAggregates,
         swissModelAggregates,
-        concatenatedCpPdbJoin
+        concatenatedCpPdbJoin,
+        archive
       )
     }
 

@@ -148,7 +148,7 @@ object Swissmodel {
 
   val filterMetaData =
     AsyncTask[SwissModelMetaDataInput, SwissModelPdbFiles]("filterswissmodel-2",
-                                                           2) {
+                                                           3) {
       case SwissModelMetaDataInput(metadata, uniprot) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
@@ -160,6 +160,12 @@ object Swissmodel {
             result <- {
               val isoforms =
                 openSource(uniprotLocal)(IOHelpers.readUniProtIsoforms)
+              log.info("Uniprot displayed isoforms: " + isoforms.size)
+              isoforms.foreach {
+                case (a, b) =>
+                  log.info(s"Uniprot displayed isoforms $a $b")
+              }
+
               val urls = IOHelpers
                 .readSwissmodelMetadata(metadataLocal, isoforms)
                 .map {

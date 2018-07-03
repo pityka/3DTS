@@ -418,19 +418,22 @@ object IOHelpers {
       .drop(1)
       .map { _.split1('\t') }
       .filter(spl => spl(4).trim == "SWISSMODEL")
-      .map { spl =>
+      .flatMap { spl =>
         val rawUniID = spl(0)
         val uniID =
-          if (!rawUniID.contains("-")) rawUniID
-          else isoforms.get(rawUniID).map(_.s).getOrElse(rawUniID)
+          if (!rawUniID.contains("-")) Some(rawUniID)
+          else isoforms.get(rawUniID).map(_.s)
         val hash = spl(3)
         val from = spl(5).toInt
         val to = spl(6).toInt
         val template = spl(8)
         val qmean = spl(9).toDouble
         val url = spl(11)
-        val filename = uniID + "_" + from + "_" + to + "_" + template + "_" + hash
-        (filename, qmean, url, uniID, from, to)
+
+        uniID.map { uniID =>
+          val filename = uniID + "_" + from + "_" + to + "_" + template + "_" + hash
+          (filename, qmean, url, uniID, from, to)
+        }.iterator
       }
       .filter { case (_, qmean, _, _, _, _) => qmean >= -4.0 }
       .toList
