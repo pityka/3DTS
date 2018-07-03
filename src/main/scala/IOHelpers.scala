@@ -59,6 +59,23 @@ case class GFFEntry(chr: String,
 
 object IOHelpers {
 
+  def readUniProtIsoforms(source: scala.io.Source): Map[String, UniId] = {
+    val lines = source.getLines
+    val regexp = "^.*IsoId=([^;]*;).*$".r
+    lines
+      .filter(_.contains("Sequence=Displayed;"))
+      .map { line =>
+        line match {
+          case regexp(isoid) => Some(isoid -> UniId(isoid.split1('-').head))
+          case _             => None
+        }
+
+      }
+      .filter(_.isDefined)
+      .map(_.get)
+      .toMap
+  }
+
   def readUniProtFile(source: scala.io.Source): Iterator[UniProtEntry] = {
     val lines = source.getLines
 
@@ -381,7 +398,7 @@ object IOHelpers {
     }.toVector
     DepletionScoreCDFs(lines(0), lines(1), lines(2), lines(3), lines(4))
   }
-  def readSwissmodelMetadata(tar: File) = {
+  def readSwissmodelMetadata(tar: File, isoforms: Map[String, UniId]) = {
     val tarInput =
       new TarArchiveInputStream(
         new java.util.zip.GZIPInputStream(new FileInputStream(tar)))
@@ -402,7 +419,10 @@ object IOHelpers {
       .map { _.split1('\t') }
       .filter(spl => spl(4).trim == "SWISSMODEL")
       .map { spl =>
-        val uniID = spl(0)
+        val rawUniID = spl(0)
+        val uniID =
+          if (!rawUniID.contains("-")) rawUniID
+          else isoforms.get(rawUniID).map(_.s).getOrElse(rawUniID)
         val hash = spl(3)
         val from = spl(5).toInt
         val to = spl(6).toInt

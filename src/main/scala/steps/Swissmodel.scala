@@ -9,6 +9,9 @@ import fileutils._
 import akka.stream.scaladsl._
 import scala.util._
 
+case class SwissModelMetaDataInput(swissModelMetadata: SharedFile,
+                                   uniprot: SharedFile)
+
 case class SwissModelPdbFiles(pdbFiles: Map[PdbId, SharedFile])
     extends ResultWithSharedFiles(pdbFiles.map(_._2).toList: _*)
 
@@ -120,7 +123,7 @@ object Swissmodel {
                       .atoms
                     atomlist
                       .map {
-                        case (_, pdbChain, pdbResidueNumber, _) =>
+                        case AtomWithLabels(_, pdbChain, pdbResidueNumber, _) =>
                           (uniId,
                            swissModelPdbId,
                            pdbChain,
@@ -144,54 +147,60 @@ object Swissmodel {
     }
 
   val filterMetaData =
-    AsyncTask[SharedFile, SwissModelPdbFiles]("filterswissmodel-1", 2) {
-      metadata => implicit ctx =>
-        implicit val mat = ctx.components.actorMaterializer
+    AsyncTask[SwissModelMetaDataInput, SwissModelPdbFiles]("filterswissmodel-2",
+                                                           2) {
+      case SwissModelMetaDataInput(metadata, uniprot) =>
+        implicit ctx =>
+          implicit val mat = ctx.components.actorMaterializer
 
-        log.info("Start parsing swissmodel metadata")
-        for {
-          metadataLocal <- metadata.file
-          result <- {
-            val urls = IOHelpers
-              .readSwissmodelMetadata(metadataLocal)
-              .map {
-                case (filename, _, url, _, _, _) => (filename, url)
-              }
-              .toList
+          log.info("Start parsing swissmodel metadata")
+          for {
+            metadataLocal <- metadata.file
+            uniprotLocal <- uniprot.file
+            result <- {
+              val isoforms =
+                openSource(uniprotLocal)(IOHelpers.readUniProtIsoforms)
+              val urls = IOHelpers
+                .readSwissmodelMetadata(metadataLocal, isoforms)
+                .map {
+                  case (filename, _, url, _, _, _) => (filename, url)
+                }
+                .toList
 
-            log.info(s"Will download ${urls.size} files from swissmodel.")
+              log.info(s"Will download ${urls.size} files from swissmodel.")
 
-            Source(urls)
-              .mapAsync(resourceAllocated.cpu) {
-                case (filename, url) =>
-                  log.info(s"try $filename $url")
-                  Try(
-                    AssemblyToPdb.retry(3)(
-                      scalaj.http
-                        .Http(url)
-                        .timeout(connTimeoutMs = 1000 * 60 * 10,
-                                 readTimeoutMs = 1000 * 60 * 10)
-                        .asBytes
-                        .body)) match {
-                    case Success(pdbData) =>
-                      log.info(s"OK $filename $url")
-                      SharedFile(writeToTempFile(new String(pdbData, "UTF-8")),
-                                 filename)
-                        .map(s => Some(PdbId(filename) -> s))
-                    case Failure(e) =>
-                      log.error(e, "Failed fetch swissmodel data from " + url)
-                      Future.successful(None)
-                  }
+              Source(urls)
+                .mapAsync(resourceAllocated.cpu) {
+                  case (filename, url) =>
+                    log.info(s"try $filename $url")
+                    Try(
+                      AssemblyToPdb.retry(3)(
+                        scalaj.http
+                          .Http(url)
+                          .timeout(connTimeoutMs = 1000 * 60 * 10,
+                                   readTimeoutMs = 1000 * 60 * 10)
+                          .asBytes
+                          .body)) match {
+                      case Success(pdbData) =>
+                        log.info(s"OK $filename $url")
+                        SharedFile(
+                          writeToTempFile(new String(pdbData, "UTF-8")),
+                          filename)
+                          .map(s => Some(PdbId(filename) -> s))
+                      case Failure(e) =>
+                        log.error(e, "Failed fetch swissmodel data from " + url)
+                        Future.successful(None)
+                    }
 
-              }
-              .filter(_.isDefined)
-              .map(_.get)
-              .runWith(Sink.seq)
-              .map { downloadedFiles =>
-                SwissModelPdbFiles(downloadedFiles.toMap)
-              }
-          }
-        } yield result
+                }
+                .filter(_.isDefined)
+                .map(_.get)
+                .runWith(Sink.seq)
+                .map { downloadedFiles =>
+                  SwissModelPdbFiles(downloadedFiles.toMap)
+                }
+            }
+          } yield result
 
     }
 
