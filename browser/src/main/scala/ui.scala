@@ -162,13 +162,15 @@ class ProteinUI(
 
   private val UIState = new UIState
 
-  def makeQuery(q: String) = {
+  def makeQuery(q: String, resolvedPdbs: Seq[PdbId]) = {
     UIState.waitState() = true
     UIState.lastQuery() = Some(q)
-    Server.query(q).map { data =>
-      UIState.waitState() = false
-      UIState.currentData() = data
-      UIState.clicked() = None
+    Server.query(q).map {
+      case (pdbsReturned, depletionScores) =>
+        UIState.waitState() = false
+        UIState.currentData() =
+          ((resolvedPdbs ++ pdbsReturned), depletionScores)
+        UIState.clicked() = None
     }
   }
 
@@ -214,7 +216,7 @@ class ProteinUI(
   ).render
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
-      makeQuery(queryBox.value)
+      makeQuery(queryBox.value, Nil)
     }
   }
 
@@ -238,7 +240,7 @@ class ProteinUI(
       span("Your query (also) returned the following pdb identifiers: ")(
         data.flatMap(pdb =>
           List(a(onclick := { (event: Event) =>
-            makeQuery(pdb.s)
+            makeQuery(pdb.s, data)
           })(pdb.s), span(", "))))
     else span()
 
