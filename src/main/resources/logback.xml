@@ -16,7 +16,7 @@
 
   <logger name="tasks.fileservice.StreamHelper" level="DEBUG"/>
   <logger name="tasks.fileservice.FolderFileStorage" level="DEBUG"/>
-  <logger name="tasks.caching.SharedFileCache" level="INFO"/>
+  <logger name="tasks.caching.SharedFileCache" level="DEBUG"/>
   <logger name="httpqueue.HttpQueueImpl" level="DEBUG"/>
 
   <root level="INFO">          
