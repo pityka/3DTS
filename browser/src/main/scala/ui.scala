@@ -385,7 +385,7 @@ class ProteinUI(
             import js.JSConverters._
             val ch: PdbChain = feature.pdbChain
             val res: PdbResidueNumberUnresolved =
-              feature.asInstanceOf[FeatureKey2].pdbResidueMin
+              feature.asInstanceOf[FeatureKey].pdbResidueMin
             UIState.viewerAndStructure.foreach {
               case Some((viewer, structure, chainRemapReverse)) =>
                 val focusResidue =
