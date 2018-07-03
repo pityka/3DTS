@@ -14,10 +14,10 @@
     </encoder>
   </appender>
 
-  <logger name="tasks.fileservice.StreamHelper" level="DEBUG"/>
-  <logger name="tasks.fileservice.FolderFileStorage" level="DEBUG"/>
-  <logger name="tasks.caching.SharedFileCache" level="DEBUG"/>
-  <logger name="httpqueue.HttpQueueImpl" level="DEBUG"/>
+  <logger name="tasks.fileservice.StreamHelper" level="INFO"/>
+  <logger name="tasks.fileservice.FolderFileStorage" level="INFO"/>
+  <logger name="tasks.caching.SharedFileCache" level="INFO"/>
+  <logger name="httpqueue.HttpQueueImpl" level="INFO"/>
 
   <root level="INFO">          
     <appender-ref ref="FILE" />
