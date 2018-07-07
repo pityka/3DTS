@@ -162,7 +162,7 @@ object StructureContext extends StrictLogging {
               .toVector
 
           if (expandedAtoms2.isEmpty) {
-            logger.error(
+            logger.info(
               s"Empty feature. $pdbId - $chain - $featureName $featureAtoms ${cif.assembly.atoms.size} $residuesInFeature $atomsByResidue")
           }
 
