@@ -23,6 +23,7 @@ object TarArchive {
             files.foreach {
               case (name, sf) =>
                 val entry = new TarArchiveEntry(name)
+                entry.setSize(sf.byteSize)
                 outputStream.putArchiveEntry(entry)
                 val inputStream =
                   sf.source.runWith(StreamConverters.asInputStream())
