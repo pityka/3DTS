@@ -542,6 +542,37 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         }
       }
 
+      val archiveForWebServer = indexedScores.flatMap { index =>
+        cppdbindex.flatMap { cppdb =>
+          uniprotByGene.flatMap { uniprotByGene =>
+            cdfs.flatMap { cdfs =>
+              assemblies.flatMap { assemblies =>
+                swissModelStructures.flatMap { swissModelPdbs =>
+                  val pdbPaths =
+                    (swissModelPdbs.pdbFiles ++ assemblies.pdbFiles)
+                      .map {
+                        case (PdbId(pdbId), sf) =>
+                          s"pdbassembly/$pdbId.assembly.pdb" -> sf
+                      }
+                  val cdfPath = Map("cdf/cdf.txt" -> cdfs)
+                  val indexPaths =
+                    (index.files ++ cppdb.files ++ uniprotByGene.files)
+                      .map { sf =>
+                        (("index/" + sf.name) -> sf)
+                      }
+
+                  TarArchive.archiveSharedFiles(
+                    TarArchiveInput(
+                      pdbPaths ++ cdfPath ++ indexPaths,
+                      "indexarchive.tar"
+                    ))(CPUMemoryRequest(1, 5000))
+                }
+              }
+            }
+          }
+        }
+      }
+
       List(
         // cifDepletionScores
         // swissModelDepletionScores
@@ -557,7 +588,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         cifAggregates,
         swissModelAggregates,
         concatenatedCpPdbJoin,
-        archive
+        archive,
+        archiveForWebServer
       )
     }
 
