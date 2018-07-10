@@ -291,7 +291,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       }
     }
 
-    val cppdbindex = cppdb.flatMap { cppdb =>
+    val cppdbindex = concatenatedCpPdbJoin.flatMap { cppdb =>
       JoinCPWithPdb.indexCpPdb(cppdb)(CPUMemoryRequest(1, 60000))
     }
 
