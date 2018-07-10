@@ -19,6 +19,9 @@ object TarArchive {
 
           val file = openFileOutputStream { os =>
             val outputStream = new TarArchiveOutputStream(os)
+            outputStream.setBigNumberMode(
+              TarArchiveOutputStream.BIGNUMBER_POSIX)
+            outputStream.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
 
             files.foreach {
               case (name, sf) =>
