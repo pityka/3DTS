@@ -545,9 +545,7 @@ class ProteinUI(
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),
         downloadLink,
-        div(style := "width: 80%")(div(proteinView),
-                                   colorkey,
-                                   resetClickButton),
+        div(style := "width: 80%")(div(proteinView), colorkey),
         div(
           h3(`class` := "uk-heading")("Depletion scores in the protein"),
           clickedTable
