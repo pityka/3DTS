@@ -138,10 +138,6 @@ object Server {
       mat: Materializer) = {
     import acs.dispatcher
 
-    // val s3Stream = new S3StreamQueued(
-    //   Await.result(com.bluelabs.akkaaws.AWSCredentials.default, 5 seconds).get,
-    //   "us-west-2")
-
     val tableManager = TableManager(indexFolder)
     val scoresReader =
       tableManager.reader(steps.DepletionToPdb.ScoresByPdbIdTable)
