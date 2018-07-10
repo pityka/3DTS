@@ -480,26 +480,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         .flatMap { s =>
           depletion3d.computeCDFs(s)
         }
-        .andThen {
-          case scala.util.Success(cdf) =>
-            logger.info(
-              "Score cdfs:"
-                + "\nnsPostMeanGlobalSynonymousRate:\n" + cdf.nsPostMeanGlobalSynonymousRate
-                .map(x => x._1 + "\t" + x._2)
-                .mkString("\n")
-                + "\nnsPostMeanHeptamerSpecificIntergenicRate:\n" + cdf.nsPostMeanHeptamerSpecificIntergenicRate
-                .map(x => x._1 + "\t" + x._2)
-                .mkString("\n")
-                + "\nnsPostMeanHeptamerIndependentIntergenicRate:\n" + cdf.nsPostMeanHeptamerIndependentIntergenicRate
-                .map(x => x._1 + "\t" + x._2)
-                .mkString("\n")
-                + "\nnsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate:\n" + cdf.nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate
-                .map(x => x._1 + "\t" + x._2)
-                .mkString("\n")
-                + "\nnsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate:\n" + cdf.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate
-                .map(x => x._1 + "\t" + x._2)
-                .mkString("\n"))
-        }
         .flatMap { cdf =>
           depletion3d.cdfs2file(cdf)(CPUMemoryRequest(1, 5000))
         }
