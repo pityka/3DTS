@@ -20,12 +20,26 @@ object Server {
 
   def makeQuery(scoresReader: IndexReader,
                 geneNameReader: IndexReader,
+                cpPdbReader: IndexReader,
                 q: String): ServerReturn = {
 
-    val pdbs: Seq[PdbId] = (if (q.isEmpty) Vector[Doc]()
-                            else geneNameReader.getDocs(q)).flatMap {
-      case Doc(str) =>
-        upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
+    val pdbs: Seq[PdbId] = {
+      val pdbsFromGeneNames =
+        if (q.isEmpty) Vector[PdbId]()
+        else
+          geneNameReader.getDocs(q).flatMap {
+            case Doc(str) =>
+              upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
+          }
+
+      val pdbsFromUniGencodeJoin =
+        if (q.isEmpty) Vector()
+        else
+          cpPdbReader.getDocs(q).map {
+            case Doc(str) =>
+              upickle.default.read[PdbUniGencodeRow](str).pdbId
+          }.distinct
+      pdbsFromGeneNames ++ pdbsFromUniGencodeJoin
     }
 
     val scores =
@@ -143,6 +157,8 @@ object Server {
       tableManager.reader(steps.DepletionToPdb.ScoresByPdbIdTable)
     val geneNameReader =
       tableManager.reader(steps.IndexUniByGeneName.UniEntryByGene)
+    val cppdbReader =
+      tableManager.reader(steps.JoinCPWithPdb.CpPdbTable)
 
     log.info("Reader ok")
     val route =
@@ -153,7 +169,10 @@ object Server {
               logRequest(("query", Logging.InfoLevel)) {
                 respondWithHeader(headers.`Access-Control-Allow-Origin`.`*`) {
                   complete {
-                    val res = makeQuery(scoresReader, geneNameReader, queryTerm)
+                    val res = makeQuery(scoresReader,
+                                        geneNameReader,
+                                        cppdbReader,
+                                        queryTerm)
                     if (format.contains("csv"))
                       HttpEntity(asCSV(res))
                     else
