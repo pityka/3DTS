@@ -35,12 +35,15 @@ object Server {
       val pdbsFromUniGencodeJoin =
         if (q.isEmpty) Vector()
         else
-          cpPdbReader.getDocs(q).map {
-            case Doc(str) =>
-              upickle.default.read[PdbUniGencodeRow](str).pdbId
-          }.distinct
+          cpPdbReader
+            .getDocs(q)
+            .map {
+              case Doc(str) =>
+                upickle.default.read[PdbUniGencodeRow](str).pdbId
+            }
+            .distinct
       pdbsFromGeneNames ++ pdbsFromUniGencodeJoin
-    }
+    }.distinct
 
     val scores =
       if (q.isEmpty) Vector[Doc]()
