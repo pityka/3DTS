@@ -169,7 +169,7 @@ class ProteinUI(
       case (pdbsReturned, depletionScores) =>
         UIState.waitState() = false
         UIState.currentData() =
-          ((resolvedPdbs ++ pdbsReturned), depletionScores)
+          ((resolvedPdbs ++ pdbsReturned).distinct, depletionScores)
         UIState.clicked() = None
     }
   }
