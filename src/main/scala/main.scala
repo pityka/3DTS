@@ -326,6 +326,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         val feature2cpEcoll = feature2cp.flatMap { f =>
           JoinFeatureWithCp.toEColl(f)(CPUMemoryRequest(12, 5000))
         }
+
         (features, feature2cpEcoll)
       }
 
@@ -432,6 +433,15 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
 
       val cifAggregates = extractAggregates("PDB", cifDepletionScores)
 
+      val supplementaryFeature2Cp =
+        cifFeature2cpEcoll.flatMap { cifFeature2cpEcoll =>
+          swissModelFeature2cpEcoll.flatMap { swissModelFeature2cpEcoll =>
+            JoinFeatureWithCp.mappedMappedFeaturesToSupplementary(
+              cifFeature2cpEcoll ++ swissModelFeature2cpEcoll)(
+              CPUMemoryRequest(1, 5000))
+          }
+        }
+
       val swissModelDepletionScores = makeDepletionScores(
         swissModelFeature2cpEcoll)
 
@@ -532,12 +542,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       val archive = concatenatedFeatures.flatMap { structuralFeatures =>
         repartitionedScores.flatMap { scores =>
           concatenatedCpPdbJoin.flatMap { cppdb =>
-            TarArchive.archiveSharedFiles(
-              TarArchiveInput(
-                Map("scores.js.gz" -> scores.files.head,
-                    "structuralFeatures.js.gz" -> structuralFeatures.sf,
-                    "gencodeUniprotPdb.js.gz" -> cppdb.sf),
-                "archive.tar"))(CPUMemoryRequest(1, 5000))
+            supplementaryFeature2Cp.flatMap { supplementaryFeature2Cp =>
+              TarArchive.archiveSharedFiles(TarArchiveInput(
+                Map(
+                  "scores.js.gz" -> scores.files.head,
+                  "structuralFeatures.js.gz" -> structuralFeatures.sf,
+                  "gencodeUniprotPdb.js.gz" -> cppdb.sf,
+                  "structuralFeatures.loci.js.gz" -> supplementaryFeature2Cp.files.head
+                ),
+                "archive.tar"
+              ))(CPUMemoryRequest(1, 5000))
+            }
           }
         }
       }

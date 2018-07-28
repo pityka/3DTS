@@ -180,12 +180,11 @@ class ProteinUI(
     width := "100"
   )(
     option(value := "s5", selected := true)(
-      "Non coding heptamer independent chromosome specific variation"),
-    option(value := "s1")("Synonymous Coding variation"),
-    option(value := "s2")("Non coding heptamer specific variation"),
-    option(value := "s3")("Non coding heptamer independent variation"),
-    option(value := "s4")(
-      "Non coding heptamer specific chromosome specific variation")
+      "Constant rate - chromosome-specific intergenic"),
+    option(value := "s1")("Constant rate - synonymous"),
+    option(value := "s2")("Heptamer rate - intergenic"),
+    option(value := "s3")("Constant rate - intergenic"),
+    option(value := "s4")("Heptamer rate - chromosome-specific intergenic")
   ).render
 
   scoreSelectorInput.onchange = (e: Event) => {
@@ -540,7 +539,9 @@ class ProteinUI(
   val ui =
     div(
       // renderProtein("3DZY"),
-      div(queryBox, waitIndicator, scoreSelectorInput),
+      div(queryBox,
+          waitIndicator,
+          div(span("Background mutation rate: "), scoreSelectorInput)),
       div(resolvedPDBs),
       div(style := "display:flex; flex-direction: column")(
         h3(`class` := "uk-heading")("Protein view"),

@@ -10,6 +10,32 @@ case class Feature2CPInput(featureContext: JsDump[StructuralContext.T1],
 
 object JoinFeatureWithCp {
 
+  case class FeatureJoinedWithCp(feature: FeatureKey,
+                                 locus: ChrPos,
+                                 pdbChain: PdbChain,
+                                 pdbResidueNumber: PdbResidueNumberUnresolved,
+                                 uniprotIds: Seq[UniId],
+                                 mappedPdbResidueCount: MappedPdbResidueCount,
+                                 totalPdbResidueCount: TotalPdbResidueCount)
+
+  val mappedMappedFeaturesToSupplementary =
+    AsyncTask[EColl[MappedFeatures], EColl[FeatureJoinedWithCp]](
+      "mappedcps-for-suppl-1",
+      1) { ecoll => implicit ctx =>
+      EColl.fromSource(
+        ecoll.source(resourceAllocated.cpu).map { tuple =>
+          FeatureJoinedWithCp(tuple._1,
+                              tuple._2,
+                              tuple._3,
+                              tuple._4,
+                              tuple._5,
+                              tuple._6,
+                              tuple._7)
+        },
+        "structuralFeatures.loci.js.gz"
+      )
+    }
+
   type MappedFeatures =
     (FeatureKey,
      ChrPos,
