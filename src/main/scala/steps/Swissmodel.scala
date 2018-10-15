@@ -47,8 +47,6 @@ object Swissmodel {
                     case 'E' | 'B'       => "dssp_strand" + structureCode
                     case _               => "dssp_other"
                   }
-                  println(
-                    (chain, residueNumber1Based, feature) + "/" + dataLine)
                   (chain, residueNumber1Based, feature)
 
                 }
