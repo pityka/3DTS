@@ -65,8 +65,6 @@ object ConvertGnomadToHLI {
                        vcf_filter,
                        GnomadGenders(females.get, males.get)) :: Nil
           else {
-            println(
-              "Line failed: " + line + "\n" + neededAnnotations + "\n" + anno + "\n" + females + "\n" + males)
             Nil
           }
       }
