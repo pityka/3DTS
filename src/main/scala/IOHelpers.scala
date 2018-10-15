@@ -418,6 +418,7 @@ object IOHelpers {
       .drop(1)
       .map { _.split1('\t') }
       .filter(spl => spl(4).trim == "SWISSMODEL")
+      .filter(spl => spl.size >= 12)
       .flatMap { spl =>
         val rawUniID = spl(0)
         val uniID =
