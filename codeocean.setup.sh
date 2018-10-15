@@ -107,7 +107,7 @@ gnomadWGSVCF = [
 	"https://storage.googleapis.com/gnomad-public/release/2.0.2/vcf/genomes/gnomad.genomes.r2.0.2.sites.chr22.vcf.bgz"
 	]
 
-swissModelMetaData = "https://swissmodel.expasy.org/repository/download/core_species/9606_meta.tar.gz"
+swissModelMetaData = "input/9606_meta.tar.gz"
 
 radius = 5.0
 EOF
@@ -123,7 +123,7 @@ mv ../gencode.v26lift37.annotation.gtf.gz input/gencode.v26lift37.annotation.gtf
 mv ../gencode.v26lift37.pc_transcripts.fa.gz input/gencode.v26lift37.pc_transcripts.fa.gz
 mv ../gencode.v26lift37.metadata.SwissProt.gz input/gencode.v26lift37.metadata.SwissProt.gz
 
-
+wget -O input/9606_meta.tar.gz https://swissmodel.expasy.org/repository/download/core_species/9606_meta.tar.gz
 wget -O input/genome.coverage.all.tar https://data.broadinstitute.org/gnomAD/release-170228/genomes/coverage/genome.coverage.all.tar
 wget -O input/exome.coverage.all.tar  https://data.broadinstitute.org/gnomAD/release-170228/exomes/coverage/exome.coverage.all.tar
 
