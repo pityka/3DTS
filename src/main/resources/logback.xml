@@ -12,14 +12,17 @@
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
     </encoder>
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>INFO</level>
+    </filter>
   </appender>
 
   <logger name="tasks.fileservice.StreamHelper" level="INFO"/>
   <logger name="tasks.fileservice.FolderFileStorage" level="INFO"/>
   <logger name="tasks.caching.SharedFileCache" level="INFO"/>
   <logger name="httpqueue.HttpQueueImpl" level="INFO"/>
-  <logger name="sd" level="INFO"/>
-  <logger name="usertasks" level="INFO"/>
+  <logger name="sd" level="DEBUG"/>
+  <logger name="usertasks" level="DEBUG"/>
   <logger name="sd.TaskRunner" level="INFO"/>
   <logger name="sd.steps.depletion3d" level="INFO"/>
 
