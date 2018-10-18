@@ -91,7 +91,7 @@ object JoinFeatureWithCp {
                     val pdbres: PdbResidueNumberUnresolved =
                       row.pdbResidueNumberUnresolved
                     val k = pdbId.s + "_" + pdbChain.s + "_" + pdbres.s
-                    log.info(s"Add $k - $cp to index.")
+                    log.debug(s"Add $k - $cp to index.")
                     mmap.get(k) match {
                       case None    => mmap.update(k, List(cp.s))
                       case Some(l) => mmap.update(k, cp.s :: l)

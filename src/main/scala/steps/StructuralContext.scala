@@ -65,14 +65,14 @@ object StructuralContext {
 
           val source: Source[JoinUniprotWithPdb.T2, _] =
             Source(mappedFeatures).flatMapConcat { s =>
-              log.info(s.toString)
+              log.debug(s.toString)
               s.source
             }
 
           val s2: Source[StructuralContextFeature, _] = source
             .mapAsync(resourceAllocated.cpu) {
               case (uniid, pdbId, pdbchain, features) =>
-                log.info(s"$uniid $pdbId pdb:${pdbs.contains(pdbId)}")
+                log.debug(s"$uniid $pdbId pdb:${pdbs.contains(pdbId)}")
                 val pdbString: Future[Option[String]] = pdbs
                   .get(pdbId)
                   .map(
@@ -135,14 +135,14 @@ object StructuralContext {
 
           val source: Source[JoinUniprotWithPdb.T2, _] =
             Source(mappedFeatures).flatMapConcat { s =>
-              log.info(s.toString)
+              log.debug(s.toString)
               s.source
             }
 
           val s2 = source
             .mapAsync(resourceAllocated.cpu) {
               case (uniid, pdbId, pdbchain, features) =>
-                log.info(s"$uniid $pdbId cif:${cifs.contains(pdbId)}")
+                log.debug(s"$uniid $pdbId cif:${cifs.contains(pdbId)}")
                 val cifString: Future[Option[String]] = cifs
                   .get(pdbId)
                   .map(
@@ -162,7 +162,7 @@ object StructuralContext {
                             .toList)
                         .toOption
 
-                      log.info(
+                      log.debug(
                         s"$uniid $pdbId cif parsed: ${cifContents.isDefined}")
 
                       cifContents

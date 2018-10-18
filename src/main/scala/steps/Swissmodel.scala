@@ -134,7 +134,7 @@ object Swissmodel {
                       }
                       .distinct
                       .map { x =>
-                        log.info(s"Swissmodel uni-pdb mapping: $x")
+                        log.debug(s"Swissmodel uni-pdb mapping: $x")
                         x
                       }
                 }
@@ -161,7 +161,7 @@ object Swissmodel {
               log.info("Uniprot displayed isoforms: " + isoforms.size)
               isoforms.foreach {
                 case (a, b) =>
-                  log.info(s"Uniprot displayed isoforms $a $b")
+                  log.debug(s"Uniprot displayed isoforms $a $b")
               }
 
               val urls = IOHelpers
@@ -176,7 +176,7 @@ object Swissmodel {
               Source(urls)
                 .mapAsync(resourceAllocated.cpu) {
                   case (filename, url) =>
-                    log.info(s"try $filename $url")
+                    log.debug(s"try $filename $url")
                     Try(
                       AssemblyToPdb.retry(3)(
                         scalaj.http
@@ -186,7 +186,7 @@ object Swissmodel {
                           .asBytes
                           .body)) match {
                       case Success(pdbData) =>
-                        log.info(s"OK $filename $url")
+                        log.debug(s"OK $filename $url")
                         SharedFile(
                           writeToTempFile(new String(pdbData, "UTF-8")),
                           filename)

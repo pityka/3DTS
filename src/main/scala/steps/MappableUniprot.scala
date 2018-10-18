@@ -16,7 +16,7 @@ object MappableUniprot {
           sd.JoinGencodeToUniprot.readUniProtIds(it))
 
         uni.foreach { uni =>
-          log.info(s"$uni mappable.")
+          log.debug(s"$uni mappable.")
         }
 
         JsDump.fromIterator(uni.iterator,

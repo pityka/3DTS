@@ -56,7 +56,7 @@ object AssemblyToPdb {
               Source(pdbIds)
                 .mapAsync(resourceAllocated.cpu) { pdbId =>
                   Future {
-                    log.info("Fetching " + pdbId)
+                    log.debug("Fetching " + pdbId)
 
                     Try(retry(3)(sd.JoinUniprotWithPdb.fetchCif(pdbId))) match {
                       case Success(cifString) =>
@@ -94,7 +94,7 @@ object AssemblyToPdb {
                   .runFold(ByteString())(_ ++ _)
                   .map(_.utf8String)
                   .flatMap { cifString =>
-                    log.info("Assembly " + pdbId)
+                    log.debug("Assembly " + pdbId)
                     if (!cifString.startsWith("data_"))
                       Future.successful(None)
                     else {
@@ -102,7 +102,7 @@ object AssemblyToPdb {
                       val cifContents = CIFContents.parseCIF(
                         scala.io.Source.fromString(cifString).getLines.toList)
                       if (cifContents.isFailure) {
-                        log.info("Cif parsing failed for " + pdbId)
+                        log.error("Cif parsing failed for " + pdbId)
                         Future.successful(None)
                       } else {
                         val pdbString = cifContents.get.asPDB
@@ -111,7 +111,7 @@ object AssemblyToPdb {
                           println(cifString)
                           println(cifContents)
                           println(pdbId)
-                          log.info("Cif parsing failed for " + pdbId)
+                          log.error("Cif parsing failed for " + pdbId)
                           Future.successful(None)
                         } else {
 

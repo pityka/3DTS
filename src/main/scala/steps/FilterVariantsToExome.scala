@@ -30,8 +30,6 @@ object FilterVariantsToExome {
               }
             }
             result <- {
-              log.info("Reading interval trees")
-
               log.info("Interval trees done")
 
               val transformedSource = genome.source

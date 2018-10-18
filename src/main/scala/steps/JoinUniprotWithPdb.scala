@@ -57,7 +57,7 @@ object JoinUniprotWithPdb {
       genomeUniJoin.sf.file.map { genomeJoinFile =>
         val uniIdFilter: Set[UniId] =
           genomeUniJoin.iterator(genomeJoinFile)(it => it.toSet)
-        log.info(uniIdFilter.take(10).toString)
+        log.debug(uniIdFilter.take(10).toString)
         log.info("Read uniprot file.. filter for: " + uniIdFilter.size)
         val uniprotkblist =
           openSource(localFile) { s =>
@@ -86,7 +86,7 @@ object JoinUniprotWithPdb {
       genomeUniJoin.sf.file.map { genomeJoinFile =>
         val uniIdFilter = genomeUniJoin.iterator(genomeJoinFile)(it =>
           sd.JoinGencodeToUniprot.readUniProtIds(it))
-        log.info(uniIdFilter.take(10).toString)
+        log.debug(uniIdFilter.take(10).toString)
         log.info("Read uniprot file.. filter for: " + uniIdFilter.size)
         val uniprotkblist =
           openSource(localFile) { s =>
@@ -157,7 +157,7 @@ object JoinUniprotWithPdb {
                 val futureBatches: Seq[Future[UniProtPdbOutput]] =
                   batches.map {
                     case (seq, idx) =>
-                      log.info("Batch size: {}", seq.size)
+                      log.debug("Batch size: {}", seq.size)
                       subtask(
                         UniProtPdbInput(
                           uniprotkbSF,
@@ -211,7 +211,7 @@ object JoinUniprotWithPdb {
             }
             .flatMap { (uniprotKb: Map[UniId, UniProtEntry]) =>
               val result = uniIds.flatMap { uniId =>
-                log.info("Join $uniID with PDB")
+                log.debug("Join $uniID with PDB")
                 val r = try {
                   sd.JoinUniprotWithPdb.joinUniProtWithPdb(uniId, uniprotKb)
                 } catch {
@@ -242,7 +242,7 @@ object JoinUniprotWithPdb {
                       _,
                       _,
                       _) =>
-                  log.info(s"$uniId - $pdbId - $pdbChain")
+                  log.debug(s"$uniId - $pdbId - $pdbChain")
                   mapping.iterator.map {
                     case (pdbSeqNum, uniNum, pdbResNum, mat) =>
                       val pdb2 =
