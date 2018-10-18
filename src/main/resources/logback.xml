@@ -18,8 +18,8 @@
   <logger name="tasks.fileservice.FolderFileStorage" level="INFO"/>
   <logger name="tasks.caching.SharedFileCache" level="INFO"/>
   <logger name="httpqueue.HttpQueueImpl" level="INFO"/>
-  <logger name="sd" level="WARN"/>
-  <logger name="usertasks" level="WARN"/>
+  <logger name="sd" level="INFO"/>
+  <logger name="usertasks" level="INFO"/>
   <logger name="sd.TaskRunner" level="INFO"/>
   <logger name="sd.steps.depletion3d" level="INFO"/>
 
