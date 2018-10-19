@@ -57,7 +57,7 @@ object JoinGencodeToUniprot extends StrictLogging {
 
     enst2uni.foreach {
       case (enst, uniid) =>
-        logger.info(s"$enst $uniid")
+        logger.debug(s"$enst $uniid")
     }
 
     def filterTSL(tsl: TranscriptSupportLevel) = !(tsl.v == 4 || tsl.v == 5)
