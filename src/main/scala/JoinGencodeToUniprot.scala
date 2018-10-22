@@ -67,7 +67,7 @@ object JoinGencodeToUniprot extends StrictLogging {
         case (enst, _) =>
           val gencodeContains = gencode.contains(enst)
           val tslOK = gencodeContains && filterTSL(gencode(enst)._2)
-          logger.info(
+          logger.debug(
             s"$enst kept: $tslOK, gencode contains enst: $gencodeContains")
           tslOK
       }
@@ -77,7 +77,7 @@ object JoinGencodeToUniprot extends StrictLogging {
           val result = uni
             .flatMap { uni =>
               val uniprotcontains = uniprotKb.contains(uni)
-              logger.info(s"$enst $uni UniprotKB contains: $uniprotcontains")
+              logger.debug(s"$enst $uni UniprotKB contains: $uniprotcontains")
               uniprotKb.get(uni).map { uniEntry =>
                 mapTranscript(enst,
                               gencode(enst)._1,

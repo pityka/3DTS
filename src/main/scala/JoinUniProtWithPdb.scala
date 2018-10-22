@@ -189,13 +189,13 @@ object JoinUniprotWithPdb extends StrictLogging {
           val cifContainsPdb = cifs.contains(pdbId)
           val cifContainsPdbChain = cifContainsPdb && cifs(pdbId).contains(
             pdbChain)
-          logger.info(
+          logger.debug(
             s"$pdbId cif contains pdb ($cifContainsPdb) and chain($cifContainsPdbChain)")
           cifContainsPdbChain
       }
       .map {
         case (pdbId, pdbChain, uniSeq) =>
-          logger.info(
+          logger.debug(
             s"$pdbId $pdbChain - aligning pdb sequence with uniprot sequence")
           val pdbResidueList: Vector[(Char, PdbResidueNumber)] =
             cifs(pdbId)(pdbChain).toVector

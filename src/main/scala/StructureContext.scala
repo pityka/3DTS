@@ -127,7 +127,7 @@ object StructureContext extends StrictLogging {
               atomsByResidue.get(chain -> residue).toList.flatten
           } toList)
 
-          logger.info(
+          logger.debug(
             s"$pdbId - $chain - $featureName - ${residuesInFeature.size} - ${featureAtoms.flatten.size}")
 
           val expandedAtoms2: Vector[T1] =
