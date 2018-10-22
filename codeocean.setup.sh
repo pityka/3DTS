@@ -2,6 +2,8 @@
 
 #assumes java8, git, wget, curl installed via codeocean's UI
 
+echo 'invalidated setup script 5'
+
 wget https://piccolo.link/sbt-1.2.4.tgz
 tar xf sbt-1.2.4.tgz
 export PATH=$PATH:`pwd`/sbt/bin/
@@ -9,6 +11,10 @@ export PATH=$PATH:`pwd`/sbt/bin/
 
 git clone https://github.com/pityka/3DTS.git
 cd 3DTS
+mkdir input
+wget -O input/human_g1k_v37.fasta.gz ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz
+wget -O input/human_g1k_v37.fasta.fai ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.fai
+gunzip input/human_g1k_v37.fasta.gz
 dep=$(ls dependencies/)
 for i in $dep; do cd dependencies/$i && sbt -batch publishLocal && cd ../../ ; done
 mkdir lib
@@ -21,7 +27,7 @@ cd ..
 
 sbt -batch stage
 
-mkdir input
+
 mkdir data
 
 cat << EOF > input/conf
@@ -112,6 +118,8 @@ swissModelMetaData = "input/9606_meta.tar.gz"
 radius = 5.0
 EOF
 
+wget -O input/9606_meta.tar.gz 'https://swissmodel.expasy.org/repository/download/core_species/9606_meta.tar.gz'
+
 wget -O input/uniprot.gz  'http://www.uniprot.org/uniprot/?sort=&desc=&compress=yes&query=proteome:UP000005640%20reviewed:yes&fil=&force=yes&format=txt'
 
 # The following three gencode files may need to be downloaded manually and transferred to the instance
@@ -123,7 +131,7 @@ mv ../gencode.v26lift37.annotation.gtf.gz input/gencode.v26lift37.annotation.gtf
 mv ../gencode.v26lift37.pc_transcripts.fa.gz input/gencode.v26lift37.pc_transcripts.fa.gz
 mv ../gencode.v26lift37.metadata.SwissProt.gz input/gencode.v26lift37.metadata.SwissProt.gz
 
-wget -O input/9606_meta.tar.gz 'https://swissmodel.expasy.org/repository/download/core_species/9606_meta.tar.gz'
+
 wget -O input/genome.coverage.all.tar https://data.broadinstitute.org/gnomAD/release-170228/genomes/coverage/genome.coverage.all.tar
 wget -O input/exome.coverage.all.tar  https://data.broadinstitute.org/gnomAD/release-170228/exomes/coverage/exome.coverage.all.tar
 
