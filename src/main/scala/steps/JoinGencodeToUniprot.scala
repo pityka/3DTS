@@ -84,7 +84,7 @@ object JoinGencodeToUniprot {
               val gencode =
                 openSource(gencodeGtfL)(s => IOHelpers.readGencodeGTF(s))
 
-              log.info("gtf read")
+              log.info("gtf read: " + gencode.size)
 
               val ensembleXRefUniProt = openSource(ensemblXrefUniprotL)(s =>
                 IOHelpers.readGencodeSwissProtMetadata(s).toList.toMap)
