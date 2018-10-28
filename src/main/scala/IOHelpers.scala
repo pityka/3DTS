@@ -418,7 +418,7 @@ object IOHelpers {
       .drop(1)
       .map { _.split1('\t') }
       .filter(spl => spl(4).trim == "SWISSMODEL")
-      .filter(spl => spl.size >= 12)
+      .filter(spl => spl.size >= 11)
       .flatMap { spl =>
         val rawUniID = spl(0)
         val uniID =
@@ -427,9 +427,9 @@ object IOHelpers {
         val hash = spl(3)
         val from = spl(5).toInt
         val to = spl(6).toInt
-        val template = spl(8)
-        val qmean = spl(9).toDouble
-        val url = spl(11)
+        val template = spl(7)
+        val qmean = spl(8).toDouble
+        val url = spl(10)
 
         uniID.map { uniID =>
           val filename = uniID + "_" + from + "_" + to + "_" + template + "_" + hash
