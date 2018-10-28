@@ -99,7 +99,7 @@ object JoinGencodeToUniprot {
                       .flatMap(x => x.accessions.map(y => y -> x))
                       .toMap)
 
-              log.info("uniprot kb read")
+              log.info("uniprot kb read. size: " + uniprotKb.size)
 
               openSource(fastaL) { fastaSource =>
                 val s: Iterator[sd.JoinGencodeToUniprot.MapResult] =
