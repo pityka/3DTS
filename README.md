@@ -7,6 +7,17 @@ estimate expectation, and produces 3D Tolerance Scores (3DTS) for genetic loci i
 3D protein space. Details of the model are available through this code and are 
 described in detail in the manuscript listed below (see Citation). 
 
+Browse precomputed scores
+-------------------------
+To browse precomputed scores please head over to http://protc-app.labtelenti.org .
+On this website you can retrieve and visualize the scores on the precomputed PDB and 
+SwissModel structures.
+
+---
+
+The remaining part of this document describes how to build and use this software 
+to recompute the scores.
+
 Quick Start Using AWS EC2
 -------------------------
 1. Launch an r4.4xlarge EC2 instance (Amazon Linux AMI) with a 600GB EBS volume.
