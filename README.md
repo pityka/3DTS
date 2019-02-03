@@ -13,6 +13,8 @@ To browse precomputed scores please head over to [protc-app.labtelenti.org](http
 On that website you can retrieve and visualize the scores on the precomputed PDB and 
 SwissModel structures.
 
+Bulk download of precomputed scores and coordinate mappings between uniprot, pdb and gencode are available in this dataset: https://doi.org/10.5281/zenodo.1311198 .
+
 ---
 
 The remaining part of this document describes how to build and use this software 
