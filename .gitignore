@@ -19,3 +19,4 @@ src/main/resources/public/bio-pv.min.js
 log-*txt
 *.cif
 .metals
+.bloop
