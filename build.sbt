@@ -1,4 +1,4 @@
-scalaVersion := "2.12.5"
+scalaVersion := "2.12.8"
 
 val commonSettings = Seq(
   scalacOptions ++= Seq(
@@ -54,7 +54,7 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "tasks-core" % "0.0.18",
   "io.github.pityka" %% "tasks-upickle" % "0.0.18",
   "io.github.pityka" %% "tasks-collection" % "0.0.18",
-  "indexlib" %% "indexlib" % "1.2.0",
+  "indexlib" %% "indexlib" % "1.3.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.apache.commons" % "commons-compress" % "1.16.1",
   "org.spire-math" %% "spire" % "0.13.0",
@@ -81,7 +81,7 @@ resources in Compile += (fastOptJS in Compile in browser).value.data
 lazy val browser = (project in file("browser"))
   .settings(commonSettings: _*)
   .settings(
-    scalaVersion := "2.12.4",
+    scalaVersion := "2.12.8",
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "0.9.5",
       "com.lihaoyi" %%% "scalatags" % "0.6.7",
@@ -96,7 +96,7 @@ lazy val browser = (project in file("browser"))
 val shared =
   (crossProject.crossType(CrossType.Pure) in file("shared"))
     .settings(
-      scalaVersion := "2.12.4"
+      scalaVersion := "2.12.8"
     )
     .settings(
       libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % "0.4.4"))

@@ -53,7 +53,7 @@ class IndexReader(f: File, compressed: Boolean = false) {
     }
   }
 
-  def getDocs(term: String): Vector[Doc] = getDocIds(term).flatMap(getDoc)
+  def getDocs(term: String, max: Int): Vector[Doc] = getDocIds(term, max).flatMap(getDoc)
 
   def getDocCount(term: String) =
     getRowId(term).map(rid => csr.readLength(rid)).getOrElse(0)

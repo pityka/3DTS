@@ -180,7 +180,7 @@ class ProteinUI(
     width := "100"
   )(
     option(value := "s5", selected := true)(
-      "Constant rate - chromosome-specific intergenic"),
+      "Constant rate - chromosome-specific intergenic (reported in paper)"),
     option(value := "s1")("Constant rate - synonymous"),
     option(value := "s2")("Heptamer rate - intergenic"),
     option(value := "s3")("Constant rate - intergenic"),
@@ -207,7 +207,7 @@ class ProteinUI(
 
   val queryBox = input(
     `class` := "uk-search-input",
-    style := "border: 1px solid #ddd",
+    style := "border: 1px solid #ddd; margin-top:15px;margin-bottom:15px",
     `type` := "text",
     height := "30",
     width := "100",
@@ -224,7 +224,7 @@ class ProteinUI(
     else {
       div(
         a(href := "/query?format=csv&q=" + UIState.lastQuery().get)(
-          "Download as csv"))
+          "Download table as csv"))
     }
   }
 
@@ -236,7 +236,7 @@ class ProteinUI(
   val resolvedPDBs = Rx {
     val data = UIState.currentData()._1
     if (data.nonEmpty)
-      span("Your query (also) returned the following pdb identifiers: ")(
+      span("Your query returned the following pdb or SwissModel structures: ")(
         data.flatMap(pdb =>
           List(a(onclick := { (event: Event) =>
             makeQuery(pdb.s, data)
@@ -413,12 +413,27 @@ class ProteinUI(
         case (pdbId, pdbChain, pdbRes) =>
           val scores =
             byResidue.get((pdbChain -> pdbRes)).toList.flatten.distinct
-          renderTable(pdbId.s + "/" + pdbChain.s + "/" + pdbRes.s,
-                      scores,
-                      scoreSelector)
+          if (scores.nonEmpty)
+            div(
+              h3(`class` := "uk-heading")("Depletion scores in the protein"),
+              downloadLink,
+              renderTable(pdbId.s + "/" + pdbChain.s + "/" + pdbRes.s,
+                          scores,
+                          scoreSelector)
+            )
+          else div()
       }
-      .getOrElse(
-        renderTable("", byResidue.values.flatten.toSeq.distinct, scoreSelector))
+      .getOrElse {
+        if (byResidue.values.flatten.toSeq.distinct.nonEmpty)
+          div(
+            h3(`class` := "uk-heading")("Depletion scores in the protein"),
+            downloadLink,
+            renderTable("",
+                        byResidue.values.flatten.toSeq.distinct,
+                        scoreSelector)
+          )
+        else div()
+      }
   }
 
   val resetClickButton =
@@ -525,8 +540,11 @@ class ProteinUI(
                PdbResidueNumberUnresolved(residueNumber.toString)))
           }
         )
+        div(style := "width: 80%")(
+          h3(`class` := "uk-heading")("Protein view"),
+          div(div(style := "border:1px solid #ddd;")(viewContainer)),
+          colorkey)
 
-        div(style := "border:1px solid #ddd;")(viewContainer)
       }
       .getOrElse(div())
 
@@ -536,21 +554,27 @@ class ProteinUI(
 
   }
 
+  val helpBox = div(`class` := "uk-panel uk-panel-box")(
+    p("You can make retrieve the 3DTS scores by searching for various identifiers on this website. For example to retrieve the scores for the PPARG protein you can query for: PPARG, 3DZY, ENST00000452400, chr8_71068527.")
+  )
+
   val ui =
     div(
       // renderProtein("3DZY"),
-      div(queryBox,
-          waitIndicator,
-          div(span("Background mutation rate: "), scoreSelectorInput)),
-      div(resolvedPDBs),
-      div(style := "display:flex; flex-direction: column")(
-        h3(`class` := "uk-heading")("Protein view"),
-        downloadLink,
-        div(style := "width: 80%")(div(proteinView), colorkey),
+      div(
+        helpBox,
+        queryBox,
+        waitIndicator,
         div(
-          h3(`class` := "uk-heading")("Depletion scores in the protein"),
-          clickedTable
-        )
+          span(
+            "You can select the approach used to calculate the background mutation rate. Please refer to the manuscript for what these mean: "),
+          scoreSelectorInput
+        ),
+      ),
+      div(style := "display:flex; flex-direction: column; margin-top: 50px")(
+        div(resolvedPDBs),
+        proteinView,
+        clickedTable
       )
     ).render
 

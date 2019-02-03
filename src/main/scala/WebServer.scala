@@ -15,8 +15,9 @@ import scala.concurrent.{Future}
 import java.io.File
 import SharedTypes._
 import tasks.util.TempFile
+import com.typesafe.scalalogging.StrictLogging
 
-object Server {
+object Server extends StrictLogging {
 
   def makeQuery(scoresReader: IndexReader,
                 geneNameReader: IndexReader,
@@ -27,7 +28,7 @@ object Server {
       val pdbsFromGeneNames =
         if (q.isEmpty) Vector[PdbId]()
         else
-          geneNameReader.getDocs(q).flatMap {
+          geneNameReader.getDocs(q, 10000).flatMap {
             case Doc(str) =>
               upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
           }
@@ -36,7 +37,7 @@ object Server {
         if (q.isEmpty) Vector()
         else
           cpPdbReader
-            .getDocs(q)
+            .getDocs(q, 10000)
             .map {
               case Doc(str) =>
                 upickle.default.read[PdbUniGencodeRow](str).pdbId
@@ -45,9 +46,15 @@ object Server {
       pdbsFromGeneNames ++ pdbsFromUniGencodeJoin
     }.distinct
 
+    logger.info(s"Query on $q returned ${pdbs.size} pdb id.")
+
     val scores =
       if (q.isEmpty) Vector[Doc]()
-      else scoresReader.getDocs(q)
+      else {
+        logger.info(
+          s"Scores matching query $q: ${scoresReader.getDocCount(q)}. Take first 100k.")
+        scoresReader.getDocs(q, 100000)
+      }
 
     (pdbs, scores.map {
       case Doc(str) =>
@@ -138,7 +145,7 @@ object Server {
         scores.featureScores.nsPostHeptamerIndependentIntergenicRate.post.mean,
         scores.featureScores.nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean,
         scores.featureScores.nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
-        scores.featureScores.uniprotIds.mkString(":")
+        scores.featureScores.uniprotIds.map(_.s).mkString(":")
       )).mkString(",")
     }
 
