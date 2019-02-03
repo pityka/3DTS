@@ -555,7 +555,7 @@ class ProteinUI(
   }
 
   val helpBox = div(`class` := "uk-panel uk-panel-box")(
-    p("You can make retrieve the 3DTS scores by searching for various identifiers on this website. For example to retrieve the scores for the PPARG protein you can query for: PPARG, 3DZY, ENST00000452400, chr8_71068527.")
+    p("You can retrieve the 3DTS scores by searching for various identifiers on this website. For example to retrieve the scores for the PPARG protein you can query for: PPARG, 3DZY, ENST00000452400, chr8_71068527.")
   )
 
   val ui =
