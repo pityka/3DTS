@@ -211,7 +211,7 @@ class ProteinUI(
     `type` := "text",
     height := "30",
     width := "100",
-    placeholder := "You can search for PDP identifier, UniProt ID, Ensemble Transcript ID, hg38 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
+    placeholder := "You can search for PDP identifier, UniProt ID, Ensemble Transcript ID, hg37 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
   ).render
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
