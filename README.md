@@ -9,8 +9,8 @@ described in detail in the manuscript listed below (see Citation).
 
 Browse precomputed scores
 -------------------------
-To browse precomputed scores please head over to http://protc-app.labtelenti.org .
-On this website you can retrieve and visualize the scores on the precomputed PDB and 
+To browse precomputed scores please head over to [protc-app.labtelenti.org](http://protc-app.labtelenti.org) .
+On that website you can retrieve and visualize the scores on the precomputed PDB and 
 SwissModel structures.
 
 ---
