@@ -41,7 +41,8 @@ for i in $(ls dependencies/); do cd dependencies/$i && sbt publishLocal && cd ..
 4. From the root folder: `sbt packageZipTarball` 
 5. Move the packaged application located in `target/universal/saturation-0.1-SNAPSHOT.tgz` to a machine with 120G RAM and ~600Gb disk. (e.g., EC2 instance type r4.4xlarge) 
 6. Edit the configuration file (see Configuration section below)
-7. Unzip the packaged application and run with 
+7. Make sure the machine you deploy to has internet connection. The software will download cif files from https://files.rcsb.org/. 
+8. Unzip the packaged application and run with 
 ~~~
 bin/saturation -Dconfig.file=path/to/config -J-Xmx115G -Djava.io.tmpdir=path/to/tmp
 ~~~
@@ -61,7 +62,7 @@ hosts.numCPU=16 # or whatever is convenient
 ~~~
 ### Configuration keys related to input files
 
-The values of the keys should be http, https or s3 URLs (s3 recommended).
+The values of the keys should be http, https s3 URLs (s3 recommended), or filesystem paths.
 
 ~~~
 uniprotKb = uniprot-all.txt.gz // Compressed Text formatted file for SwissProt (Reviewed) portion of Uniprot for Proteome UP000005640
