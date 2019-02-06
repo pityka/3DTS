@@ -44,18 +44,27 @@ class ProteinUI(
     val viewer = js.Dynamic.global.pv.Viewer(viewContainer, options)
 
     Ajax.get("pdb/" + pdbId).map(_.responseText).map { pdbtext =>
-      val chainRemap = scala.io.Source
-        .fromString(pdbtext)
-        .getLines
-        .next
-        .drop("REMARK 9 ".size)
-        .trim
-        .split(":")
-        .grouped(2)
-        .map(x => x(0) -> x(1))
-        .toMap
-      val chainRemapReverse =
-        chainRemap.toSeq.groupBy(_._2).map(x => x._1 -> x._2.map(_._1))
+      val (chainRemap, chainRemapReverse) =
+        if (pdbtext.contains("REMARK 9")) {
+          val chainRemap = scala.io.Source
+            .fromString(pdbtext)
+            .getLines
+            .next
+            .drop("REMARK 9 ".size)
+            .trim
+            .split(":")
+            .grouped(2)
+            .map(x => x(0) -> x(1))
+            .toMap
+          val reverse = chainRemap.toSeq
+            .groupBy(_._2)
+            .map(x => x._1 -> x._2.map(_._1))
+
+          (chainRemap, reverse)
+        } else ((a: String) => a, (a: String) => List(a))
+
+      println("chain remap: " + chainRemap)
+
       val fetchedStructure =
         js.Dynamic.global.pv.io.pdb(pdbtext)
       val renderedStructure = viewer.cartoon("protein", fetchedStructure)
@@ -89,6 +98,7 @@ class ProteinUI(
       )
       renderedStructure.colorBy(colorByResidueIdentityRgb(
         (chain: String, res: Int) => {
+
           colors
             .get(PdbChain(chainRemap(chain)) -> PdbResidueNumberUnresolved(
               res.toString))
@@ -156,7 +166,8 @@ class ProteinUI(
     val lastQuery: Var[Option[String]] = Var(None)
 
     val viewerAndStructure =
-      Var[Option[(js.Dynamic, js.Dynamic, Map[String, Seq[String]])]](None)
+      Var[Option[(js.Dynamic, js.Dynamic, Function1[String, Seq[String]])]](
+        None)
 
   }
 
