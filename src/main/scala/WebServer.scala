@@ -28,10 +28,16 @@ object Server extends StrictLogging {
       val pdbsFromGeneNames =
         if (q.isEmpty) Vector[PdbId]()
         else
-          geneNameReader.getDocs(q, 10000).flatMap {
-            case Doc(str) =>
-              upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
-          }
+          geneNameReader
+            .getDocs(q, 10000)
+            .flatMap {
+              case Doc(str) =>
+                upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
+            }
+            .filter { pdb =>
+              val count = scoresReader.getDocCount(pdb.s)
+              count > 0
+            }
 
       val pdbsFromUniGencodeJoin =
         if (q.isEmpty) Vector()
@@ -52,8 +58,8 @@ object Server extends StrictLogging {
       if (q.isEmpty) Vector[Doc]()
       else {
         logger.info(
-          s"Scores matching query $q: ${scoresReader.getDocCount(q)}. Take first 100k.")
-        scoresReader.getDocs(q, 100000)
+          s"Scores matching query $q: ${scoresReader.getDocCount(q)}. Take first 10k.")
+        scoresReader.getDocs(q, 10000)
       }
 
     (pdbs, scores.map {
