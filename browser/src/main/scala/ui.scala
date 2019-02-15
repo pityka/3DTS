@@ -222,7 +222,7 @@ class ProteinUI(
     `type` := "text",
     height := "30",
     width := "100",
-    placeholder := "You can search for PDP identifier, UniProt ID, Ensemble Transcript ID, hg37 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
+    placeholder := "You can search for PDP identifier, UniProt ID, Ensemble Transcript ID, hg10 `chromosome_position`, `pdbid_pdbchain` , `pdbid_pdbchain_pdbresidue`  "
   ).render
   queryBox.onkeypress = (e: KeyboardEvent) => {
     if (e.keyCode == 13) {
@@ -566,7 +566,7 @@ class ProteinUI(
   }
 
   val helpBox = div(`class` := "uk-panel uk-panel-box")(
-    p("You can retrieve the 3DTS scores by searching for various identifiers on this website. For example to retrieve the scores for the PPARG protein you can query for: PPARG, 3DZY, ENST00000452400, chr8_71068527.")
+    p("You can retrieve the 3DTS scores by searching for various identifiers on this website. For example to retrieve the scores for the PPARG protein you can query for: PPARG, 3DZY, ENST00000452400, chr8_71068527 (hg19).")
   )
 
   val ui =
