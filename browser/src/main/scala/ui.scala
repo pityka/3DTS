@@ -439,6 +439,7 @@ class ProteinUI(
           div(
             h3(`class` := "uk-heading")("Depletion scores in the protein"),
             downloadLink,
+            resetClickButton,
             renderTable("",
                         byResidue.values.flatten.toSeq.distinct,
                         scoreSelector)
@@ -449,7 +450,7 @@ class ProteinUI(
 
   val resetClickButton =
     button(`class` := "uk-button uk-button-text uk-button-small")(
-      "Clear selection").render
+      "Reset selection of table").render
   resetClickButton.onclick = { (e: Event) =>
     UIState.clicked() = None
   }
@@ -554,7 +555,10 @@ class ProteinUI(
         div(style := "width: 80%")(
           h3(`class` := "uk-heading")("Protein view"),
           div(div(style := "border:1px solid #ddd;")(viewContainer)),
-          colorkey)
+          colorkey,
+          p(`class` := "uk-panel uk-panel-box")(
+            "You can rotate the view by panning the mouse and zoom with the mouse wheel. To recenter the camera click on a residue. Clicking on a residue also selects the residue in the table below. You can clear this selection with the button above the table. To remove the selected amino acids from the 3D view, please reload the page. Parts of the protein might be gray if we could not compute the depletion score for that part. For very large proteins, this browser application loads only the first 10000 scored features.")
+        )
 
       }
       .getOrElse(div())
