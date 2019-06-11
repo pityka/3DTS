@@ -20,3 +20,4 @@ log-*txt
 *.cif
 .metals
 .bloop
+.vscode
