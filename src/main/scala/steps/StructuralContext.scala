@@ -3,7 +3,7 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
@@ -13,16 +13,39 @@ case class StructuralContextFromFeaturesInput(
     radius: Double,
     bothSides: Boolean)
 
+object StructuralContextFromFeaturesInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[StructuralContextFromFeaturesInput] =
+    JsonCodecMaker.make[StructuralContextFromFeaturesInput](CodecMakerConfig())
+}
+
 case class StructuralContextFromFeaturesAndPdbsInput(
     pdbs: Map[PdbId, SharedFile],
     mappedUniprotFeatures: Set[JsDump[JoinUniprotWithPdb.T2]],
     radius: Double,
     bothSides: Boolean)
 
+object StructuralContextFromFeaturesAndPdbsInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec
+    : JsonValueCodec[StructuralContextFromFeaturesAndPdbsInput] =
+    JsonCodecMaker.make[StructuralContextFromFeaturesAndPdbsInput](
+      CodecMakerConfig())
+}
+
 case class StructuralContextFeature(
     featureKey: FeatureKey,
     pdbResidues: Seq[(PdbChain, PdbResidueNumberUnresolved)],
     uniprotIds: Seq[UniId])
+
+object StructuralContextFeature {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[StructuralContextFeature] =
+    JsonCodecMaker.make[StructuralContextFeature](CodecMakerConfig())
+}
 
 object StructuralContext {
 
@@ -71,7 +94,7 @@ object StructuralContext {
 
           val s2: Source[StructuralContextFeature, _] = source
             .mapAsync(resourceAllocated.cpu) {
-              case (uniid, pdbId, pdbchain, features) =>
+              case JoinUniprotWithPdb.T2(uniid, pdbId, pdbchain, features) =>
                 log.debug(s"$uniid $pdbId pdb:${pdbs.contains(pdbId)}")
                 val pdbString: Future[Option[String]] = pdbs
                   .get(pdbId)
@@ -141,7 +164,7 @@ object StructuralContext {
 
           val s2 = source
             .mapAsync(resourceAllocated.cpu) {
-              case (uniid, pdbId, pdbchain, features) =>
+              case JoinUniprotWithPdb.T2(uniid, pdbId, pdbchain, features) =>
                 log.debug(s"$uniid $pdbId cif:${cifs.contains(pdbId)}")
                 val cifString: Future[Option[String]] = cifs
                   .get(pdbId)

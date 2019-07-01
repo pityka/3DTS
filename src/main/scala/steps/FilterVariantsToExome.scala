@@ -3,7 +3,7 @@ package sd.steps
 import sd._
 import tasks._
 import tasks.queue.NodeLocalCache
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import fileutils._
 import akka.stream.scaladsl._
 import akka.util._
@@ -12,10 +12,24 @@ case class FilterVariantsInput(gnomad: JsDump[JoinVariationsCore.GnomadLine],
                                tpe: String,
                                gencodeGtf: SharedFile)
 
-case class FilterGnomadOutput(f: SharedFile) extends ResultWithSharedFiles(f)
+case class FilterGnomadOutput(f: SharedFile)
+
+object FilterGnomadOutput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[FilterGnomadOutput] =
+    JsonCodecMaker.make[FilterGnomadOutput](CodecMakerConfig())
+}
+
+object FilterVariantsInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[FilterVariantsInput] =
+    JsonCodecMaker.make[FilterVariantsInput](CodecMakerConfig())
+}
 
 object FilterVariantsToExome {
-
+  import com.github.plokhotnyuk.jsoniter_scala.core._
   val task =
     AsyncTask[FilterVariantsInput, FilterGnomadOutput]("filtergnomad-1", 1) {
 
@@ -29,6 +43,7 @@ object FilterVariantsToExome {
                 JoinVariationsCore.exomeIntervalTree(gencodeSource)
               }
             }
+
             result <- {
               log.info("Interval trees done")
 
@@ -39,7 +54,7 @@ object FilterVariantsToExome {
                       .lookup(gnomadLine.chromosome, gnomadLine.position, exons)
                       .isEmpty)
                 .map { gl =>
-                  ByteString(upickle.default.write(gl) + "\n")
+                  ByteString(writeToString(gl) + "\n")
                 }
                 .via(Compression.gzip)
 

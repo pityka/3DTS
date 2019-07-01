@@ -19,14 +19,10 @@ object JoinGencodeToUniprot extends StrictLogging {
   sealed trait MapResult
 
   object MapResult {
-    import upickle.default.{ReadWriter, macroRW}
-    implicit val readWriter: ReadWriter[MapResult] =
-      macroRW[Success] merge
-        macroRW[MultipleChromosomes] merge
-        macroRW[TranscriptSizeError] merge
-        macroRW[MultipleStrands] merge
-        macroRW[Enst2UniFailed] merge
-        macroRW[TranslationMismatch]
+    import com.github.plokhotnyuk.jsoniter_scala.core._
+    import com.github.plokhotnyuk.jsoniter_scala.macros._
+    implicit val codec: JsonValueCodec[MapResult] =
+      JsonCodecMaker.make[MapResult](CodecMakerConfig())
   }
 
   def readUniProtIds(s: Iterator[MapResult]): Set[UniId] =

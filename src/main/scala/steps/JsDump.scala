@@ -7,38 +7,37 @@ import tasks.util.TempFile
 import fileutils._
 import akka.util._
 import akka.stream.scaladsl._
+import com.github.plokhotnyuk.jsoniter_scala.macros._
+import com.github.plokhotnyuk.jsoniter_scala.core._
 
-case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
+case class JsDump[T](sf: SharedFile) {
 
   def createIterator[R](file: File)(
-      implicit r: upickle.default.Reader[T]): (Iterator[T], Closeable) = {
+      implicit r: JsonValueCodec[T]): (Iterator[T], Closeable) = {
     val source = createSource(file)
-    val unpickler = implicitly[upickle.default.Reader[T]]
     val it =
-      source.getLines.map(line => upickle.default.read[T](line)(unpickler))
+      source.getLines.map(line => readFromString[T](line))
     it -> new Closeable { def close = source.close }
   }
 
   def iterator[R](file: File)(f: Iterator[T] => R)(
-      implicit r: upickle.default.Reader[T]): R =
+      implicit r: JsonValueCodec[T]): R =
     openSource(file) { source =>
-      val unpickler = implicitly[upickle.default.Reader[T]]
       val it =
-        source.getLines.map(line => upickle.default.read[T](line)(unpickler))
+        source.getLines.map(line => readFromString[T](line))
       f(it)
     }
 
   def source(implicit
              ts: TaskSystemComponents,
-             r: upickle.default.Reader[T]): Source[T, _] = {
-    val unpickler = implicitly[upickle.default.Reader[T]]
+             r: JsonValueCodec[T]): Source[T, akka.NotUsed] = {
     sf.source
       .via(Compression.gunzip())
       .via(akka.stream.scaladsl.Framing
         .delimiter(ByteString("\n"), maximumFrameLength = Int.MaxValue))
       .map { frame =>
         val line = frame.utf8String
-        upickle.default.read[T](line)(unpickler)
+        readFromString[T](line)
       }
   }
 
@@ -46,26 +45,26 @@ case class JsDump[T](sf: SharedFile) extends ResultWithSharedFiles(sf) {
 
 object JsDump {
 
-  def fromIterator[T: upickle.default.Reader: upickle.default.Writer](
-      i: Iterator[T],
-      name: String)(implicit ts: TaskSystemComponents): Future[JsDump[T]] = {
+  implicit def codec[T: JsonValueCodec]: JsonValueCodec[JsDump[T]] =
+    JsonCodecMaker.make[JsDump[T]](CodecMakerConfig())
+
+  def fromIterator[T: JsonValueCodec](i: Iterator[T], name: String)(
+      implicit ts: TaskSystemComponents): Future[JsDump[T]] = {
     implicit val ec = ts.executionContext
-    val pickler = implicitly[upickle.default.Writer[T]]
     val tmp = openZippedFileWriter { writer =>
       i.foreach { elem =>
-        writer.write(upickle.default.write(elem)(pickler) + "\n")
+        writer.write(writeToString(elem) + "\n")
       }
     }._1
     SharedFile(tmp, name).map(x => JsDump(x))
   }
-  def sink[T: upickle.default.Reader: upickle.default.Writer](name: String)(
+  def sink[T: JsonValueCodec](name: String)(
       implicit ts: TaskSystemComponents): Sink[T, Future[JsDump[T]]] = {
     implicit val ec = ts.executionContext
     val tmp = TempFile.createTempFile("jdump" + name)
-    val pickler = implicitly[upickle.default.Writer[T]]
 
     Flow[T]
-      .map(x => ByteString(upickle.default.write(x)(pickler) + "\n"))
+      .map(x => ByteString(writeToString(x) + "\n"))
       .via(tasks.util.AkkaStreamComponents
         .strictBatchWeighted[ByteString](512 * 1024, _.size)(_ ++ _))
       .via(Compression.gzip)

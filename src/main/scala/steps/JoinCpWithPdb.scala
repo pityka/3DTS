@@ -3,20 +3,32 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import tasks.util.TempFile
 import fileutils._
 import stringsplit._
 
 import index2._
-import SharedTypes._
 
 case class JoinCPWithPdbInput(
     gencodeUniprot: JsDump[sd.JoinGencodeToUniprot.MapResult],
     pdbUniprot: List[JsDump[JoinUniprotWithPdb.T1]])
 
+object JoinCPWithPdbInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[JoinCPWithPdbInput] =
+    JsonCodecMaker.make[JoinCPWithPdbInput](CodecMakerConfig())
+}
+
 case class CpPdbIndex(fs: Set[SharedFile])
-    extends ResultWithSharedFiles(fs.toSeq: _*)
+
+object CpPdbIndex {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[CpPdbIndex] =
+    JsonCodecMaker.make[CpPdbIndex](CodecMakerConfig())
+}
 
 object JoinCPWithPdb {
 
@@ -38,6 +50,7 @@ object JoinCPWithPdb {
   val indexCpPdb =
     AsyncTask[JsDump[PdbUniGencodeRow], CpPdbIndex]("indexcppdb", 2) {
       pdbunigencode => implicit ctx =>
+        import com.github.plokhotnyuk.jsoniter_scala.core._
         log.info("start indexing " + pdbunigencode)
         implicit val mat = ctx.components.actorMaterializer
         val tmpFolder = TempFile.createTempFile("index")
@@ -57,7 +70,7 @@ object JoinCPWithPdb {
             val pdbres = pdbunigencode.pdbResidueNumberUnresolved.s
 
             val cp = chrpos(0) + "_" + chrpos(2)
-            val js = upickle.default.write(pdbunigencode)
+            val js = writeToString(pdbunigencode)
             writer.add(Doc(js),
                        List(enst,
                             uniid,
@@ -66,7 +79,7 @@ object JoinCPWithPdb {
                             pdbId + "_" + pdbchain,
                             pdbId + "_" + pdbchain + "_" + pdbres))
           }
-          .map { done =>
+          .map { _ =>
             writer.makeIndex(1000000, 50)
           }
           .flatMap { _ =>
@@ -76,7 +89,7 @@ object JoinCPWithPdb {
               .map(x => CpPdbIndex(x.toSet))
           }
     }
-
+  import com.github.plokhotnyuk.jsoniter_scala.core._
   val task =
     AsyncTask[JoinCPWithPdbInput, JsDump[PdbUniGencodeRow]]("cppdb-2", 1) {
 
@@ -103,7 +116,7 @@ object JoinCPWithPdb {
                       log.debug(s"Add $line to index")
                       val uni: UniId = line.uniId
                       val uninum: Option[UniNumber] = line.uniNumber
-                      (uni, uninum) -> upickle.default.write(line)
+                      (uni, uninum) -> writeToString(line)
                     }
                     .filter(_._1._2.isDefined)
                     .map(x => (x._1._1.s + "_" + x._1._2.get.i) -> x._2)
@@ -135,8 +148,8 @@ object JoinCPWithPdb {
                     iter
                       .map {
                         case unipdbline =>
-                          val uni: UniId = unipdbline._1
-                          val uninum: UniNumber = unipdbline._7
+                          val uni: UniId = unipdbline.uniId
+                          val uninum: UniNumber = unipdbline.uniNumber
                           val genomeLines =
                             uniprot2Genome.get(uni.s + "_" + uninum.i)
                           log.debug(s"$unipdbline JOIN $genomeLines")
@@ -146,20 +159,20 @@ object JoinCPWithPdb {
                       .map(x => (x._1.get -> x._2))
                       .flatMap {
                         case (genomeLines,
-                              (uniid,
-                               pdbid,
-                               pdbch,
-                               pdbres,
-                               _,
-                               pdbaa,
-                               unin,
-                               uniaa,
-                               _)) =>
+                              JoinUniprotWithPdb.T1(uniid,
+                                                    pdbid,
+                                                    pdbch,
+                                                    pdbres,
+                                                    _,
+                                                    pdbaa,
+                                                    unin,
+                                                    uniaa,
+                                                    _)) =>
                           genomeLines.iterator.map {
                             case genomeLine =>
                               val t1: MappedTranscriptToUniprot =
-                                upickle.default
-                                  .read[MappedTranscriptToUniprot](genomeLine)
+                                readFromString[MappedTranscriptToUniprot](
+                                  genomeLine)
                               PdbUniGencodeRow(
                                 pdbid,
                                 pdbch,

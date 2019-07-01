@@ -7,11 +7,14 @@ import org.saddle.linalg._
 import scala.util.Try
 import com.typesafe.scalalogging.StrictLogging
 
+import com.github.plokhotnyuk.jsoniter_scala.macros._
+import com.github.plokhotnyuk.jsoniter_scala.core._
+
 case class PdbAsssemblyId(i: String) extends AnyVal
 
 case class FakePdbChain(s: String) extends AnyVal
 
-case class Atom(coord: Vec[Double],
+case class Atom(coord: Array[Double],
                 id: Int,
                 name: String,
                 symbol: String,
@@ -21,7 +24,7 @@ case class Atom(coord: Vec[Double],
     var s = 0d
     var i = 0
     while (i < point.length) {
-      val d = (point.raw(i) - coord.raw(i))
+      val d = (point.raw(i) - coord(i))
       s += d * d
       i += 1
     }
@@ -33,19 +36,8 @@ case class Atom(coord: Vec[Double],
 }
 
 object Atom {
-  implicit val rw = upickle.default
-    .ReadWriter[Atom](
-      atom =>
-        upickle.default.writeJs(
-          (atom.coord.raw(0),
-           atom.coord.raw(1),
-           atom.coord.raw(2),
-           atom.id,
-           atom.name,
-           atom.symbol,
-           atom.residue3,
-           atom.tempFactor)), { case _ => ??? }
-    )
+  implicit val codec: JsonValueCodec[Atom] =
+    JsonCodecMaker.make[Atom](CodecMakerConfig())
 }
 
 /* Not augmented */
@@ -80,7 +72,8 @@ case class Structure(atoms: Vector[AtomWithLabels],
                      sheet: Seq[PdbSheet] = Nil)
 
 object Structure {
-  implicit val rw = upickle.default.macroRW[Structure]
+  implicit val codec: JsonValueCodec[Structure] =
+    JsonCodecMaker.make[Structure](CodecMakerConfig())
 }
 
 case class PdbHelix(serial: String,
@@ -97,7 +90,8 @@ case class PdbHelix(serial: String,
                     comment: String,
                     helixLength: Option[Int])
 object PdbHelix {
-  implicit val rw = upickle.default.macroRW[PdbHelix]
+  implicit val codec: JsonValueCodec[PdbHelix] =
+    JsonCodecMaker.make[PdbHelix](CodecMakerConfig())
 }
 
 case class PdbSheet(strand: Int,
@@ -124,7 +118,8 @@ case class PdbSheet(strand: Int,
                     code2: Option[String])
 
 object PdbSheet {
-  implicit val rw = upickle.default.macroRW[PdbSheet]
+  implicit val codec: JsonValueCodec[PdbSheet] =
+    JsonCodecMaker.make[PdbSheet](CodecMakerConfig())
 }
 
 case class CIFContents(
@@ -233,9 +228,9 @@ case class CIFContents(
             rightJustify(residue.toString, 4),
             maybeInsertionCode.getOrElse(" "),
             "   ",
-            rightJustify(coords.raw(0).toString.take(7), 8),
-            rightJustify(coords.raw(1).toString.take(7), 8),
-            rightJustify(coords.raw(2).toString.take(7), 8),
+            rightJustify(coords(0).toString.take(7), 8),
+            rightJustify(coords(1).toString.take(7), 8),
+            rightJustify(coords(2).toString.take(7), 8),
             rightJustify("1.0", 6),
             rightJustify(temp, 6),
             "      ",
@@ -307,7 +302,8 @@ case class CIFContents(
 
 object CIFContents extends StrictLogging {
 
-  implicit val rw = upickle.default.macroRW[CIFContents]
+  implicit val codec: JsonValueCodec[CIFContents] =
+    JsonCodecMaker.make[CIFContents](CodecMakerConfig())
 
   /** Extract necessary information from the protein structure file
     *

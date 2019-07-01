@@ -5,6 +5,7 @@ import fileutils.{openFileWriter, openSource}
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.utils.IOUtils
 import java.io._
+import tasks.jsonitersupport._
 
 case class Variant(locus: String,
                    variantClass: String,
@@ -42,6 +43,15 @@ case class LocusVariationCountAndNumNs(locus: ChrPos,
                                        alleleCountNonSyn: Int,
                                        sampleSize: Int,
                                        numS: Int)
+
+object LocusVariationCountAndNumNs {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[LocusVariationCountAndNumNs] =
+    JsonCodecMaker.make[LocusVariationCountAndNumNs](CodecMakerConfig())
+
+  implicit val serde = tasks.makeSerDe[LocusVariationCountAndNumNs]
+}
 
 sealed trait Strand
 case object Forward extends Strand

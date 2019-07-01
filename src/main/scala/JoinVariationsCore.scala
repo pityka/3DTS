@@ -1,6 +1,9 @@
 package sd
 
 import intervaltree._
+import com.github.plokhotnyuk.jsoniter_scala.core._
+import com.github.plokhotnyuk.jsoniter_scala.macros._
+import tasks.jsonitersupport._
 
 case class GenomeCoverage(chromosome: String,
                           position: Int,
@@ -12,6 +15,10 @@ object GenomeCoverage {
   implicit val sk = new flatjoin.StringKey[GenomeCoverage] {
     def key(g: GenomeCoverage) = g.cp
   }
+  implicit val codec: JsonValueCodec[GenomeCoverage] =
+    JsonCodecMaker.make[GenomeCoverage](CodecMakerConfig())
+
+  implicit val serde = tasks.makeSerDe[GenomeCoverage]
 }
 
 object JoinVariationsCore {
@@ -70,13 +77,18 @@ object JoinVariationsCore {
     implicit val sk = new flatjoin.StringKey[GnomadLine] {
       def key(g: GnomadLine) = g.cp
     }
+    implicit val codec: JsonValueCodec[GnomadLine] =
+      JsonCodecMaker.make[GnomadLine](CodecMakerConfig())
+
+    implicit val serde = tasks.makeSerDe[GnomadLine]
   }
 
   object Bean {
-    import upickle.default.{ReadWriter, macroRW}
+
     implicit val ordering: Ordering[Bean] = Ordering.by(_.chrpos)
-    implicit val readWriter: ReadWriter[Bean] =
-      macroRW[MappedCP] merge macroRW[Data] merge macroRW[Coverage]
+
+    implicit val codec: JsonValueCodec[Bean] =
+      JsonCodecMaker.make[Bean](CodecMakerConfig())
 
     case class Data(gl: GnomadLine, source: String, chrpos: String) extends Bean
 
@@ -91,7 +103,7 @@ object JoinVariationsCore {
   def readGnomad(s: scala.io.Source): Iterator[GnomadLine] =
     s.getLines
       .map { line =>
-        val t = scala.util.Try(upickle.default.read[GnomadLine](line))
+        val t = scala.util.Try(readFromString[GnomadLine](line))
         t.toOption
       }
       .filter(_.isDefined)

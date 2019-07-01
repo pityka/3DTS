@@ -3,7 +3,7 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import tasks.util.TempFile
 import fileutils._
 import index2._
@@ -28,7 +28,13 @@ object UniprotKbToJs {
 }
 
 case class UniprotIndexedByGene(fs: Set[SharedFile])
-    extends ResultWithSharedFiles(fs.toSeq: _*)
+
+object UniprotIndexedByGene {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[UniprotIndexedByGene] =
+    JsonCodecMaker.make[UniprotIndexedByGene](CodecMakerConfig())
+}
 
 object IndexUniByGeneName {
 
@@ -51,10 +57,11 @@ object IndexUniByGeneName {
 
         uniprot.source
           .runForeach { uniprotelem =>
-            val js = upickle.default.write(uniprotelem)
+            import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
+            val js = writeToString(uniprotelem)
             writer.add(Doc(js), uniprotelem.geneNames.map(_.value))
           }
-          .map { done =>
+          .map { _ =>
             writer.makeIndex(100000, 50)
           }
           .flatMap { _ =>

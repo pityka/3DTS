@@ -3,8 +3,8 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.collection._
-import tasks.upicklesupport._
+import tasks.ecoll._
+import tasks.jsonitersupport._
 import tasks.util.TempFile
 import fileutils._
 import index2._
@@ -14,11 +14,24 @@ case class Depletion2PdbInput(
     contextFile: JsDump[StructuralContext.T1]
 )
 
+object Depletion2PdbInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[Depletion2PdbInput] =
+    JsonCodecMaker.make[Depletion2PdbInput](CodecMakerConfig())
+}
+
 case class ScoresIndexedByPdbId(fs: Set[SharedFile])
-    extends ResultWithSharedFiles(fs.toSeq: _*)
+
+object ScoresIndexedByPdbId {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[ScoresIndexedByPdbId] =
+    JsonCodecMaker.make[ScoresIndexedByPdbId](CodecMakerConfig())
+}
 
 object DepletionToPdb {
-
+  import com.github.plokhotnyuk.jsoniter_scala.core._
   val ScoresByPdbIdTable = Table(name = "SCORESbyPDBID",
                                  uniqueDocuments = true,
                                  compressedDocuments = true)
@@ -39,10 +52,10 @@ object DepletionToPdb {
       scoresOnPdb.source
         .runForeach { scoreByResidue =>
           val pdbId = scoreByResidue.pdbId
-          val js = upickle.default.write(scoreByResidue)
+          val js = writeToString(scoreByResidue)
           writer.add(Doc(js), List(pdbId))
         }
-        .map { done =>
+        .map { _ =>
           writer.makeIndex(1000000, 50)
         }
         .flatMap { _ =>

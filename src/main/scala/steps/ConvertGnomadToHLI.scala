@@ -2,14 +2,16 @@ package sd.steps
 
 import sd._
 import tasks._
-import tasks.collection._
-import tasks.upicklesupport._
+import tasks.ecoll._
+import tasks.jsonitersupport._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import JoinVariationsCore.{GnomadLine, GnomadGenders, GnomadPop}
 import stringsplit._
 
 case class GnomadData(sf: SharedFile)
+
+case class GnomadDataList(data: Seq[GnomadData])
 
 object ConvertGnomadToHLI {
 
@@ -87,8 +89,8 @@ object ConvertGnomadToHLI {
     }
 
   val gnomadToEColl =
-    AsyncTask[List[GnomadData], EColl[GnomadLine]]("convertgnomad2hli-ecoll", 1) {
-      case files =>
+    AsyncTask[GnomadDataList, EColl[GnomadLine]]("convertgnomad2hli-ecoll", 1) {
+      case GnomadDataList(files) =>
         implicit ctx =>
           val convertpar = math.max(1, resourceAllocated.cpu / 2)
           val ecollPar = math.max(1, resourceAllocated.cpu - convertpar)
@@ -96,11 +98,11 @@ object ConvertGnomadToHLI {
           log.info(
             "Start converting " + files + " " + convertpar + " " + ecollPar)
 
-          val converterFlow: Flow[String, GnomadLine, _] =
+          val converterFlow: Flow[String, GnomadLine, akka.NotUsed] =
             tasks.util.AkkaStreamComponents.parallelize(convertpar, 1000)(
               vcf2json)
 
-          val source = Source(files.map(_.sf)).flatMapConcat { sf =>
+          val source = Source(files.toList.map(_.sf)).flatMapConcat { sf =>
             sf.source
               .via(Compression.gunzip())
               .via(tasks.util.AkkaStreamComponents
@@ -116,4 +118,17 @@ object ConvertGnomadToHLI {
 
     }
 
+}
+
+object GnomadData {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[GnomadData] =
+    JsonCodecMaker.make[GnomadData](CodecMakerConfig())
+}
+object GnomadDataList {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[GnomadDataList] =
+    JsonCodecMaker.make[GnomadDataList](CodecMakerConfig())
 }

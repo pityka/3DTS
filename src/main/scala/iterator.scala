@@ -1,6 +1,6 @@
 package sd
 
-import upickle.default.{Writer, Reader}
+import com.github.plokhotnyuk.jsoniter_scala.core._
 import java.io.{Closeable, File}
 
 package object iterator {
@@ -167,13 +167,12 @@ package object iterator {
 
   def sortAsJson[T](iterator: Iterator[T], batch: Int)(
       implicit o: Ordering[T],
-      pickler: Writer[T],
-      unpickler: Reader[T]): (Iterator[T], Closeable) = {
+      pickler: JsonValueCodec[T]): (Iterator[T], Closeable) = {
 
     def dump(it: Iterator[T]): File = {
       fileutils.openFileWriter { writer =>
         it.foreach { t =>
-          writer.write(upickle.default.write(t))
+          writer.write(writeToString(t))
           writer.write("\n")
         }
       }._1
@@ -199,8 +198,7 @@ package object iterator {
         case (file) =>
           val source = fileutils.createSource(file)
           val it: Iterator[T] = source.getLines map (line =>
-            upickle.default
-              .read[T](line))
+            readFromString[T](line))
           (it, source, file)
       }
 

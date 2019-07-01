@@ -23,7 +23,7 @@ object StructureContext extends StrictLogging {
         val dimensions = 3
 
         def compareProjection(d: Int)(x: T1, y: T1) =
-          x.atom.coord.raw(d).compareTo(y.atom.coord.raw(d))
+          x.atom.coord(d).compareTo(y.atom.coord(d))
       }
 
     def liftIntoFakeT1(v: Vec[Double]) =
@@ -55,12 +55,12 @@ object StructureContext extends StrictLogging {
           val expandedAtoms2: Vector[T1] =
             featureAtoms
               .flatMap { fa =>
-                val bbXTop = fa.coord.raw(0) + radius
-                val bbXBot = fa.coord.raw(0) - radius
-                val bbYTop = fa.coord.raw(1) + radius
-                val bbYBot = fa.coord.raw(1) - radius
-                val bbZTop = fa.coord.raw(2) + radius
-                val bbZBot = fa.coord.raw(2) - radius
+                val bbXTop = fa.coord(0) + radius
+                val bbXBot = fa.coord(0) - radius
+                val bbYTop = fa.coord(1) + radius
+                val bbYBot = fa.coord(1) - radius
+                val bbZTop = fa.coord(2) + radius
+                val bbZBot = fa.coord(2) - radius
                 val queryRegion = Region
                   .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
                   .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
@@ -107,7 +107,7 @@ object StructureContext extends StrictLogging {
         val dimensions = 3
 
         def compareProjection(d: Int)(x: T1, y: T1) =
-          x.atom.coord.raw(d).compareTo(y.atom.coord.raw(d))
+          x.atom.coord(d).compareTo(y.atom.coord(d))
       }
 
     def liftIntoFakeT1(v: Vec[Double]) =
@@ -134,12 +134,12 @@ object StructureContext extends StrictLogging {
             featureAtoms
               .flatMap { atomsOfFeatureResidue =>
                 atomsOfFeatureResidue.flatMap { fa =>
-                  val bbXTop = fa.coord.raw(0) + radius
-                  val bbXBot = fa.coord.raw(0) - radius
-                  val bbYTop = fa.coord.raw(1) + radius
-                  val bbYBot = fa.coord.raw(1) - radius
-                  val bbZTop = fa.coord.raw(2) + radius
-                  val bbZBot = fa.coord.raw(2) - radius
+                  val bbXTop = fa.coord(0) + radius
+                  val bbXBot = fa.coord(0) - radius
+                  val bbYTop = fa.coord(1) + radius
+                  val bbYBot = fa.coord(1) - radius
+                  val bbZTop = fa.coord(2) + radius
+                  val bbZBot = fa.coord(2) - radius
                   val queryRegion = Region
                     .from(liftIntoFakeT1(Vec(bbXBot, 0d, 0d)), 0)
                     .to(liftIntoFakeT1(Vec(bbXTop, 0d, 0d)), 0)
@@ -180,12 +180,13 @@ object StructureContext extends StrictLogging {
   }
 
   def atomAlignsWithSideChain(atom: Atom, residue: List[Atom]): Boolean = {
+    import org.saddle._
     val alphaCarbon = residue.find(_.name == "CA").map(_.coord)
     val betaCarbon = residue.find(_.name == "CB").map(_.coord)
     if (alphaCarbon.isDefined && betaCarbon.isDefined) {
-      val normal = alphaCarbon.get - betaCarbon.get
-      val point = alphaCarbon.get
-      val atomCoordinate = atom.coord
+      val normal = Vec(alphaCarbon.get: _*) - Vec(betaCarbon.get.toSeq: _*)
+      val point = Vec(alphaCarbon.get: _*)
+      val atomCoordinate = Vec(atom.coord: _*)
       val atomVector = point - atomCoordinate
       val dot = atomVector dot normal
       dot > 0

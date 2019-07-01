@@ -2,24 +2,7 @@ package sd
 
 import com.typesafe.scalalogging.StrictLogging
 
-case class PdbMethod(s: String) extends AnyVal
-object PdbMethod {
-  val XRay = PdbMethod("x-ray")
-  val NMR = PdbMethod("nmr")
-  implicit val pickler = AnyValPicklers(PdbMethod.unapply, PdbMethod.apply)
-}
-
 case class GeneName(value: String)
-
-case class UniProtEntry(
-    accessions: Seq[UniId],
-    seqLength: Option[Int],
-    pdbs: Seq[
-      (PdbId, PdbMethod, Option[Double], Seq[(PdbChain, List[(Int, Int)])])],
-    sequence: UniSeq,
-    ensts: Seq[EnsT],
-    features: List[(String, UniNumber, UniNumber)],
-    geneNames: List[GeneName])
 
 object JoinUniprotWithPdb extends StrictLogging {
 
@@ -117,7 +100,7 @@ object JoinUniprotWithPdb extends StrictLogging {
       .groupBy(_._1)
       .map(x => x._1 -> x._2.map(_._2))
 
-  /* Downloads from https://files.rcsb.org/download/{PDBID}.cif.gz */
+  // Downloads from https://files.rcsb.org/download/{PDBID}.cif.gz
   def fetchCif(id: PdbId): String = {
     def decompress(compressed: Array[Byte]) =
       scala.io.Source

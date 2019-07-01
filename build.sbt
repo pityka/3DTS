@@ -43,6 +43,8 @@ val commonSettings = Seq(
   )
 )
 
+val tasksVersion = "0.0.61-SNAPSHOT"
+
 libraryDependencies ++= Seq(
   "io.github.pityka" %% "fileutils" % "1.2.0",
   "io.github.pityka" %% "stringsplit" % "1.1.0",
@@ -51,9 +53,10 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "intervaltree" % "1.0.0",
   "io.github.pityka" %% "sampling" % "0.0.1",
   "io.github.pityka" %% "saddle-core-fork" % "1.3.4-fork1",
-  "io.github.pityka" %% "tasks-core" % "0.0.18",
-  "io.github.pityka" %% "tasks-upickle" % "0.0.18",
-  "io.github.pityka" %% "tasks-collection" % "0.0.18",
+  "io.github.pityka" %% "tasks-core" % tasksVersion,
+  "io.github.pityka" %% "tasks-jsoniter" % tasksVersion,
+  "io.github.pityka" %% "tasks-ecoll" % tasksVersion,
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.3" % Provided,
   "indexlib" %% "indexlib" % "1.3.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.apache.commons" % "commons-compress" % "1.16.1",
@@ -65,7 +68,8 @@ libraryDependencies ++= Seq(
   "com.github.tototoshi" %% "scala-csv" % "1.3.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-  "com.typesafe.akka" %% "akka-slf4j" % "2.5.11"
+  "com.typesafe.akka" %% "akka-slf4j" % "2.5.11",
+  "com.lihaoyi" %% "upickle" % "0.4.4"
 ).map(
   x =>
     x.exclude("log4j", "log4j")

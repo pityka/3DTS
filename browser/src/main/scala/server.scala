@@ -1,12 +1,12 @@
 package sd.ui
 
-import sd._
 import org.scalajs.dom.ext.Ajax
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.concurrent.Future
-import SharedTypes._
+import sd.shared._
 
 object Server {
+  type ServerReturn = (Seq[PdbId], Seq[DepletionScoresByResidue])
   def getCdfs: Future[DepletionScoreCDFs] =
     Ajax.get("/cdfs").map(_.responseText).map { r =>
       println(r.take(100))

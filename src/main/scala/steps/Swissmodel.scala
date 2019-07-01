@@ -3,7 +3,7 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import stringsplit._
 import fileutils._
 import akka.stream.scaladsl._
@@ -12,8 +12,21 @@ import scala.util._
 case class SwissModelMetaDataInput(swissModelMetadata: SharedFile,
                                    uniprot: SharedFile)
 
+object SwissModelMetaDataInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[SwissModelMetaDataInput] =
+    JsonCodecMaker.make[SwissModelMetaDataInput](CodecMakerConfig())
+}
+
 case class SwissModelPdbFiles(pdbFiles: Map[PdbId, SharedFile])
-    extends ResultWithSharedFiles(pdbFiles.map(_._2).toList: _*)
+
+object SwissModelPdbFiles {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[SwissModelPdbFiles] =
+    JsonCodecMaker.make[SwissModelPdbFiles](CodecMakerConfig())
+}
 
 object Swissmodel {
 
@@ -79,16 +92,18 @@ object Swissmodel {
 
               val features = dsspFeatures.map {
                 case (chain, features) =>
-                  (UniId(swissmodelPdbId.s.split1('_').head),
-                   swissmodelPdbId,
-                   PdbChain(chain),
-                   features.map {
-                     case (start, end, feature) =>
-                       (UniprotFeatureName(feature),
-                        ((start + 1) to end)
-                          .map(i => PdbResidueNumber(i, None))
-                          .toSet)
-                   }.toSet)
+                  JoinUniprotWithPdb.T2(
+                    UniId(swissmodelPdbId.s.split1('_').head),
+                    swissmodelPdbId,
+                    PdbChain(chain),
+                    features.map {
+                      case (start, end, feature) =>
+                        (UniprotFeatureName(feature),
+                         ((start + 1) to end)
+                           .map(i => PdbResidueNumber(i, None))
+                           .toSet)
+                    }.toSet
+                  )
 
               }
 
@@ -122,15 +137,16 @@ object Swissmodel {
                     atomlist
                       .map {
                         case AtomWithLabels(_, pdbChain, pdbResidueNumber, _) =>
-                          (uniId,
-                           swissModelPdbId,
-                           pdbChain,
-                           pdbResidueNumber.toUnresolved,
-                           PdbNumber(-1),
-                           PdbSeq(""),
-                           UniNumber(pdbResidueNumber.num - 1),
-                           UniSeq("?"),
-                           true)
+                          JoinUniprotWithPdb.T1(
+                            uniId,
+                            swissModelPdbId,
+                            pdbChain,
+                            pdbResidueNumber.toUnresolved,
+                            PdbNumber(-1),
+                            PdbSeq(""),
+                            UniNumber(pdbResidueNumber.num - 1),
+                            UniSeq("?"),
+                            true)
                       }
                       .distinct
                       .map { x =>

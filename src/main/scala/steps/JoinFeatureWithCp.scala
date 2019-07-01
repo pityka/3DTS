@@ -2,11 +2,17 @@ package sd.steps
 
 import sd._
 import tasks._
-import tasks.collection._
-import tasks.upicklesupport._
+import tasks.ecoll._
+import tasks.jsonitersupport._
 
 case class Feature2CPInput(featureContext: JsDump[StructuralContext.T1],
-                           cppdb: JsDump[SharedTypes.PdbUniGencodeRow])
+                           cppdb: JsDump[PdbUniGencodeRow])
+object Feature2CPInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[Feature2CPInput] =
+    JsonCodecMaker.make[Feature2CPInput](CodecMakerConfig())
+}
 
 object JoinFeatureWithCp {
 
@@ -18,43 +24,60 @@ object JoinFeatureWithCp {
                                  mappedPdbResidueCount: MappedPdbResidueCount,
                                  totalPdbResidueCount: TotalPdbResidueCount)
 
+  object FeatureJoinedWithCp {
+    import com.github.plokhotnyuk.jsoniter_scala.core._
+    import com.github.plokhotnyuk.jsoniter_scala.macros._
+    implicit val codec: JsonValueCodec[FeatureJoinedWithCp] =
+      JsonCodecMaker.make[FeatureJoinedWithCp](CodecMakerConfig())
+  }
+
   val mappedMappedFeaturesToSupplementary =
     AsyncTask[EColl[MappedFeatures], EColl[FeatureJoinedWithCp]](
       "mappedcps-for-suppl-1",
       1) { ecoll => implicit ctx =>
       EColl.fromSource(
         ecoll.source(resourceAllocated.cpu).map { tuple =>
-          FeatureJoinedWithCp(tuple._1,
-                              tuple._2,
-                              tuple._3,
-                              tuple._4,
-                              tuple._5,
-                              tuple._6,
-                              tuple._7)
+          FeatureJoinedWithCp(tuple.featureKey,
+                              tuple.chrPos,
+                              tuple.pdbChain,
+                              tuple.pdbResidueNumber,
+                              tuple.uniIds,
+                              tuple.mappedPdbResidueCount,
+                              tuple.totalPdbResidueCount)
         },
         "structuralFeatures.loci.js.gz"
       )
     }
 
-  type MappedFeatures =
-    (FeatureKey,
-     ChrPos,
-     PdbChain,
-     PdbResidueNumberUnresolved,
-     Seq[UniId],
-     MappedPdbResidueCount,
-     TotalPdbResidueCount)
+  case class MappedFeatures(featureKey: FeatureKey,
+                            chrPos: ChrPos,
+                            pdbChain: PdbChain,
+                            pdbResidueNumber: PdbResidueNumberUnresolved,
+                            uniIds: Seq[UniId],
+                            mappedPdbResidueCount: MappedPdbResidueCount,
+                            totalPdbResidueCount: TotalPdbResidueCount)
 
-  val joinCpWithLocus = EColl.innerJoinBy2[ChrPos, LocusVariationCountAndNumNs](
+  object MappedFeatures {
+    import com.github.plokhotnyuk.jsoniter_scala.core._
+    import com.github.plokhotnyuk.jsoniter_scala.macros._
+    implicit val codec: JsonValueCodec[MappedFeatures] =
+      JsonCodecMaker.make[MappedFeatures](CodecMakerConfig())
+    implicit val serde = tasks.makeSerDe[MappedFeatures]
+  }
+
+  val joinCpWithLocus = EColl.join2Inner[ChrPos, LocusVariationCountAndNumNs](
     "innerjoin-cp-locus-1",
-    1)(1024 * 1024 * 50, _.s, _.locus.s, Some(1))
+    1,
+    Some(1),
+    1024 * 1024 * 50)((_: ChrPos).s, (_: LocusVariationCountAndNumNs).locus.s)
 
-  val mappedCps = EColl.map[MappedFeatures, ChrPos]("mappedcps-1", 1)(_._2)
+  val mappedCps = EColl.map("mappedcps-1", 1)((_: MappedFeatures).chrPos)
 
-  val sortedCps = EColl.sortBy[ChrPos]("sortcps-1", 1)(1024 * 1024 * 50L, _.s)
+  val sortedCps =
+    EColl.sortBy[ChrPos]("sortcps-1", 1, 1024 * 1024 * 50L)((_: ChrPos).s)
 
   val uniqueCps =
-    EColl.uniqueSorted[ChrPos]("uniquecps-1", 1)(1024 * 1024 * 50L)
+    EColl.distinct[ChrPos]("uniquecps-1", 1)
 
   val toEColl =
     AsyncTask[JsDump[MappedFeatures], EColl[MappedFeatures]](
@@ -136,13 +159,13 @@ object JoinFeatureWithCp {
                                     pdbchain,
                                     pdbnumber,
                                     uniids) =>
-                                (featureKey,
-                                 chrpos,
-                                 pdbchain,
-                                 pdbnumber,
-                                 uniids,
-                                 MappedPdbResidueCount(success),
-                                 TotalPdbResidueCount(total))
+                                MappedFeatures(featureKey,
+                                               chrpos,
+                                               pdbchain,
+                                               pdbnumber,
+                                               uniids,
+                                               MappedPdbResidueCount(success),
+                                               TotalPdbResidueCount(total))
                             }
                           case None => Nil
                         }.iterator

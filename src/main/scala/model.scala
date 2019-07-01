@@ -124,11 +124,11 @@ object Model extends StrictLogging {
     rnd.setSeed(1L)
 
     val posteriors @ Posterior(postMean, _) =
-      bayes(`P(x|s)` = `P(x|s)`, prior = (x: Double) => 1.0)
+      bayes(`P(x|s)` = `P(x|s)`, prior = (_: Double) => 1.0)
 
     val postMeanIS = estimatePosteriorMeanWithImportanceSampling(
       likelihood = `P(x|s)`,
-      prior = (x: Double) => 1.0,
+      prior = (_: Double) => 1.0,
       sampleFromPrior = rnd.nextDouble,
       n = 20000).estimate
 

@@ -2,8 +2,8 @@ package sd.steps
 
 import sd._
 import tasks._
-import tasks.collection._
-import tasks.upicklesupport._
+import tasks.ecoll._
+import tasks.jsonitersupport._
 import fileutils._
 
 case class JoinVariationsInput(
@@ -14,31 +14,37 @@ case class JoinVariationsInput(
     gnomadGenomeCoverage: JsDump[GenomeCoverage],
     gencodeGtf: SharedFile)
 
+object JoinVariationsInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[JoinVariationsInput] =
+    JsonCodecMaker.make[JoinVariationsInput](CodecMakerConfig())
+}
+
 object JoinVariations {
 
-  val countMissense = EColl.foldLeft[LocusVariationCountAndNumNs, Long](
-    "count-missense-variation-1",
-    1)(0L, {
-    case (count, locus) =>
-      if (locus.alleleCountNonSyn > 0) count + 1
-      else count
-  })
+  val countMissense = EColl.foldConstant("count-missense-variation-1", 1, 0L)(
+    spore[(Long, LocusVariationCountAndNumNs), Long] {
+      case (count, locus) =>
+        if (locus.alleleCountNonSyn > 0) count + 1
+        else count
+    })
 
   val filterMissense =
-    EColl.filter[LocusVariationCountAndNumNs]("filter-missense-variation-1", 1)(
-      _.alleleCountNonSyn > 0)
+    EColl.filter("filter-missense-variation-1", 1)(
+      spore((_: LocusVariationCountAndNumNs).alleleCountNonSyn > 0))
 
   val filterSynonymous =
-    EColl.filter[LocusVariationCountAndNumNs]("filter-synonymous-variation-1",
-                                              1)(_.alleleCountSyn > 0)
+    EColl.filter("filter-synonymous-variation-1", 1)(
+      (_: LocusVariationCountAndNumNs).alleleCountSyn > 0)
 
-  val countSynonymous = EColl.foldLeft[LocusVariationCountAndNumNs, Long](
-    "count-synonymous-variation-1",
-    1)(0L, {
-    case (count, locus) =>
-      if (locus.alleleCountSyn > 0) count + 1
-      else count
-  })
+  val countSynonymous =
+    EColl.foldConstant("count-synonymous-variation-1", 1, 0L)(
+      spore[(Long, LocusVariationCountAndNumNs), Long] {
+        case (count, locus) =>
+          if (locus.alleleCountSyn > 0) count + 1
+          else count
+      })
 
   val toEColl =
     AsyncTask[JsDump[LocusVariationCountAndNumNs],
@@ -55,18 +61,15 @@ object JoinVariations {
     }
 
   val siteFrequencySpectrum =
-    EColl.foldLeft[LocusVariationCountAndNumNs, Map[Int, Int]](
-      "sitefrequencyspectrum",
-      1)(
-      Map.empty[Int, Int], {
+    EColl.foldConstant("sitefrequencyspectrum", 1, Map.empty[Int, Int])(
+      spore[(Map[Int, Int], LocusVariationCountAndNumNs), Map[Int, Int]] {
         case (acc, locus) =>
           val ac = locus.alleleCountSyn + locus.alleleCountNonSyn
           acc.get(ac) match {
             case None    => acc.updated(ac, 1)
             case Some(c) => acc.updated(ac, c + 1)
           }
-      }
-    )
+      })
 
   val task =
     AsyncTask[JoinVariationsInput, JsDump[LocusVariationCountAndNumNs]](

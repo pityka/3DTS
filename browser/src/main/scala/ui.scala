@@ -1,6 +1,5 @@
 package sd.ui
 
-import sd._
 import scala.scalajs._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js._
@@ -11,6 +10,7 @@ import framework.Framework._
 import org.scalajs.dom.raw._
 import rx._
 import scalatags.JsDom.all._
+import sd.shared._
 
 class ProteinUI(
     parentNode: Node
@@ -198,7 +198,7 @@ class ProteinUI(
     option(value := "s4")("Heptamer rate - chromosome-specific intergenic")
   ).render
 
-  scoreSelectorInput.onchange = (e: Event) => {
+  scoreSelectorInput.onchange = (_: Event) => {
     UIState.waitState() = true
     scoreSelectorInput.value match {
       case "s1" => UIState.selectedScore() = ScoreSelector.globalSynonymous
@@ -249,7 +249,7 @@ class ProteinUI(
     if (data.nonEmpty)
       span("Your query returned the following pdb or SwissModel structures: ")(
         data.flatMap(pdb =>
-          List(a(onclick := { (event: Event) =>
+          List(a(onclick := { (_: Event) =>
             makeQuery(pdb.s, data)
           })(pdb.s), span(", "))))
     else span()
@@ -349,7 +349,7 @@ class ProteinUI(
           btn
         ).render
         var shown = false
-        toggle.onclick = { (e: Event) =>
+        toggle.onclick = { (_: Event) =>
           if (shown == true) {
             shown = false
             formElem.style.display = "none"
@@ -361,7 +361,7 @@ class ProteinUI(
           }
         }
 
-        btn.onclick = { (e: Event) =>
+        btn.onclick = { (_: Event) =>
           Server.post(txt.value, feature.toString).onComplete {
             case _ =>
               shown = false
@@ -393,7 +393,7 @@ class ProteinUI(
           unis.map(_.s).mkString(",")
         ).render
         featureElem.onclick = {
-          (e: Event) =>
+          (_: Event) =>
             import js.JSConverters._
             val ch: PdbChain = feature.pdbChain
             val res: PdbResidueNumberUnresolved =
@@ -451,7 +451,7 @@ class ProteinUI(
   val resetClickButton =
     button(`class` := "uk-button uk-button-text uk-button-small")(
       "Reset selection of table").render
-  resetClickButton.onclick = { (e: Event) =>
+  resetClickButton.onclick = { (_: Event) =>
     UIState.clicked() = None
   }
 

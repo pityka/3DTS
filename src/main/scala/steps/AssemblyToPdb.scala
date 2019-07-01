@@ -3,25 +3,18 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import fileutils._
 import akka.stream.scaladsl._
 import scala.util._
 import akka.util.ByteString
 import scala.util.Try
 
-case class GeneSymbol(s: String) extends AnyVal
-object GeneSymbol {
-  implicit val pickler = AnyValPicklers(GeneSymbol.unapply, GeneSymbol.apply)
-}
-
 case class Assembly2PdbInput(uniprotKb: SharedFile, mappableIds: JsDump[UniId])
 
 case class FetchCifOutput(cifFiles: Map[PdbId, SharedFile])
-    extends ResultWithSharedFiles(cifFiles.map(_._2).toList: _*)
 
 case class Assembly2PdbOutput(pdbFiles: Map[PdbId, SharedFile])
-    extends ResultWithSharedFiles(pdbFiles.map(_._2).toList: _*)
 
 object AssemblyToPdb {
 
@@ -131,4 +124,24 @@ object AssemblyToPdb {
             }
 
     }
+}
+
+object Assembly2PdbInput {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[Assembly2PdbInput] =
+    JsonCodecMaker.make[Assembly2PdbInput](CodecMakerConfig())
+}
+
+object FetchCifOutput {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[FetchCifOutput] =
+    JsonCodecMaker.make[FetchCifOutput](CodecMakerConfig())
+}
+object Assembly2PdbOutput {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[Assembly2PdbOutput] =
+    JsonCodecMaker.make[Assembly2PdbOutput](CodecMakerConfig())
 }

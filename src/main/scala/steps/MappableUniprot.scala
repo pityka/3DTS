@@ -2,7 +2,7 @@ package sd.steps
 
 import sd._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 
 object MappableUniprot {
 

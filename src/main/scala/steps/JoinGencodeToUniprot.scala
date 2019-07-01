@@ -2,7 +2,7 @@ package sd.steps
 
 import sd._
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import fileutils._
 
 case class GencodeUniprotInput(
@@ -11,6 +11,12 @@ case class GencodeUniprotInput(
     transcriptFasta: SharedFile,
     uniprotKb: SharedFile
 )
+object GencodeUniprotInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[GencodeUniprotInput] =
+    JsonCodecMaker.make[GencodeUniprotInput](CodecMakerConfig())
+}
 
 object JoinGencodeToUniprot {
 

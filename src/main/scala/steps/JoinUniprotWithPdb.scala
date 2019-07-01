@@ -3,9 +3,9 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
-import tasks.collection._
+
 import tasks.queue.NodeLocalCache
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import fileutils._
 import akka.stream.scaladsl.Source
 
@@ -15,9 +15,22 @@ case class UniProtPdbInput(
     batchName: String,
     genomeUniJoinFile: JsDump[sd.JoinGencodeToUniprot.MapResult])
 
+object UniProtPdbInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[UniProtPdbInput] =
+    JsonCodecMaker.make[UniProtPdbInput](CodecMakerConfig())
+}
+
 case class UniProtPdbFullInput(
     uniprotKb: SharedFile,
     genomeUniJoinFile: JsDump[sd.JoinGencodeToUniprot.MapResult])
+object UniProtPdbFullInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[UniProtPdbFullInput] =
+    JsonCodecMaker.make[UniProtPdbFullInput](CodecMakerConfig())
+}
 
 case class UniProtPdbFullOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
@@ -25,29 +38,57 @@ case class UniProtPdbFullOutput(
                   JsDump[JoinUniprotWithPdb.T2],
                   JsDump[AlignmentDetails])],
     qc: SharedFile)
-    extends ResultWithSharedFiles(qc +: tables.map(_._2.sf): _*)
+
+object UniProtPdbFullOutput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[UniProtPdbFullOutput] =
+    JsonCodecMaker.make[UniProtPdbFullOutput](CodecMakerConfig())
+}
 
 case class UniProtPdbOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
                   JsDump[JoinUniprotWithPdb.T1],
                   JsDump[JoinUniprotWithPdb.T2],
                   JsDump[AlignmentDetails])])
-    extends ResultWithSharedFiles(tables.map(_._2.sf): _*)
+
+object UniProtPdbOutput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[UniProtPdbOutput] =
+    JsonCodecMaker.make[UniProtPdbOutput](CodecMakerConfig())
+}
 
 object JoinUniprotWithPdb {
 
-  type T1 = (UniId,
-             PdbId,
-             PdbChain,
-             PdbResidueNumberUnresolved,
-             PdbNumber,
-             PdbSeq,
-             UniNumber,
-             UniSeq,
-             Boolean)
+  case class T1(uniId: UniId,
+                pdbId: PdbId,
+                pdbChain: PdbChain,
+                pdbResidueNumber: PdbResidueNumberUnresolved,
+                pdbNumber: PdbNumber,
+                pdbSeq: PdbSeq,
+                uniNumber: UniNumber,
+                uniSeq: UniSeq,
+                perfectMatch: Boolean)
 
-  type T2 =
-    (UniId, PdbId, PdbChain, Set[(UniprotFeatureName, Set[PdbResidueNumber])])
+  object T1 {
+    import com.github.plokhotnyuk.jsoniter_scala.core._
+    import com.github.plokhotnyuk.jsoniter_scala.macros._
+    implicit val codec: JsonValueCodec[T1] =
+      JsonCodecMaker.make[T1](CodecMakerConfig())
+  }
+
+  case class T2(uniId: UniId,
+                pdbId: PdbId,
+                pdbChain: PdbChain,
+                features: Set[(UniprotFeatureName, Set[PdbResidueNumber])])
+
+  object T2 {
+    import com.github.plokhotnyuk.jsoniter_scala.core._
+    import com.github.plokhotnyuk.jsoniter_scala.macros._
+    implicit val codec: JsonValueCodec[T2] =
+      JsonCodecMaker.make[T2](CodecMakerConfig())
+  }
 
   def downloadUniprot2(uniprotkbSF: SharedFile, genomeUniJoin: JsDump[UniId])(
       implicit ts: tasks.queue.ComputationEnvironment) = {
@@ -105,7 +146,7 @@ object JoinUniprotWithPdb {
       }
     }
   }
-
+  import tasks.ecoll.EColl
   val extractMapppedFeatures =
     AsyncTask[UniProtPdbFullOutput, EColl[MappedUniprotFeature]](
       "uniprot2pdb-extract-features",
@@ -113,7 +154,7 @@ object JoinUniprotWithPdb {
       val source = Source(uniProtPdbFullOutput.tables.toList)
         .flatMapConcat(_._3.source)
         .mapConcat {
-          case (uni, pdb, chain, featureSet) =>
+          case T2(uni, pdb, chain, featureSet) =>
             featureSet.toList.map {
               case (featureName, residues) =>
                 MappedUniprotFeature(uni, pdb, chain, featureName, residues)
@@ -163,7 +204,7 @@ object JoinUniprotWithPdb {
                           uniprotkbSF,
                           seq.map(_._1).sortBy(_.s).toList,
                           "batch" + idx,
-                          genomeUniJoinFileSF))(CPUMemoryRequest(1, 1000))
+                          genomeUniJoinFileSF))(ResourceRequest(1, 1000))
                   }.toSeq
 
                 Future.sequence(futureBatches).flatMap {
@@ -249,15 +290,17 @@ object JoinUniprotWithPdb {
                         pdbResNum.num.toString + pdbResNum.insertionCode
                           .getOrElse("")
 
-                      (uniId,
-                       pdbId,
-                       pdbChain,
-                       PdbResidueNumberUnresolved(pdb2),
-                       PdbNumber(pdbSeqNum.i),
-                       PdbSeq(pdbSeq.s(pdbSeqNum.i).toString),
-                       UniNumber(uniNum.i),
-                       UniSeq(uniSeq.s(uniNum.i).toString),
-                       mat)
+                      T1(
+                        uniId,
+                        pdbId,
+                        pdbChain,
+                        PdbResidueNumberUnresolved(pdb2),
+                        PdbNumber(pdbSeqNum.i),
+                        PdbSeq(pdbSeq.s(pdbSeqNum.i).toString),
+                        UniNumber(uniNum.i),
+                        UniSeq(uniSeq.s(uniNum.i).toString),
+                        mat
+                      )
 
                   }
               }
@@ -266,7 +309,7 @@ object JoinUniprotWithPdb {
 
               val featureMappingIter = result.iterator.map {
                 case (uniId, pdbId, pdbChain, _, _, _, _, _, features) =>
-                  (uniId, pdbId, pdbChain, features.toSet)
+                  T2(uniId, pdbId, pdbChain, features.toSet)
               }
 
               val featureMapping =

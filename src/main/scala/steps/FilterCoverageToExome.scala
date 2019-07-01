@@ -1,13 +1,20 @@
 package sd.steps
 
 import sd._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import tasks._
 import tasks.queue.NodeLocalCache
 import fileutils._
 
 case class FilterCoverageInput(coverage: JsDump[GenomeCoverage],
                                gencodeGtf: SharedFile)
+
+object FilterCoverageInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[FilterCoverageInput] =
+    JsonCodecMaker.make[FilterCoverageInput](CodecMakerConfig())
+}
 
 object FilterCoverageToExome {
 

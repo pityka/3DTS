@@ -1,7 +1,7 @@
 package sd.steps
 
 import tasks._
-import tasks.upicklesupport._
+import tasks.jsonitersupport._
 import akka.stream.scaladsl._
 import fileutils._
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -9,6 +9,13 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.utils.IOUtils
 
 case class TarArchiveInput(files: Map[String, SharedFile], name: String)
+
+object TarArchiveInput {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[TarArchiveInput] =
+    JsonCodecMaker.make[TarArchiveInput](CodecMakerConfig())
+}
 
 object TarArchive {
   val archiveSharedFiles =

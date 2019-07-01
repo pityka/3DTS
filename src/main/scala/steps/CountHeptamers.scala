@@ -5,72 +5,82 @@ import java.io.File
 import scala.concurrent._
 import tasks._
 import tasks.queue.NodeLocalCache
-import tasks.upicklesupport._
-import tasks.collection._
+import tasks.jsonitersupport._
+import tasks.ecoll._
 import akka.stream.scaladsl.Source
 import JoinVariationsCore.{GnomadLine}
 
 case class HeptamerRates(sf: SharedFile)
 
+object HeptamerRates {
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  implicit val codec: JsonValueCodec[HeptamerRates] =
+    JsonCodecMaker.make[HeptamerRates](CodecMakerConfig())
+}
+
 object CountHeptamers {
 
   val filterToChromosome =
-    EColl.mapSourceWith[GenomeCoverage, Option[String], GenomeCoverage](
+    EColl.mapWith[GenomeCoverage, Option[String], GenomeCoverage](
       "filterCoverageToChromosome",
-      1)(mayChromosome => mayChromosome.getOrElse("")) {
-      case (coverageSource, mayChromosome) =>
-        implicit ctx =>
-          coverageSource
-            .filter { coverage =>
-              if (mayChromosome.isEmpty) true
-              else {
-                coverage.chromosome == mayChromosome.get
-              }
+      1,
+      false)(spore {
+      case (coverageSource, mayChromosome, _, _, _) =>
+        coverageSource
+          .filter { coverage =>
+            if (mayChromosome.isEmpty) true
+            else {
+              coverage.chromosome == mayChromosome.get
             }
+          }
 
-    }
+    })
 
   val autosomes = 1 to 22 map (i => "chr" + i) toSet
 
   val filterToAutosome =
     EColl
-      .filter[GenomeCoverage]("filterCoverageToAutosome", 1) {
-        case (coverage) =>
+      .filter("filterCoverageToAutosome", 1)(
+        (coverage: GenomeCoverage) =>
           sd.steps.CountHeptamers.autosomes.contains(coverage.chromosome)
-      }
+      )
 
   val filterTask =
-    EColl.mapSourceWith[GenomeCoverage, SharedFile, GenomeCoverage](
+    EColl.mapWith[GenomeCoverage, SharedFile, GenomeCoverage](
       "filterCoverageToInterGenic",
-      1)(_ => "") {
-      case (coverageSource, gencode) =>
-        implicit ctx =>
-          val futureSource = for {
-            gencodeL <- gencode.file
-            exons <- NodeLocalCache.getItem("intervaltrees" + gencode) {
-              fileutils.openSource(gencodeL) { gencodeSource =>
-                JoinVariationsCore.exomeIntervalTree(gencodeSource)
-              }
+      1,
+      false)(spore {
+      case (coverageSource, gencode, ctx, _, _) =>
+        implicit val ce = ctx
+        val futureSource = for {
+          gencodeL <- gencode.file
+          exons <- NodeLocalCache.getItem("intervaltrees" + gencode) {
+            fileutils.openSource(gencodeL) { gencodeSource =>
+              JoinVariationsCore.exomeIntervalTree(gencodeSource)
             }
-          } yield {
-            log.info("Interval trees done")
-
-            coverageSource
-              .filter(
-                coverage =>
-                  JoinVariationsCore
-                    .lookup(coverage.chromosome, coverage.position, exons)
-                    .isEmpty)
-
           }
+        } yield {
+          log.info("Interval trees done")
 
-          Source.fromFuture(futureSource).flatMapConcat(identity)
-    }
+          coverageSource
+            .filter(
+              coverage =>
+                JoinVariationsCore
+                  .lookup(coverage.chromosome, coverage.position, exons)
+                  .isEmpty)
+
+        }
+
+        Source.fromFuture(futureSource).flatMapConcat(identity)
+    })
 
   val joinGnomadGenomeCoverageWithGnomadDataTask =
-    EColl.outerJoinBy2[GenomeCoverage, GnomadLine](
+    EColl.join2Outer(
       "joinGnomadCoverageWithData",
-      1)(1024 * 1024 * 50, _.cp, _.cp, Some(1))
+      1,
+      Some(1),
+      1024 * 1024 * 50)((_: GenomeCoverage).cp, (_: GnomadLine).cp)
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
                         calls: EColl[GnomadLine],
@@ -83,34 +93,35 @@ object CountHeptamers {
     : Future[(HeptamerRates, HeptamerIndependentIntergenicRate)] = {
     for {
       intergenicCoverage <- filterTask((coverage, gencode))(
-        CPUMemoryRequest(12, 5000))
+        ResourceRequest(12, 5000))
       coverageOnChromosome <- if (chromosomeFilter.isEmpty)
-        filterToAutosome(intergenicCoverage)(CPUMemoryRequest(12, 5000))
+        filterToAutosome(intergenicCoverage)(ResourceRequest(12, 5000))
       else
         filterToChromosome((intergenicCoverage, chromosomeFilter))(
-          CPUMemoryRequest(12, 5000))
+          ResourceRequest(12, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (coverageOnChromosome, calls))(CPUMemoryRequest((1, 12), 5000))
-      mapped <- mapTask((joined, (fasta, fai)))(CPUMemoryRequest(1, 5000))
-      grouped <- groupByTask(mapped)(CPUMemoryRequest((1, 12), 5000))
-      summed <- sum(grouped)(CPUMemoryRequest(1, 5000))
-      concatenated <- concatenate(summed)(CPUMemoryRequest((1, 12), 30000))
-      globalRate <- heptamerIndependentNeutralRate(concatenated)(
-        CPUMemoryRequest(1, 30000))
-      _ <- heptamerCounts(summed)(CPUMemoryRequest(1, 5000))
-      rates <- heptamerNeutralRates(summed)(CPUMemoryRequest(1, 30000))
-      file <- heptamerFrequenciesToFile(rates)(CPUMemoryRequest(1, 5000))
+        (coverageOnChromosome, calls))(ResourceRequest((1, 12), 5000))
+      mapped <- mapTask((joined, (fasta, fai)))(ResourceRequest(1, 5000))
+      grouped <- groupByTask(mapped)(ResourceRequest((1, 12), 5000))
+      summed <- sum(grouped)(ResourceRequest(1, 5000))
+      concatenated <- concatenate((summed, (Vector.empty, 0)))(
+        ResourceRequest((1, 12), 30000)).flatMap(_.head)
+      globalRate <- heptamerIndependentNeutralRate(concatenated.get)(
+        ResourceRequest(1, 30000))
+      _ <- heptamerCounts(summed)(ResourceRequest(1, 5000))
+      rates <- heptamerNeutralRates(summed)(ResourceRequest(1, 30000))
+      file <- heptamerFrequenciesToFile(rates)(ResourceRequest(1, 5000))
     } yield (file, globalRate)
   }
 
   val groupByTask =
     EColl
-      .groupBy[HeptamerOccurences]("groupHeptamer", 1)(1024 * 1024 * 50,
-                                                       _.heptamer,
-                                                       Some(1))
+      .groupBy("groupHeptamer", 1)(() => Some(1),
+                                   (_: HeptamerOccurences).heptamer,
+      )
 
   val sum =
-    EColl.reduceSeq[HeptamerOccurences]("sumHeptamer", 1) { seq =>
+    EColl.map("sumHeptamer", 1) { (seq: Seq[HeptamerOccurences]) =>
       val a = seq.toVector.map(_.sampleSizes).flatten
       val b = seq.toVector.map(_.variantAlleleCounts).flatten
       val heptamerCount = seq.map(_.heptamerCount).sum
@@ -121,68 +132,63 @@ object CountHeptamers {
     }
 
   val heptamerCounts = EColl
-    .map[HeptamerOccurences, (String, Int)]("hepCounts", 1) {
+    .map("hepCounts", 1)(spore[HeptamerOccurences, (String, Int)] {
       case HeptamerOccurences(hep, _, _, c) => (hep, c)
-    }
-
-  case class HeptamerOccurences(heptamer: String,
-                                sampleSizes: Vector[Int],
-                                variantAlleleCounts: Vector[Int],
-                                heptamerCount: Int)
+    })
 
   val mapTask =
     EColl
-      .mapSourceWith[(Option[GenomeCoverage], Option[GnomadLine]),
-                     (SharedFile, SharedFile),
-                     HeptamerOccurences]("mapHeptamer", 2)(_ => "") {
-        case (variants, (fasta, fai)) =>
-          implicit ctx =>
-            implicit val mat = ctx.components.actorMaterializer
+      .mapWith[(Option[GenomeCoverage], Option[GnomadLine]),
+               (SharedFile, SharedFile),
+               HeptamerOccurences]("mapHeptamer", 2, false)(spore {
+        case (variants, (fasta, fai), ctx, _, _) =>
+          implicit val ce = ctx
+          implicit val mat = ctx.components.actorMaterializer
 
-            val countTable: Future[List[HeptamerOccurences]] =
-              for {
-                fasta <- fasta.file
-                fai <- fai.file
-                reference = HeptamerHelpers.openFasta(fasta, fai)
-                counts <- {
+          val countTable: Future[List[HeptamerOccurences]] =
+            for {
+              fasta <- fasta.file
+              fai <- fai.file
+              reference = HeptamerHelpers.openFasta(fasta, fai)
+              counts <- {
 
-                  val mutable =
-                    scala.collection.mutable
-                      .AnyRefMap[String, (List[Int], List[Int], Int)]()
+                val mutable =
+                  scala.collection.mutable
+                    .AnyRefMap[String, (List[Int], List[Int], Int)]()
 
-                  variants
-                    .collect {
-                      case (Some(cov), calls) => (cov, calls)
-                    }
-                    .runFold(mutable) {
-                      case (mutable,
-                            (coverage: GenomeCoverage, maybeVariantCall)) =>
-                        val passSNP = maybeVariantCall
-                          .filter { x =>
-                            x.ref.size == 1 && x.alt.size == 1 && x.filter == "PASS"
-                          }
-                        val sampleSize =
-                          passSNP
-                            .map(gl =>
-                              gl.genders.male.totalChromosomeCount + gl.genders.female.totalChromosomeCount)
-                            .map(_ / 2)
-                            .getOrElse(
-                              coverage.numberOfWellSequencedIndividuals)
-
-                        val variantAlleleCount = passSNP
-                          .map(gl =>
-                            gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount)
-                          .getOrElse(0)
-
-                        val mayHeptamer =
-                          HeptamerHelpers.heptamerAt(coverage.chromosome,
-                                                     coverage.position,
-                                                     reference)
-
-                        mayHeptamer.failed.foreach { e =>
-                          log.warning(s"Heptamer retrieval failed $coverage $e")
+                variants
+                  .collect {
+                    case (Some(cov), calls) => (cov, calls)
+                  }
+                  .runFold(mutable) {
+                    case (mutable,
+                          (coverage: GenomeCoverage, maybeVariantCall)) =>
+                      val passSNP = maybeVariantCall
+                        .filter { x =>
+                          x.ref.size == 1 && x.alt.size == 1 && x.filter == "PASS"
                         }
-                        mayHeptamer.foreach { heptamer =>
+                      val sampleSize =
+                        passSNP
+                          .map(gl =>
+                            gl.genders.male.totalChromosomeCount + gl.genders.female.totalChromosomeCount)
+                          .map(_ / 2)
+                          .getOrElse(coverage.numberOfWellSequencedIndividuals)
+
+                      val variantAlleleCount = passSNP
+                        .map(gl =>
+                          gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount)
+                        .getOrElse(0)
+
+                      val mayHeptamer =
+                        HeptamerHelpers.heptamerAt(coverage.chromosome,
+                                                   coverage.position,
+                                                   reference)
+
+                      mayHeptamer.failed.foreach { e =>
+                        log.warning(s"Heptamer retrieval failed $coverage $e")
+                      }
+                      mayHeptamer.foreach {
+                        heptamer =>
                           if (!heptamer.contains('N')) {
 
                             passSNP.foreach { passSNP =>
@@ -205,24 +211,24 @@ object CountHeptamers {
                                    heptamerCount + 1))
                             }
                           }
-                        }
-                        mutable
-                    }
-                    .map(_.toList)
-                }
-              } yield
-                counts.map {
-                  case (heptamer,
-                        (sampleSizes, variantAlleleCounts, heptamerCount)) =>
-                    HeptamerOccurences(heptamer,
-                                       sampleSizes.toVector,
-                                       variantAlleleCounts.toVector,
-                                       heptamerCount)
-                }
+                      }
+                      mutable
+                  }
+                  .map(_.toList)
+              }
+            } yield
+              counts.map {
+                case (heptamer,
+                      (sampleSizes, variantAlleleCounts, heptamerCount)) =>
+                  HeptamerOccurences(heptamer,
+                                     sampleSizes.toVector,
+                                     variantAlleleCounts.toVector,
+                                     heptamerCount)
+              }
 
-            Source.fromFuture(countTable).flatMapConcat(list => Source(list))
+          Source.fromFuture(countTable).flatMapConcat(list => Source(list))
 
-      }
+      })
   import akka.stream.scaladsl._
   import akka.util.ByteString
   def zippedTemporaryFileSink(
@@ -263,28 +269,22 @@ object CountHeptamers {
         }
     }
 
-  case class HeptamerNeutralRateAndVariableCount(heptamer: String,
-                                                 rate: Double,
-                                                 countOfVariableLoci: Int,
-                                                 samples: Vector[Int])
-
   val heptamerNeutralRates =
-    EColl.map[HeptamerOccurences, HeptamerNeutralRateAndVariableCount](
-      "heptamerNeutralRates",
-      1) {
-      case HeptamerOccurences(heptamer, samples, alleleCounts, _) =>
-        val countOfVariableLoci = alleleCounts.count(_ > 0)
-        val p =
-          Model.mlNeutral(samples.toArray, countOfVariableLoci)
-        HeptamerNeutralRateAndVariableCount(heptamer,
-                                            p,
-                                            countOfVariableLoci,
-                                            samples)
-    }
+    EColl.map("heptamerNeutralRates", 1)(
+      spore[HeptamerOccurences, HeptamerNeutralRateAndVariableCount] {
+        case HeptamerOccurences(heptamer, samples, alleleCounts, _) =>
+          val countOfVariableLoci = alleleCounts.count(_ > 0)
+          val p =
+            Model.mlNeutral(samples.toArray, countOfVariableLoci)
+          HeptamerNeutralRateAndVariableCount(heptamer,
+                                              p,
+                                              countOfVariableLoci,
+                                              samples)
+      })
 
   val concatenate =
-    EColl.foldLeft[HeptamerOccurences, (Vector[Int], Int)]("concatenate", 2)(
-      (Vector[Int](), 0), {
+    EColl.fold[HeptamerOccurences, (Vector[Int], Int)]("concatenate", 2)(
+      spore {
         case ((accumulatedListOfSamples, accumulatedAlleleCounts),
               HeptamerOccurences(hepta, samples, alleleCounts, _)) =>
           val accepted = Set('A', 'T', 'G', 'C')
@@ -300,7 +300,7 @@ object CountHeptamers {
     )
 
   val heptamerIndependentNeutralRate =
-    AsyncTask[(Seq[Int], Int), HeptamerIndependentIntergenicRate](
+    AsyncTask[(Vector[Int], Int), HeptamerIndependentIntergenicRate](
       "heptamerIndependentNeutralRate",
       1) {
       case (samples, alleleCounts) =>

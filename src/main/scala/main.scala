@@ -3,12 +3,13 @@ package sd
 import sd.steps._
 
 import tasks._
-import tasks.collection._
+import tasks.ecoll._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.config._
 import com.typesafe.scalalogging.StrictLogging
+import tasks.jsonitersupport._
 
 import scala.collection.JavaConverters._
 
@@ -24,10 +25,10 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val uniprotKbOriginal = importFile(config.getString("uniprotKb"))
 
     val uniprotKbAsJS =
-      UniprotKbToJs.task(uniprotKbOriginal)(CPUMemoryRequest(1, 5000))
+      UniprotKbToJs.task(uniprotKbOriginal)(ResourceRequest(1, 5000))
 
     val uniprotByGene = uniprotKbAsJS.flatMap { uniprotKbAsJS =>
-      IndexUniByGeneName.task(uniprotKbAsJS)(CPUMemoryRequest(1, 5000))
+      IndexUniByGeneName.task(uniprotKbAsJS)(ResourceRequest(1, 5000))
     }
 
     val gencodeGtf = importFile(config.getString("gencodeGTF"))
@@ -62,13 +63,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         config.getString("swissModelMetaData"))
       Swissmodel.filterMetaData(
         SwissModelMetaDataInput(swissModelMetaData, uniprotKbOriginal))(
-        CPUMemoryRequest(12, 5000))
+        ResourceRequest(12, 5000))
     }
 
     val swissModelUniPdbMap = swissModelStructures.flatMap {
       swissModelStructures =>
         Swissmodel.fakeUniprotPdbMappingFromSwissmodel(swissModelStructures)(
-          CPUMemoryRequest(12, 5000))
+          ResourceRequest(12, 5000))
     }
 
     val swissModelLinearFeatures = swissModelStructures.flatMap {
@@ -78,7 +79,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
             case (pdbId, pdbFile) =>
               Swissmodel
                 .defineSecondaryFeaturesWithDSSP((pdbId, pdbFile))(
-                  CPUMemoryRequest(1, 5000))
+                  ResourceRequest(1, 5000))
           })
           .map(_.toSet)
     }
@@ -86,36 +87,38 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val convertedGnomadGenome = {
       val gnomadGenome = importFile(config.getString("gnomadGenome"))
       ConvertGnomadToHLI.task(GnomadData(gnomadGenome))(
-        CPUMemoryRequest(1, 5000))
+        ResourceRequest(1, 5000))
     }
     val convertedGnomadExome = {
       val gnomadExome = importFile(config.getString("gnomadExome"))
-      ConvertGnomadToHLI.task(GnomadData(gnomadExome))(
-        CPUMemoryRequest(1, 5000))
+      ConvertGnomadToHLI.task(GnomadData(gnomadExome))(ResourceRequest(1, 5000))
     }
 
     val gnomadExomeCoverage = ConvertGenomeCoverage.task(
-      gnomadExomeCoverageFile -> 123136)(CPUMemoryRequest(1, 5000))
+      GnomadCoverageFile(gnomadExomeCoverageFile, 123136))(
+      ResourceRequest(1, 5000))
     val gnomadGenomeCoverage = ConvertGenomeCoverage.task(
-      gnomadGenomeCoverageFile -> 15496)(CPUMemoryRequest(1, 5000))
+      GnomadCoverageFile(gnomadGenomeCoverageFile, 15496))(
+      ResourceRequest(1, 5000))
 
     val filteredGnomadExomeCoverage = gnomadExomeCoverage.flatMap { g =>
       FilterCoverageToExome.task(FilterCoverageInput(g, gencodeGtf))(
-        CPUMemoryRequest(1, 5000))
+        ResourceRequest(1, 5000))
     }
 
     val filteredGnomadGenomeCoverage = gnomadGenomeCoverage.flatMap { g =>
       FilterCoverageToExome.task(FilterCoverageInput(g, gencodeGtf))(
-        CPUMemoryRequest(1, 5000))
+        ResourceRequest(1, 5000))
     }
 
     val gnomadWGSConvertedCoverage =
       ConvertGenomeCoverage
-        .gnomadToEColl(gnomadWGSCoverage -> 15496)(CPUMemoryRequest(12, 5000))
+        .gnomadToEColl(GnomadCoverageFiles(gnomadWGSCoverage, 15496))(
+          ResourceRequest(12, 5000))
 
     val gnomadWGSConvertedVCF =
       ConvertGnomadToHLI
-        .gnomadToEColl(gnomadWGSVCF)(CPUMemoryRequest(12, 5000))
+        .gnomadToEColl(GnomadDataList(gnomadWGSVCF))(ResourceRequest(12, 5000))
 
     val chromosomes = None :: ((1 to 22 map (i => "chr" + i)).toList)
       .map(Some(_))
@@ -152,25 +155,25 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       convertedGnomadGenome.flatMap { gnomadGenome =>
         FilterVariantsToExome.task(
           FilterVariantsInput(gnomadGenome, "gnomad", gencodeGtf))(
-          CPUMemoryRequest(1, 5000))
+          ResourceRequest(1, 5000))
       }
 
     val filteredGnomadExome = convertedGnomadExome.flatMap { gnomadExome =>
       FilterVariantsToExome.task(
         FilterVariantsInput(gnomadExome, "gnomad", gencodeGtf))(
-        CPUMemoryRequest(1, 5000))
+        ResourceRequest(1, 5000))
     }
 
     val uniprotgencodemap = sd.steps.JoinGencodeToUniprot.task(
       GencodeUniprotInput(gencodeGtf,
                           gencodeMetadataXrefUniprot,
                           gencodeTranscripts,
-                          uniprotKbOriginal))(CPUMemoryRequest(1, 30000))
+                          uniprotKbOriginal))(ResourceRequest(1, 30000))
 
     val uniprotgencodeCountUni = uniprotgencodemap
       .flatMap { uniprotgencodemap =>
         sd.steps.JoinGencodeToUniprot
-          .countMappedUniprot(uniprotgencodemap)(CPUMemoryRequest(1, 5000))
+          .countMappedUniprot(uniprotgencodemap)(ResourceRequest(1, 5000))
       }
       .andThen {
         case count =>
@@ -181,7 +184,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val uniprotgencodeCountEnsT = uniprotgencodemap
       .flatMap { uniprotgencodemap =>
         sd.steps.JoinGencodeToUniprot
-          .countMappedEnst(uniprotgencodemap)(CPUMemoryRequest(1, 5000))
+          .countMappedEnst(uniprotgencodemap)(ResourceRequest(1, 5000))
       }
       .andThen {
         case count =>
@@ -200,7 +203,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                                     uniprotgencodemap,
                                     exomeCov,
                                     genomeCov,
-                                    gencodeGtf))(CPUMemoryRequest(1, 60000))
+                                    gencodeGtf))(ResourceRequest(1, 60000))
             }
           }
         }
@@ -209,7 +212,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
 
     val variationsJoinedEColl = variationsJoined
       .flatMap { f =>
-        JoinVariations.toEColl(f)(CPUMemoryRequest(12, 60000))
+        JoinVariations.toEColl(f)(ResourceRequest(12, 60000))
       }
       .andThen {
         case scala.util.Success(variationsJoined) =>
@@ -220,14 +223,14 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val variationCounts = for {
       variations <- variationsJoinedEColl
       _ <- JoinVariations
-        .countMissense(variations)(CPUMemoryRequest(1, 5000))
+        .countMissense(variations)(ResourceRequest(1, 5000))
         .andThen {
           case scala.util.Success(missenseCount) =>
             logger.info(s"Total missense variation: " + missenseCount)
           case _ =>
         }
       _ <- JoinVariations
-        .countSynonymous(variations)(CPUMemoryRequest(1, 5000))
+        .countSynonymous(variations)(ResourceRequest(1, 5000))
         .andThen {
           case scala.util.Success(synCount) =>
             logger.info(s"Total synonymous variation: " + synCount)
@@ -236,28 +239,28 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     } yield ()
 
     val missenseVariations = variationsJoinedEColl.flatMap { variations =>
-      JoinVariations.filterMissense(variations)(CPUMemoryRequest(1, 5000))
+      JoinVariations.filterMissense(variations)(ResourceRequest(1, 5000))
     }
 
     val synonymousVariations = variationsJoinedEColl.flatMap { variations =>
-      JoinVariations.filterSynonymous(variations)(CPUMemoryRequest(1, 5000))
+      JoinVariations.filterSynonymous(variations)(ResourceRequest(1, 5000))
     }
 
     val siteFrequencySpectrum = variationsJoinedEColl.flatMap {
       variationsJoinedEColl =>
         JoinVariations.siteFrequencySpectrum(variationsJoinedEColl)(
-          CPUMemoryRequest(12, 5000))
+          ResourceRequest(12, 5000))
     }
 
     val uniprotpdbmap = uniprotgencodemap.flatMap { uniprotgencodemap =>
       sd.steps.JoinUniprotWithPdb
         .task(UniProtPdbFullInput(uniprotKbOriginal, uniprotgencodemap))(
-          CPUMemoryRequest(1, 1000))
+          ResourceRequest(1, 1000))
     }
 
     val extractedFeatures = uniprotpdbmap.flatMap { uniprotpdbmap =>
       sd.steps.JoinUniprotWithPdb
-        .extractMapppedFeatures(uniprotpdbmap)(CPUMemoryRequest((1, 12), 5000))
+        .extractMapppedFeatures(uniprotpdbmap)(ResourceRequest((1, 12), 5000))
     }
 
     extractedFeatures.andThen {
@@ -271,7 +274,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         JoinCPWithPdb.task(
           JoinCPWithPdbInput(uniprotgencodemap,
                              uniprotpdbmap.tables.map(_._2).sortBy(_.sf.name)))(
-          CPUMemoryRequest((1, 3), 100000))
+          ResourceRequest((1, 3), 100000))
       }
     }
 
@@ -280,33 +283,33 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         swissModelUniPdbMap.flatMap { swissModelUniPdbMap =>
           JoinCPWithPdb.task(
             JoinCPWithPdbInput(uniprotgencodemap, List(swissModelUniPdbMap)))(
-            CPUMemoryRequest((1, 3), 100000))
+            ResourceRequest((1, 3), 100000))
         }
       }
 
     val concatenatedCpPdbJoin = swissModelCpPdb.flatMap { swissModelCpPdb =>
       cppdb.flatMap { cppdb =>
         JoinCPWithPdb.concatenate((swissModelCpPdb, cppdb))(
-          CPUMemoryRequest(1, 5000))
+          ResourceRequest(1, 5000))
       }
     }
 
     val cppdbindex = concatenatedCpPdbJoin.flatMap { cppdb =>
-      JoinCPWithPdb.indexCpPdb(cppdb)(CPUMemoryRequest(1, 60000))
+      JoinCPWithPdb.indexCpPdb(cppdb)(ResourceRequest(1, 60000))
     }
 
     val mappableUniprotIds = uniprotgencodemap.flatMap { uniprotgencodemap =>
-      MappableUniprot.task(uniprotgencodemap)(CPUMemoryRequest(1, 1000))
+      MappableUniprot.task(uniprotgencodemap)(ResourceRequest(1, 1000))
     }
 
     val cifs = mappableUniprotIds.flatMap { mappedUniprotIds =>
       AssemblyToPdb.fetchCif(
         Assembly2PdbInput(uniprotKbOriginal, mappedUniprotIds))(
-        CPUMemoryRequest((1, 8), 3000))
+        ResourceRequest((1, 8), 3000))
     }
 
     val assemblies = cifs.flatMap { cifs =>
-      AssemblyToPdb.assembly(cifs)(CPUMemoryRequest((1, 16), 3000))
+      AssemblyToPdb.assembly(cifs)(ResourceRequest((1, 16), 3000))
     }
 
     val scores = {
@@ -314,17 +317,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
 
       def joinFeatureWithCp(
           features: Future[JsDump[steps.StructuralContext.T1]],
-          cppdb: Future[JsDump[SharedTypes.PdbUniGencodeRow]]) = {
+          cppdb: Future[JsDump[PdbUniGencodeRow]]) = {
         val feature2cp = cppdb.flatMap { cppdb =>
           features.flatMap { features =>
             JoinFeatureWithCp.task(
               Feature2CPInput(featureContext = features, cppdb = cppdb))(
-              CPUMemoryRequest(1, 120000))
+              ResourceRequest(1, 120000))
           }
         }
 
         val feature2cpEcoll = feature2cp.flatMap { f =>
-          JoinFeatureWithCp.toEColl(f)(CPUMemoryRequest(12, 5000))
+          JoinFeatureWithCp.toEColl(f)(ResourceRequest(12, 5000))
         }
 
         (features, feature2cpEcoll)
@@ -338,7 +341,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 pdbs = pdbs.pdbFiles,
                 mappedUniprotFeatures = features,
                 radius = radius,
-                bothSides = true))(CPUMemoryRequest((1, 12), 1000))
+                bothSides = true))(ResourceRequest((1, 12), 1000))
           }
         }
 
@@ -354,7 +357,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 mappedUniprotFeatures = uniprotpdbmap.tables.map(_._3).toSet,
                 radius = radius,
                 bothSides = includeBothSidesOfPlane))(
-              CPUMemoryRequest((1, 12), 1000))
+              ResourceRequest((1, 12), 1000))
           }
         }
 
@@ -406,14 +409,16 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         scores.flatMap { scores =>
           for {
             _ <- depletion3d
-              .uniquePdbIds(scores)(CPUMemoryRequest(1, 5000))
+              .uniquePdbIds(scores)(ResourceRequest(1, 5000))
+              .flatMap(_.head.map(_.get))
               .andThen {
                 case scala.util.Success(set) =>
                   logger.info(s"$tag Number of unique scored pdbs: ${set.size}")
                 case _ =>
               }
             _ <- depletion3d
-              .uniqueUniprotIds(scores)(CPUMemoryRequest(1, 5000))
+              .uniqueUniprotIds(scores)(ResourceRequest(1, 5000))
+              .flatMap(_.head.map(_.get))
               .andThen {
                 case scala.util.Success(set) =>
                   logger.info(
@@ -438,7 +443,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           swissModelFeature2cpEcoll.flatMap { swissModelFeature2cpEcoll =>
             JoinFeatureWithCp.mappedMappedFeaturesToSupplementary(
               cifFeature2cpEcoll ++ swissModelFeature2cpEcoll)(
-              CPUMemoryRequest(1, 5000))
+              ResourceRequest(1, 5000))
           }
         }
 
@@ -452,9 +457,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         swissModelFeature2cp <- swissModelFeature2cpEcoll
         cifFeature2cp <- cifFeature2cpEcoll
         concat = swissModelFeature2cp ++ cifFeature2cp
-        cps <- JoinFeatureWithCp.mappedCps(concat)(CPUMemoryRequest(1, 5000))
-        sorted <- JoinFeatureWithCp.sortedCps(cps)(CPUMemoryRequest(1, 5000))
-        unique <- JoinFeatureWithCp.uniqueCps(sorted)(CPUMemoryRequest(1, 5000))
+        cps <- JoinFeatureWithCp.mappedCps(concat)(ResourceRequest(1, 5000))
+        sorted <- JoinFeatureWithCp.sortedCps(cps)(ResourceRequest(1, 5000))
+        unique <- JoinFeatureWithCp.uniqueCps(sorted)(ResourceRequest(1, 5000))
       } yield unique).andThen {
         case scala.util.Success(unique) =>
           logger.info(
@@ -465,15 +470,15 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         cps <- uniqueMappedCps
         missense <- missenseVariations
         synonymous <- synonymousVariations
-        joinedMissense <- JoinFeatureWithCp
-          .joinCpWithLocus((cps, missense))(CPUMemoryRequest(1, 100000))
+        _ <- JoinFeatureWithCp
+          .joinCpWithLocus((cps, missense))(ResourceRequest(1, 100000))
           .andThen {
             case scala.util.Success(joinedMissense) =>
               logger.info(
                 "Total number of mapped missense: " + joinedMissense.length)
           }
-        joinedSynonymous <- JoinFeatureWithCp
-          .joinCpWithLocus((cps, synonymous))(CPUMemoryRequest(1, 100000))
+        _ <- JoinFeatureWithCp
+          .joinCpWithLocus((cps, synonymous))(ResourceRequest(1, 100000))
           .andThen {
             case scala.util.Success(joinedSyn) =>
               logger.info(
@@ -491,17 +496,17 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           depletion3d.computeCDFs(s)
         }
         .flatMap { cdf =>
-          depletion3d.cdfs2file(cdf)(CPUMemoryRequest(1, 5000))
+          depletion3d.cdfs2file(cdf)(ResourceRequest(1, 5000))
         }
 
       val concatenatedFeatures = for {
         c1 <- swissModelFeatures
         c2 <- cifFeatures
-        r <- StructuralContext.concatenate((c1, c2))(CPUMemoryRequest(1, 5000))
+        r <- StructuralContext.concatenate((c1, c2))(ResourceRequest(1, 5000))
       } yield r
 
       val featureCount = concatenatedFeatures.flatMap { feat =>
-        StructuralContext.count(feat)(CPUMemoryRequest(1, 5000))
+        StructuralContext.count(feat)(ResourceRequest(1, 5000))
       }
 
       featureCount.andThen {
@@ -517,16 +522,16 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
             Depletion2PdbInput(
               scores,
               features
-            ))(CPUMemoryRequest(1, 10000))
+            ))(ResourceRequest(1, 10000))
         }
       }
 
       val repartitionedScores = concatenatedDepletionScores.flatMap { ds =>
-        depletion3d.repartition(ds)(CPUMemoryRequest((1, 12), 5000))
+        depletion3d.repartition(ds)(ResourceRequest((1, 12), 5000))
       }
 
       val indexedScores = scores2pdb.flatMap { scores =>
-        DepletionToPdb.indexByPdbId(scores)(CPUMemoryRequest(1, 20000))
+        DepletionToPdb.indexByPdbId(scores)(ResourceRequest(1, 20000))
       }
 
       val server = indexedScores.flatMap { index =>
@@ -545,13 +550,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
             supplementaryFeature2Cp.flatMap { supplementaryFeature2Cp =>
               TarArchive.archiveSharedFiles(TarArchiveInput(
                 Map(
-                  "scores.js.gz" -> scores.files.head,
+                  "scores.js.gz" -> scores.partitions.head,
                   "structuralFeatures.js.gz" -> structuralFeatures.sf,
                   "gencodeUniprotPdb.js.gz" -> cppdb.sf,
-                  "structuralFeatures.loci.js.gz" -> supplementaryFeature2Cp.files.head
+                  "structuralFeatures.loci.js.gz" -> supplementaryFeature2Cp.partitions.head
                 ),
                 "archive.tar"
-              ))(CPUMemoryRequest(1, 5000))
+              ))(ResourceRequest(1, 5000))
             }
           }
         }
@@ -574,7 +579,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 }
             val cdfPath = Map("cdf/cdf.txt" -> cdfs)
             val indexPaths =
-              (index.files ++ cppdb.files ++ uniprotByGene.files)
+              (index.fs ++ cppdb.fs ++ uniprotByGene.fs)
                 .map { sf =>
                   (("index/" + sf.name) -> sf)
                 }
@@ -583,7 +588,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
               TarArchiveInput(
                 pdbPaths ++ cdfPath ++ indexPaths,
                 "indexarchive.tar"
-              ))(CPUMemoryRequest(1, 5000))
+              ))(ResourceRequest(1, 5000))
           }
         } yield tar
 

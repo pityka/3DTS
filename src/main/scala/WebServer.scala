@@ -13,16 +13,16 @@ import tasks._
 import index2._
 import scala.concurrent.{Future}
 import java.io.File
-import SharedTypes._
 import tasks.util.TempFile
 import com.typesafe.scalalogging.StrictLogging
+import com.github.plokhotnyuk.jsoniter_scala.core._
 
 object Server extends StrictLogging {
 
   def makeQuery(scoresReader: IndexReader,
                 geneNameReader: IndexReader,
                 cpPdbReader: IndexReader,
-                q: String): ServerReturn = {
+                q: String): (Seq[PdbId], Seq[DepletionScoresByResidue]) = {
 
     val pdbs: Seq[PdbId] = {
       val pdbsFromGeneNames =
@@ -32,7 +32,7 @@ object Server extends StrictLogging {
             .getDocs(q, 10000)
             .flatMap {
               case Doc(str) =>
-                upickle.default.read[UniProtEntry](str).pdbs.map(_._1)
+                readFromString[UniProtEntry](str).pdbs.map(_._1)
             }
             .filter { pdb =>
               val count = scoresReader.getDocCount(pdb.s)
@@ -46,7 +46,7 @@ object Server extends StrictLogging {
             .getDocs(q, 10000)
             .map {
               case Doc(str) =>
-                upickle.default.read[PdbUniGencodeRow](str).pdbId
+                readFromString[PdbUniGencodeRow](str).pdbId
             }
             .distinct
       pdbsFromGeneNames ++ pdbsFromUniGencodeJoin
@@ -64,7 +64,7 @@ object Server extends StrictLogging {
 
     (pdbs, scores.map {
       case Doc(str) =>
-        upickle.default.read[DepletionScoresByResidue](str)
+        readFromString[DepletionScoresByResidue](str)
     })
 
   }
@@ -85,7 +85,7 @@ object Server extends StrictLogging {
     linkFolder.mkdirs
     val cdfs = cdfFile.file
     Future
-      .sequence((scoresIndex.files ++ cppdbIndex.files ++ geneNameIndex.files)
+      .sequence((scoresIndex.fs ++ cppdbIndex.fs ++ geneNameIndex.fs)
         .map { sf =>
           sf.file.map { file =>
             val filelinkpath =
@@ -114,7 +114,7 @@ object Server extends StrictLogging {
   }
 
   val dataFolder = tasks.util.config
-    .parse(com.typesafe.config.ConfigFactory.load)
+    .parse(() => com.typesafe.config.ConfigFactory.load())
     .storageURI
     .getPath
 
@@ -123,6 +123,93 @@ object Server extends StrictLogging {
     val file = new File(dataFolder + "/pdbassembly/" + pdb + ".assembly.pdb")
     akka.stream.scaladsl.FileIO.fromPath(file.toPath)
 
+  }
+
+  def asBrowserReadableJson(
+      data: (Seq[PdbId], Seq[DepletionScoresByResidue])): String = {
+    val asShared = (data._1.map(p => shared.PdbId(p.s)), data._2.map {
+      case DepletionScoresByResidue(
+          pdbId,
+          pdbChain,
+          pdbResidue,
+          DepletionRow(
+            FeatureKey(pdbId2,
+                       pdbChain2,
+                       uniprotFeatureName,
+                       pdbResidueMin,
+                       pdbResidueMax),
+            obsNs,
+            expNs,
+            obsS,
+            expS,
+            numLoci,
+            nsPostGlobalSynonymousRate,
+            nsPostHeptamerSpecificIntergenicRate,
+            nsPostHeptamerIndependentIntergenicRate,
+            nsPostHeptamerSpecificChromosomeSpecificIntergenicRate,
+            nsPostHeptamerIndependentChromosomeSpecificIntergenicRate,
+            uniprotIds)) =>
+        shared.DepletionScoresByResidue(
+          pdbId,
+          pdbChain,
+          pdbResidue,
+          shared.DepletionRow(
+            shared.FeatureKey(
+              shared.PdbId(pdbId2.s),
+              shared.PdbChain(pdbChain2.s),
+              shared.UniprotFeatureName(uniprotFeatureName.s),
+              shared.PdbResidueNumberUnresolved(pdbResidueMin.s),
+              shared.PdbResidueNumberUnresolved(pdbResidueMax.s)
+            ),
+            shared.ObsNs(obsNs.v),
+            shared.ExpNs(expNs.v),
+            shared.ObsS(obsS.v),
+            shared.ExpS(expS.v),
+            shared.NumLoci(numLoci.v),
+            shared.NsPostGlobalSynonymousRate(
+              shared.Posterior(nsPostGlobalSynonymousRate.post.mean,
+                               nsPostGlobalSynonymousRate.post.cdf)),
+            shared.NsPostHeptamerSpecificIntergenicRate(
+              shared.Posterior(nsPostHeptamerSpecificIntergenicRate.post.mean,
+                               nsPostHeptamerSpecificIntergenicRate.post.cdf)),
+            shared.NsPostHeptamerIndependentIntergenicRate(
+              shared.Posterior(
+                nsPostHeptamerIndependentIntergenicRate.post.mean,
+                nsPostHeptamerIndependentIntergenicRate.post.cdf
+              )),
+            shared.NsPostHeptamerSpecificChromosomeSpecificIntergenicRate(
+              shared.Posterior(
+                nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.mean,
+                nsPostHeptamerSpecificChromosomeSpecificIntergenicRate.post.cdf
+              )
+            ),
+            shared.NsPostHeptamerIndependentChromosomeSpecificIntergenicRate(
+              shared.Posterior(
+                nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.mean,
+                nsPostHeptamerIndependentChromosomeSpecificIntergenicRate.post.cdf
+              )
+            ),
+            uniprotIds.map(u => shared.UniId(u.s))
+          )
+        )
+
+    })
+    upickle.default.write(asShared)
+  }
+
+  def asBrowserReadableJson(data: DepletionScoreCDFs): String = {
+    val asShared = shared.DepletionScoreCDFs(
+      nsPostMeanGlobalSynonymousRate = data.nsPostMeanGlobalSynonymousRate,
+      nsPostMeanHeptamerSpecificIntergenicRate =
+        data.nsPostMeanHeptamerSpecificIntergenicRate,
+      nsPostMeanHeptamerIndependentIntergenicRate =
+        data.nsPostMeanHeptamerIndependentIntergenicRate,
+      nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate =
+        data.nsPostMeanHeptamerSpecificChromosomeSpecificIntergenicRate,
+      nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate =
+        data.nsPostMeanHeptamerIndependentChromosomeSpecificIntergenicRate
+    )
+    upickle.default.write(asShared)
   }
 
   val csvHeader = List("PDB",
@@ -136,7 +223,7 @@ object Server extends StrictLogging {
                        "SCORE_global_rate",
                        "SCORE_local_rate").mkString(",")
 
-  def asCSV(data: ServerReturn): String = {
+  def asCSV(data: (Seq[PdbId], Seq[DepletionScoresByResidue])): String = {
 
     def asCSVRow(scores: DepletionScoresByResidue): String = {
       (List(scores.pdbId, scores.pdbChain, scores.pdbResidue) ++ List(
@@ -192,7 +279,7 @@ object Server extends StrictLogging {
                     if (format.contains("csv"))
                       HttpEntity(asCSV(res))
                     else
-                      HttpEntity(upickle.default.write(res))
+                      HttpEntity(asBrowserReadableJson(res))
                   }
                 }
               }
@@ -247,7 +334,7 @@ object Server extends StrictLogging {
         } ~
         path("cdfs") {
           get {
-            complete((StatusCodes.OK, upickle.default.write(cdfs)))
+            complete((StatusCodes.OK, asBrowserReadableJson(cdfs)))
           }
         } ~
         path(RemainingPath) { segment =>
