@@ -3,10 +3,11 @@ package sd.steps
 import sd._
 import tasks.jsonitersupport._
 import tasks._
+import tasks.ecoll._
 import tasks.queue.NodeLocalCache
 import fileutils._
 
-case class FilterCoverageInput(coverage: JsDump[GenomeCoverage],
+case class FilterCoverageInput(coverage: EColl[GenomeCoverage],
                                gencodeGtf: SharedFile)
 
 object FilterCoverageInput {
@@ -19,14 +20,14 @@ object FilterCoverageInput {
 object FilterCoverageToExome {
 
   val task =
-    AsyncTask[FilterCoverageInput, JsDump[GenomeCoverage]]("filtercoverage-1",
+    AsyncTask[FilterCoverageInput, EColl[GenomeCoverage]]("filtercoverage-1",
                                                            1) {
 
       case FilterCoverageInput(coverage, gencode) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
           log.info(
-            "Start filtering " + coverage.sf.name + " to " + gencode.name)
+            "Start filtering " + coverage.basename + " to " + gencode.name)
           for {
             gencodeL <- gencode.file
             exons <- NodeLocalCache.getItem("intervaltrees" + gencode) {
@@ -37,14 +38,14 @@ object FilterCoverageToExome {
             result <- {
               log.info("Interval trees done")
 
-              coverage.source
+              coverage.source(resourceAllocated.cpu)
                 .filter(
                   coverage =>
                     !JoinVariationsCore
                       .lookup(coverage.chromosome, coverage.position, exons)
                       .isEmpty)
-                .runWith(JsDump.sink[GenomeCoverage](
-                  name = coverage.sf.name + ".filter." + gencode.name))
+                .runWith(EColl.sink[GenomeCoverage](
+                  name = coverage.basename + ".filter." + gencode.name))
 
             }
 

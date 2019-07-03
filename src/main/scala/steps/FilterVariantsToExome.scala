@@ -2,13 +2,14 @@ package sd.steps
 
 import sd._
 import tasks._
+import tasks.ecoll._
 import tasks.queue.NodeLocalCache
 import tasks.jsonitersupport._
 import fileutils._
 import akka.stream.scaladsl._
 import akka.util._
 
-case class FilterVariantsInput(gnomad: JsDump[JoinVariationsCore.GnomadLine],
+case class FilterVariantsInput(gnomad: EColl[JoinVariationsCore.GnomadLine],
                                tpe: String,
                                gencodeGtf: SharedFile)
 
@@ -35,7 +36,7 @@ object FilterVariantsToExome {
 
       case FilterVariantsInput(genome, _, gencode) =>
         implicit ctx =>
-          log.info("Start filtering " + genome.sf.name + " to " + gencode.name)
+          log.info("Start filtering " + genome.basename + " to " + gencode.name)
           for {
             gencodeL <- gencode.file
             exons <- NodeLocalCache.getItem("intervaltrees" + gencode) {
@@ -47,7 +48,7 @@ object FilterVariantsToExome {
             result <- {
               log.info("Interval trees done")
 
-              val transformedSource = genome.source
+              val transformedSource = genome.source(resourceAllocated.cpu)
                 .filter(
                   gnomadLine =>
                     !JoinVariationsCore
@@ -59,7 +60,7 @@ object FilterVariantsToExome {
                 .via(Compression.gzip)
 
               SharedFile(transformedSource,
-                         genome.sf.name + ".filter." + gencode.name).map(x =>
+                         genome.basename + ".filter." + gencode.name).map(x =>
                 FilterGnomadOutput(x))
 
             }

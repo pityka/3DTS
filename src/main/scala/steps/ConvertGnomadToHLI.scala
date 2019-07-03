@@ -15,13 +15,6 @@ case class GnomadDataList(data: Seq[GnomadData])
 
 object ConvertGnomadToHLI {
 
-  val toEColl =
-    AsyncTask[JsDump[GnomadLine], EColl[GnomadLine]]("GenomeCoverageToEColl", 1) {
-      js => implicit ctx =>
-        log.info(s"Convert $js to ecoll.")
-        EColl.fromSource(js.source, js.sf.name, 1024 * 1024 * 10)
-    }
-
   def vcf2json(line: String): List[GnomadLine] =
     if (line.startsWith("#")) Nil
     else {
@@ -74,7 +67,7 @@ object ConvertGnomadToHLI {
     }
 
   val task =
-    AsyncTask[GnomadData, JsDump[GnomadLine]]("convertgnomad2hli", 1) {
+    AsyncTask[GnomadData, EColl[GnomadLine]]("convertgnomad2hli", 1) {
       case GnomadData(sf) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
@@ -84,7 +77,7 @@ object ConvertGnomadToHLI {
             .via(Framing.delimiter(ByteString("\n"), Int.MaxValue, true))
             .map(_.utf8String)
             .mapConcat(line => vcf2json(line))
-            .runWith(JsDump.sink(name = sf.name + ".js.gz"))
+            .runWith(EColl.sink(name = sf.name + ".js.gz"))
 
     }
 

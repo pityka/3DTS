@@ -11,7 +11,7 @@ import index2._
 
 case class Depletion2PdbInput(
     posteriorFile: EColl[DepletionRow],
-    contextFile: JsDump[StructuralContext.T1]
+    contextFile: EColl[StructuralContext.T1]
 )
 
 object Depletion2PdbInput {
@@ -37,7 +37,7 @@ object DepletionToPdb {
                                  compressedDocuments = true)
 
   val indexByPdbId =
-    AsyncTask[JsDump[DepletionScoresByResidue], ScoresIndexedByPdbId](
+    AsyncTask[EColl[DepletionScoresByResidue], ScoresIndexedByPdbId](
       "indexscores",
       2) { scoresOnPdb => implicit ctx =>
       log.info("start indexing " + scoresOnPdb)
@@ -49,7 +49,7 @@ object DepletionToPdb {
 
       val writer = tableManager.writer(ScoresByPdbIdTable)
 
-      scoresOnPdb.source
+      scoresOnPdb.source(resourceAllocated.cpu)
         .runForeach { scoreByResidue =>
           val pdbId = scoreByResidue.pdbId
           val js = writeToString(scoreByResidue)
@@ -67,7 +67,7 @@ object DepletionToPdb {
     }
 
   val task =
-    AsyncTask[Depletion2PdbInput, JsDump[DepletionScoresByResidue]](
+    AsyncTask[Depletion2PdbInput, EColl[DepletionScoresByResidue]](
       "depletion2pdb",
       1) {
 
@@ -77,15 +77,15 @@ object DepletionToPdb {
           ) =>
         implicit ctx =>
           implicit val am = ctx.components.actorMaterializer
+          val (contextIter,contextIterClose) = contextJs.source(1).runWith(JoinVariations.iteratorSink)
           for {
-            contextL <- contextJs.sf.file
+            
             scoreMap <- scoresJs
               .source(resourceAllocated.cpu)
               .runWith(akka.stream.scaladsl.Sink.seq)
               .map(_.groupBy(_.featureKey))
             result <- {
 
-              contextJs.iterator(contextL) { contextIter =>
                 val iter = contextIter.flatMap {
                   case StructuralContextFeature(fkey, pdbResidues, _) =>
                     val scores = scoreMap.get(fkey).getOrElse(Vector())
@@ -101,11 +101,13 @@ object DepletionToPdb {
 
                     }
                 }
-                JsDump.fromIterator(iter,
+                EColl.fromIterator(iter,
                                     name = scoresJs.partitions.headOption.fold(
                                       "scores")(_.name) + ".back2pdb.json.gz")
-              }
 
+            }
+            _ = {
+              contextIterClose()
             }
 
           } yield result

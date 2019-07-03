@@ -28,13 +28,6 @@ object GnomadCoverageFiles {
 
 object ConvertGenomeCoverage {
   import tasks.ecoll.EColl
-  val toEColl =
-    AsyncTask[JsDump[GenomeCoverage], EColl[GenomeCoverage]](
-      "GenomeCoverageToEColl",
-      1) { js => implicit ctx =>
-      log.info(s"Convert $js to ecoll.")
-      EColl.fromSource(js.source, js.sf.name, 1024 * 1024 * 10)
-    }
 
   def convertLine(frame: ByteString, totalSize: Int) = {
     val spl = frame.utf8String.split1('\t')
@@ -51,7 +44,7 @@ object ConvertGenomeCoverage {
   }
 
   val task =
-    AsyncTask[GnomadCoverageFile, JsDump[GenomeCoverage]](
+    AsyncTask[GnomadCoverageFile, EColl[GenomeCoverage]](
       "convertgenomecoverage-1",
       1) {
       case GnomadCoverageFile(coverageFile, totalSize) =>
@@ -62,7 +55,7 @@ object ConvertGenomeCoverage {
             .via(Framing.delimiter(ByteString("\n"),
                                    maximumFrameLength = Int.MaxValue))
             .map(convertLine(_, totalSize))
-            .runWith(JsDump.sink[GenomeCoverage](
+            .runWith(EColl.sink[GenomeCoverage](
               coverageFile.name + "genomecoverage.js.gz"))
 
     }

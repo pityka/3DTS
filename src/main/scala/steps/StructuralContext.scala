@@ -6,10 +6,11 @@ import tasks._
 import tasks.jsonitersupport._
 import akka.stream.scaladsl._
 import akka.util.ByteString
+import tasks.ecoll._
 
 case class StructuralContextFromFeaturesInput(
     cifs: Map[PdbId, SharedFile],
-    mappedUniprotFeatures: Set[JsDump[JoinUniprotWithPdb.T2]],
+    mappedUniprotFeatures: Set[EColl[JoinUniprotWithPdb.T2]],
     radius: Double,
     bothSides: Boolean)
 
@@ -22,7 +23,7 @@ object StructuralContextFromFeaturesInput {
 
 case class StructuralContextFromFeaturesAndPdbsInput(
     pdbs: Map[PdbId, SharedFile],
-    mappedUniprotFeatures: Set[JsDump[JoinUniprotWithPdb.T2]],
+    mappedUniprotFeatures: Set[EColl[JoinUniprotWithPdb.T2]],
     radius: Double,
     bothSides: Boolean)
 
@@ -53,30 +54,31 @@ object StructuralContext {
   type T1 = StructuralContextFeature
 
   val concatenate =
-    AsyncTask[(JsDump[T1], JsDump[T1]), JsDump[T1]](
+    AsyncTask[(EColl[T1], EColl[T1]), EColl[T1]](
       "concatenatedStructuralFeatures",
       1) {
       case (js1, js2) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
-          (js1.source ++ js2.source)
-            .runWith(JsDump.sink(js1.sf.name + ".concat." + js2.sf.name))
+          (js1.source(1) ++ js2.source(1))
+            .runWith(EColl.sink(js1.basename + ".concat." + js2.basename))
 
     }
 
   val count =
-    AsyncTask[JsDump[T1], Long]("countStructuralFeatures", 1) {
+    AsyncTask[EColl[T1], Long]("countStructuralFeatures", 1) {
       case js1 =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
-          js1.source
+          js1
+            .source(1)
             .fold(0L)((x, _) => x + 1)
             .runWith(Sink.head)
 
     }
 
   val fromFeaturesAndPdbStructures =
-    AsyncTask[StructuralContextFromFeaturesAndPdbsInput, JsDump[T1]](
+    AsyncTask[StructuralContextFromFeaturesAndPdbsInput, EColl[T1]](
       "structuralContextFromPdb-1",
       2) {
       case StructuralContextFromFeaturesAndPdbsInput(pdbs,
@@ -90,7 +92,7 @@ object StructuralContext {
           val source: Source[JoinUniprotWithPdb.T2, _] =
             Source(mappedFeatures).flatMapConcat { s =>
               log.debug(s.toString)
-              s.source
+              s.source(resourceAllocated.cpu)
             }
 
           val s2: Source[StructuralContextFeature, _] = source
@@ -138,12 +140,12 @@ object StructuralContext {
             }
             .mapConcat(identity)
 
-          s2.runWith(JsDump.sink(
+          s2.runWith(EColl.sink(
             radius + "." + bothSides + "." + mappedFeatures.hashCode + ".frompdb.json.gz"))
     }
 
   val taskfromFeatures =
-    AsyncTask[StructuralContextFromFeaturesInput, JsDump[T1]](
+    AsyncTask[StructuralContextFromFeaturesInput, EColl[T1]](
       "structuralcontextfromfeatures",
       9) {
 
@@ -160,7 +162,7 @@ object StructuralContext {
           val source: Source[JoinUniprotWithPdb.T2, _] =
             Source(mappedFeatures).flatMapConcat { s =>
               log.debug(s.toString)
-              s.source
+              s.source(resourceAllocated.cpu)
             }
 
           val s2 = source
@@ -217,7 +219,7 @@ object StructuralContext {
             }
             .mapConcat(identity)
 
-          s2.runWith(JsDump.sink(
+          s2.runWith(EColl.sink(
             radius + "." + bothSides + "." + mappedFeatures.hashCode + "." + ".json.gz"))
 
     }

@@ -3,25 +3,25 @@ package sd.steps
 import sd._
 import tasks._
 import tasks.jsonitersupport._
+import tasks.ecoll._
 
 object MappableUniprot {
 
   val task =
-    AsyncTask[JsDump[sd.JoinGencodeToUniprot.MapResult], JsDump[UniId]](
+    AsyncTask[EColl[sd.JoinGencodeToUniprot.MapResult], EColl[UniId]](
       "mappableUniprot",
       1) { mapresult => implicit ctx =>
-      log.info("Start extracting uniprot ids from " + mapresult.sf.name)
-      mapresult.sf.file.flatMap { genomeJoinFile =>
-        val uni: Set[UniId] = mapresult.iterator(genomeJoinFile)(it =>
-          sd.JoinGencodeToUniprot.readUniProtIds(it))
+        implicit val mat = ctx.components.actorMaterializer
+      log.info("Start extracting uniprot ids from " + mapresult.basename)
+          sd.JoinGencodeToUniprot.readUniProtIds(mapresult.source(1)).run.flatMap{ uni =>
 
         uni.foreach { uni =>
           log.debug(s"$uni mappable.")
         }
 
-        JsDump.fromIterator(uni.iterator,
-                            name = mapresult.sf.name + ".uniids.json.gz")
-
+        EColl.fromIterator(uni.iterator,
+                            name = mapresult.basename + ".uniids.json.gz")
       }
+
     }
 }

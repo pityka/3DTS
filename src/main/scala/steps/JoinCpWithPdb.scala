@@ -43,7 +43,8 @@ object JoinCPWithPdb {
       case (js1, js2) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
-          (js1.source(resourceAllocated.cpu) ++ js2.source(resourceAllocated.cpu))
+          (js1.source(resourceAllocated.cpu) ++ js2.source(
+            resourceAllocated.cpu))
             .runWith(EColl.sink(js1.sf.name + ".concat." + js2.sf.name))
 
     }
@@ -61,7 +62,8 @@ object JoinCPWithPdb {
 
         val writer = tableManager.writer(CpPdbTable)
 
-        pdbunigencode.source(resourceAllocated.cpu)
+        pdbunigencode
+          .source(resourceAllocated.cpu)
           .runForeach { pdbunigencode =>
             val pdbId = pdbunigencode.pdbId.s
             val enst = pdbunigencode.ensT.s

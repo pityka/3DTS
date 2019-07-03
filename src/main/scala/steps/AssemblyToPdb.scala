@@ -3,6 +3,7 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
+import tasks.ecoll._
 import tasks.jsonitersupport._
 import fileutils._
 import akka.stream.scaladsl._
@@ -10,7 +11,7 @@ import scala.util._
 import akka.util.ByteString
 import scala.util.Try
 
-case class Assembly2PdbInput(uniprotKb: SharedFile, mappableIds: JsDump[UniId])
+case class Assembly2PdbInput(uniprotKb: SharedFile, mappableIds: EColl[UniId])
 
 case class FetchCifOutput(cifFiles: Map[PdbId, SharedFile])
 
