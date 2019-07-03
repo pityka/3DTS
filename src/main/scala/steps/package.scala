@@ -48,6 +48,26 @@ package object steps {
     : JsonValueCodec[Seq[HeptamerOccurences]] =
     JsonCodecMaker.make[Seq[HeptamerOccurences]](CodecMakerConfig())
 
+  implicit val joincpwithlocusCodec
+    : JsonValueCodec[(sd.ChrPos, sd.LocusVariationCountAndNumNs)] =
+    JsonCodecMaker
+      .make[(sd.ChrPos, sd.LocusVariationCountAndNumNs)](CodecMakerConfig())
+
+  implicit val joincpwithlocusSerde =
+    tasks.makeSerDe[(sd.ChrPos, sd.LocusVariationCountAndNumNs)]
+
+  implicit val feature2cpJoinCodec
+    : JsonValueCodec[(Option[sd.steps.JoinFeatureWithCp.PdbMapping],
+                      Option[sd.steps.JoinFeatureWithCp.StructureDefinition])] =
+    JsonCodecMaker
+      .make[(Option[sd.steps.JoinFeatureWithCp.PdbMapping],
+             Option[sd.steps.JoinFeatureWithCp.StructureDefinition])](
+        CodecMakerConfig())
+
+  implicit val feature2cpSerDe =
+    tasks.makeSerDe[(Option[sd.steps.JoinFeatureWithCp.PdbMapping],
+                     Option[sd.steps.JoinFeatureWithCp.StructureDefinition])]
+
   implicit val seqHeptamerOccurencesSerDe =
     tasks.makeSerDe[Seq[HeptamerOccurences]]
   implicit val genomeCoverageAndGnomadLineCodec: JsonValueCodec[

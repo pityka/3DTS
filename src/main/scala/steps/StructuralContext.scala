@@ -45,6 +45,7 @@ object StructuralContextFeature {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[StructuralContextFeature] =
     JsonCodecMaker.make[StructuralContextFeature](CodecMakerConfig())
+  implicit val serde = tasks.makeSerDe[StructuralContextFeature]
 }
 
 object StructuralContext {

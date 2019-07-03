@@ -7,12 +7,13 @@ import tasks.jsonitersupport._
 import tasks.util.TempFile
 import fileutils._
 import stringsplit._
+import tasks.ecoll._
 
 import index2._
 
 case class JoinCPWithPdbInput(
-    gencodeUniprot: JsDump[sd.JoinGencodeToUniprot.MapResult],
-    pdbUniprot: List[JsDump[JoinUniprotWithPdb.T1]])
+    gencodeUniprot: EColl[sd.JoinGencodeToUniprot.MapResult],
+    pdbUniprot: List[EColl[JoinUniprotWithPdb.T1]])
 
 object JoinCPWithPdbInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
@@ -37,18 +38,18 @@ object JoinCPWithPdb {
                          compressedDocuments = true)
 
   val concatenate =
-    AsyncTask[(JsDump[PdbUniGencodeRow], JsDump[PdbUniGencodeRow]),
-              JsDump[PdbUniGencodeRow]]("concatenatedCpPdb", 1) {
+    AsyncTask[(EColl[PdbUniGencodeRow], JsECollDump[PdbUniGencodeRow]),
+              EColl[PdbUniGencodeRow]]("concatenatedCpPdb", 1) {
       case (js1, js2) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
-          (js1.source ++ js2.source)
-            .runWith(JsDump.sink(js1.sf.name + ".concat." + js2.sf.name))
+          (js1.source(resourceAllocated.cpu) ++ js2.source(resourceAllocated.cpu))
+            .runWith(EColl.sink(js1.sf.name + ".concat." + js2.sf.name))
 
     }
 
   val indexCpPdb =
-    AsyncTask[JsDump[PdbUniGencodeRow], CpPdbIndex]("indexcppdb", 2) {
+    AsyncTask[EColl[PdbUniGencodeRow], CpPdbIndex]("indexcppdb", 2) {
       pdbunigencode => implicit ctx =>
         import com.github.plokhotnyuk.jsoniter_scala.core._
         log.info("start indexing " + pdbunigencode)
@@ -60,7 +61,7 @@ object JoinCPWithPdb {
 
         val writer = tableManager.writer(CpPdbTable)
 
-        pdbunigencode.source
+        pdbunigencode.source(resourceAllocated.cpu)
           .runForeach { pdbunigencode =>
             val pdbId = pdbunigencode.pdbId.s
             val enst = pdbunigencode.ensT.s
@@ -91,7 +92,7 @@ object JoinCPWithPdb {
     }
   import com.github.plokhotnyuk.jsoniter_scala.core._
   val task =
-    AsyncTask[JoinCPWithPdbInput, JsDump[PdbUniGencodeRow]]("cppdb-2", 1) {
+    AsyncTask[JoinCPWithPdbInput, EColl[PdbUniGencodeRow]]("cppdb-2", 1) {
 
       case JoinCPWithPdbInput(
           gencodeUniprot,
@@ -197,7 +198,7 @@ object JoinCPWithPdb {
 
                   }
 
-                JsDump
+                EColl
                   .fromIterator[PdbUniGencodeRow](
                     iter,
                     gencodeUniprot.sf.name + "." + pdbMaps.hashCode)

@@ -43,7 +43,7 @@ val commonSettings = Seq(
   )
 )
 
-val tasksVersion = "0.0.61-SNAPSHOT"
+val tasksVersion = "0.0.62-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "io.github.pityka" %% "fileutils" % "1.2.2",

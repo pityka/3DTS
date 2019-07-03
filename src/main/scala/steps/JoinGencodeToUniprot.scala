@@ -4,6 +4,7 @@ import sd._
 import tasks._
 import tasks.jsonitersupport._
 import fileutils._
+import tasks.ecoll._
 
 case class GencodeUniprotInput(
     gencodeGtf: SharedFile,
@@ -21,7 +22,7 @@ object GencodeUniprotInput {
 object JoinGencodeToUniprot {
 
   val countMappedUniprot =
-    AsyncTask[JsDump[sd.JoinGencodeToUniprot.MapResult], Int](
+    AsyncTask[EColl[sd.JoinGencodeToUniprot.MapResult], Int](
       "joingencodeuniprot-count-mapped-uniprot",
       2) {
       case js =>
@@ -30,7 +31,7 @@ object JoinGencodeToUniprot {
 
           val set = scala.collection.mutable.Set[UniId]()
 
-          js.source
+          js.source(resourceAllocated.cpu)
             .collect {
               case sd.JoinGencodeToUniprot.Success(mapped) => mapped
             }
@@ -45,7 +46,7 @@ object JoinGencodeToUniprot {
     }
 
   val countMappedEnst =
-    AsyncTask[JsDump[sd.JoinGencodeToUniprot.MapResult], Int](
+    AsyncTask[EColl[sd.JoinGencodeToUniprot.MapResult], Int](
       "joingencodeuniprot-count-mapped-enst",
       2) {
       case js =>
@@ -54,7 +55,7 @@ object JoinGencodeToUniprot {
 
           val set = scala.collection.mutable.Set[EnsT]()
 
-          js.source
+          js.source(resourceAllocated.cpu)
             .collect {
               case sd.JoinGencodeToUniprot.Success(mapped) => mapped
             }
@@ -69,7 +70,7 @@ object JoinGencodeToUniprot {
     }
 
   val task =
-    AsyncTask[GencodeUniprotInput, JsDump[sd.JoinGencodeToUniprot.MapResult]](
+    AsyncTask[GencodeUniprotInput, EColl[sd.JoinGencodeToUniprot.MapResult]](
       "gencodeuniprot-3",
       1) {
       case GencodeUniprotInput(
@@ -114,7 +115,7 @@ object JoinGencodeToUniprot {
                     ensembleXRefUniProt,
                     IOHelpers.readGencodeProteinCodingTranscripts(fastaSource),
                     uniprotKb)
-                JsDump.fromIterator(s, gencodeGtf.name + ".genome.json.gz")
+                EColl.fromIterator(s, gencodeGtf.name + ".genome.json.gz")
 
               }
 

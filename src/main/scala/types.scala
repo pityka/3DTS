@@ -305,6 +305,7 @@ case class PdbUniGencodeRow(
 object PdbUniGencodeRow {
   implicit val codec: JsonValueCodec[PdbUniGencodeRow] =
     JsonCodecMaker.make[PdbUniGencodeRow](CodecMakerConfig())
+  implicit val serde = tasks.makeSerDe[PdbUniGencodeRow]
 }
 
 case class LigandabilityRow(uniid: UniId,
