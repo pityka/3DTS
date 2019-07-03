@@ -46,7 +46,7 @@ val commonSettings = Seq(
 val tasksVersion = "0.0.61-SNAPSHOT"
 
 libraryDependencies ++= Seq(
-  "io.github.pityka" %% "fileutils" % "1.2.0",
+  "io.github.pityka" %% "fileutils" % "1.2.2",
   "io.github.pityka" %% "stringsplit" % "1.1.0",
   "io.github.pityka" %% "saddle-linalg" % "0.0.23",
   "io.github.pityka" %% "poibin" % "0.0.1",

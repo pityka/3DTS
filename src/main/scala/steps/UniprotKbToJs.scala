@@ -4,26 +4,30 @@ import sd._
 import scala.concurrent._
 import tasks._
 import tasks.jsonitersupport._
+import tasks.ecoll._
 import tasks.util.TempFile
 import fileutils._
 import index2._
+import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.StreamConverters
 
 object UniprotKbToJs {
   val task =
-    AsyncTask[SharedFile, JsDump[UniProtEntry]]("uniprotkb2js", 2) {
+    AsyncTask[SharedFile, EColl[UniProtEntry]]("uniprotkb2js", 2) {
       uniprotkb => implicit ctx =>
         log.info("start converting uniprot kb to js " + uniprotkb)
-        uniprotkb.file.flatMap { uniprotkbL =>
-          val source = fileutils.createSource(uniprotkbL)
+        implicit val mat = ctx.components.actorMaterializer
+        val scalaSource = scala.io.Source.fromInputStream(
+          uniprotkb.source.runWith(StreamConverters.asInputStream()))
+        val parsed =
+          Source.fromIterator(() => IOHelpers.readUniProtFile(scalaSource))
 
-          JsDump
-            .fromIterator(IOHelpers.readUniProtFile(source),
-                          name = uniprotkb.name + ".json.gz")
-            .andThen {
-              case _ => source.close
-            }
+        EColl
+          .fromSource(parsed,
+                      name = uniprotkb.name + ".json.gz",
+                      partitionSize = 1024 * 1024 * 50,
+                      parallelism = resourceAllocated.cpu)
 
-        }
     }
 }
 
@@ -43,8 +47,8 @@ object IndexUniByGeneName {
                              compressedDocuments = true)
 
   val task =
-    AsyncTask[JsDump[UniProtEntry], UniprotIndexedByGene]("indexpdbnamesbygene",
-                                                          1) {
+    AsyncTask[EColl[UniProtEntry], UniprotIndexedByGene]("indexpdbnamesbygene",
+                                                         1) {
       uniprot => implicit ctx =>
         log.info("start indexing " + uniprot)
         implicit val mat = ctx.components.actorMaterializer
@@ -55,7 +59,8 @@ object IndexUniByGeneName {
 
         val writer = tableManager.writer(UniEntryByGene)
 
-        uniprot.source
+        uniprot
+          .source(resourceAllocated.cpu)
           .runForeach { uniprotelem =>
             import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
             val js = writeToString(uniprotelem)

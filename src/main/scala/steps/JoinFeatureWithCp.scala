@@ -5,8 +5,8 @@ import tasks._
 import tasks.ecoll._
 import tasks.jsonitersupport._
 
-case class Feature2CPInput(featureContext: JsDump[StructuralContext.T1],
-                           cppdb: JsDump[PdbUniGencodeRow])
+case class Feature2CPInput(featureContext: EColl[StructuralContext.T1],
+                           cppdb: EColl[PdbUniGencodeRow])
 object Feature2CPInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
@@ -79,21 +79,10 @@ object JoinFeatureWithCp {
   val uniqueCps =
     EColl.distinct[ChrPos]("uniquecps-1", 1)
 
-  val toEColl =
-    AsyncTask[JsDump[MappedFeatures], EColl[MappedFeatures]](
-      "convertfeature2cp-ecoll-1",
-      1) {
-      case js =>
-        implicit ctx =>
-          EColl.fromSource(js.source,
-                           js.sf.name,
-                           1024 * 1024 * 50,
-                           parallelism = resourceAllocated.cpu)
-
-    }
+  val joinOp = EColl.join2InnerKeepGroups("feature2cpsecond-join",1, maxParallelJoins = None, partitionSize = 1024*1024*50)((r:PdbUniGencodeRow) => r.pdbId.s + "_" + r.pdbChain.s + "_" + r.pdbres.s,(r:StructuralContext.T1) => r.featureKey.pdbId.s + "_" + pdbChain + "_" + pdbResidue)
 
   val task =
-    AsyncTask[Feature2CPInput, JsDump[MappedFeatures]]("feature2cpsecond-2", 3) {
+    AsyncTask[Feature2CPInput, EColl[MappedFeatures]]("feature2cpsecond-2", 3) {
 
       case Feature2CPInput(
           featureContextJsDump,
@@ -101,6 +90,9 @@ object JoinFeatureWithCp {
           ) =>
         implicit ctx =>
           log.info("Start JoinFeatureWithCp")
+
+          
+
           featureContextJsDump.sf.file.flatMap { featureContextLocalFile =>
             cppdbJsDump.sf.file.flatMap { cppdb =>
               val map: scala.collection.mutable.Map[String, List[String]] =

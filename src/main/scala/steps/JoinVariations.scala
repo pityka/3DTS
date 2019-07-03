@@ -5,13 +5,14 @@ import tasks._
 import tasks.ecoll._
 import tasks.jsonitersupport._
 import fileutils._
+import akka.stream.scaladsl.Sink
 
 case class JoinVariationsInput(
     gnomadExome: SharedFile,
     gnomadGenome: SharedFile,
-    mappedProteinCoding: JsDump[sd.JoinGencodeToUniprot.MapResult],
-    gnomadExomeCoverage: JsDump[GenomeCoverage],
-    gnomadGenomeCoverage: JsDump[GenomeCoverage],
+    mappedProteinCoding: EColl[sd.JoinGencodeToUniprot.MapResult],
+    gnomadExomeCoverage: EColl[GenomeCoverage],
+    gnomadGenomeCoverage: EColl[GenomeCoverage],
     gencodeGtf: SharedFile)
 
 object JoinVariationsInput {
@@ -46,20 +47,6 @@ object JoinVariations {
           else count
       })
 
-  val toEColl =
-    AsyncTask[JsDump[LocusVariationCountAndNumNs],
-              EColl[LocusVariationCountAndNumNs]](
-      "convertjoindvariations-ecoll-1",
-      1) {
-      case js =>
-        implicit ctx =>
-          EColl.fromSource(js.source,
-                           js.sf.name,
-                           1024 * 1024 * 50,
-                           parallelism = resourceAllocated.cpu)
-
-    }
-
   val siteFrequencySpectrum =
     EColl.foldConstant("sitefrequencyspectrum", 1, Map.empty[Int, Int])(
       spore[(Map[Int, Int], LocusVariationCountAndNumNs), Map[Int, Int]] {
@@ -71,8 +58,30 @@ object JoinVariations {
           }
       })
 
+  def iteratorSink[T] = Sink.queue[T].mapMaterializedValue { queue =>
+    val it = new Iterator[T] {
+      var nextElementFuture = queue.pull
+      var nextElement: Option[T] = None
+
+      def hasNext: Boolean = {
+        nextElement = scala.concurrent.Await
+          .result(nextElementFuture, scala.concurrent.duration.Duration.Inf)
+        nextElement.isDefined
+      }
+
+      def next(): T = {
+        val next = nextElement.get
+        nextElementFuture = queue.pull
+        next
+      }
+
+    }
+    val close = () => queue.cancel
+    (it, close)
+  }
+
   val task =
-    AsyncTask[JoinVariationsInput, JsDump[LocusVariationCountAndNumNs]](
+    AsyncTask[JoinVariationsInput, EColl[LocusVariationCountAndNumNs]](
       "joinvariation-1",
       3) {
 
@@ -84,53 +93,55 @@ object JoinVariations {
                                gencode) =>
         implicit ctx =>
           log.info("Start joining variation files ")
+          implicit val mat = ctx.components.actorMaterializer
           for {
-            mappedL <- mapped.sf.file
+            // mappedL <- mapped.sf.file
             exomeL <- exome.file
             genomeL <- genome.file
             gencodeL <- gencode.file
-            exomeCovL <- exomeCov.sf.file
-            genomeCovL <- genomeCov.sf.file
+            // exomeCovL <- exomeCov.sf.file
+            // genomeCovL <- genomeCov.sf.file
             result <- {
               log.info("Reading interval trees")
               val exons = openSource(gencodeL) { gencodeSource =>
                 JoinVariationsCore.exomeIntervalTree(gencodeSource)
               }
               log.info("Interval trees done")
-              mapped.iterator(mappedL) { mappedIter2 =>
-                exomeCov.iterator(exomeCovL) { exomeCovIter =>
-                  genomeCov.iterator(genomeCovL) { genomeCovIter =>
-                    openSource(exomeL) { exSource =>
-                      openSource(genomeL) { geSource =>
-                        val mappedIter =
-                          JoinVariationsCore.readMappedFile(mappedIter2)
-                        val exIter =
-                          JoinVariationsCore.readGnomad(exSource)
-                        val geIter =
-                          JoinVariationsCore.readGnomad(geSource)
-                        val (joinedIter, closeable) =
-                          JoinVariationsCore.join(
-                            mappedIter,
-                            List(("exome", exIter), ("genome", geIter)),
-                            List("exome" -> exomeCovIter,
-                                 "genome" -> genomeCovIter),
-                            1000000)((chr, bp) =>
-                            !JoinVariationsCore.lookup(chr, bp, exons).isEmpty)
-                        log.info("Joined iterator start")
-                        JsDump
-                          .fromIterator[LocusVariationCountAndNumNs](
-                            joinedIter,
-                            mapped.sf.name + ".variationdata.json.gz")
-                          .map { x =>
-                            closeable.close
-                            log.info("Join done, uploading.")
-                            x
-                          }
-                      }
-
+              val (mappedIter2, mappedIter2Close) =
+                mapped.source(1).runWith(iteratorSink)
+              val (exomeCovIter, exomeCovIterClose) =
+                exomeCov.source(1).runWith(iteratorSink)
+              val (genomeCovIter, genomeCovIterClose) =
+                genomeCov.source(1).runWith(iteratorSink)
+              openSource(exomeL) { exSource =>
+                openSource(genomeL) { geSource =>
+                  val mappedIter =
+                    JoinVariationsCore.readMappedFile(mappedIter2)
+                  val exIter =
+                    JoinVariationsCore.readGnomad(exSource)
+                  val geIter =
+                    JoinVariationsCore.readGnomad(geSource)
+                  val (joinedIter, closeable) =
+                    JoinVariationsCore.join(
+                      mappedIter,
+                      List(("exome", exIter), ("genome", geIter)),
+                      List("exome" -> exomeCovIter, "genome" -> genomeCovIter),
+                      1000000)((chr, bp) =>
+                      !JoinVariationsCore.lookup(chr, bp, exons).isEmpty)
+                  log.info("Joined iterator start")
+                  EColl
+                    .fromIterator(joinedIter,
+                                  mapped.basename + ".variationdata.json.gz")
+                    .map { x =>
+                      closeable.close
+                      mappedIter2Close()
+                      exomeCovIterClose()
+                      genomeCovIterClose()
+                      log.info("Join done, uploading.")
+                      x
                     }
-                  }
                 }
+
               }
 
             }

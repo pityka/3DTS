@@ -2,6 +2,7 @@ package sd
 
 import intervaltree._
 import com.typesafe.scalalogging.StrictLogging
+import akka.stream.scaladsl.Source
 
 case class TranscriptSupportLevel(v: Int) extends AnyVal
 case class EnsE(from: Int,
@@ -25,10 +26,11 @@ object JoinGencodeToUniprot extends StrictLogging {
       JsonCodecMaker.make[MapResult](CodecMakerConfig())
   }
 
-  def readUniProtIds(s: Iterator[MapResult]): Set[UniId] =
+  def readUniProtIds(s: Source[MapResult]) =
     s.filter(_.isInstanceOf[Success])
-      .flatMap(_.asInstanceOf[Success].v.map(_.uniId))
-      .toSet
+      .mapConcat(_.asInstanceOf[Success].v.map(_.uniId))
+      .to(Sink.seq)
+      .mapMaterializedValue(_.toSet)
 
   case class Success(v: Seq[MappedTranscriptToUniprot]) extends MapResult
   case class MultipleChromosomes(exons: Seq[EnsE]) extends MapResult

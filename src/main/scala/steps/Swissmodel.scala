@@ -1,13 +1,13 @@
 package sd.steps
 
 import sd._
-import scala.concurrent._
 import tasks._
 import tasks.jsonitersupport._
 import stringsplit._
 import fileutils._
 import akka.stream.scaladsl._
 import scala.util._
+import tasks.ecoll._
 
 case class SwissModelMetaDataInput(swissModelMetadata: SharedFile,
                                    uniprot: SharedFile)
@@ -19,7 +19,16 @@ object SwissModelMetaDataInput {
     JsonCodecMaker.make[SwissModelMetaDataInput](CodecMakerConfig())
 }
 
-case class SwissModelPdbFiles(pdbFiles: Map[PdbId, SharedFile])
+case class SwissModelPdbEntry(id: PdbId, data: String)
+object SwissModelPdbEntry {
+  import com.github.plokhotnyuk.jsoniter_scala.core._
+  import com.github.plokhotnyuk.jsoniter_scala.macros._
+  implicit val codec: JsonValueCodec[SwissModelPdbEntry] =
+    JsonCodecMaker.make[SwissModelPdbEntry](CodecMakerConfig())
+  implicit val serde = tasks.makeSerDe[SwissModelPdbEntry]
+}
+
+case class SwissModelPdbFiles(pdbFiles: EColl[SwissModelPdbEntry])
 
 object SwissModelPdbFiles {
   import com.github.plokhotnyuk.jsoniter_scala.core._
@@ -30,134 +39,125 @@ object SwissModelPdbFiles {
 
 object Swissmodel {
 
+  val dsspExecutable = TempFile.getExecutableFromJar("/mkdssp")
+
   val defineSecondaryFeaturesWithDSSP =
-    AsyncTask[(PdbId, SharedFile), JsDump[JoinUniprotWithPdb.T2]]("dssp-1", 3) {
-      case (swissmodelPdbId, swissmodelPdbFile) =>
+    AsyncTask[SwissModelPdbEntry, EColl[JoinUniprotWithPdb.T2]]("dssp-1", 3) {
+      case SwissModelPdbEntry(swissmodelPdbId, swissmodelPdbData) =>
         implicit ctx =>
-          for {
-            swissmodelPdbFileLocal <- swissmodelPdbFile.file
-            result <- {
-              val dsspExecutable = TempFile.getExecutableFromJar("/mkdssp")
-              val command = List(dsspExecutable.getAbsolutePath,
-                                 "-i",
-                                 swissmodelPdbFileLocal.getAbsolutePath)
-              val (stdout, _, _) =
-                execGetStreamsAndCode(command,
-                                      unsuccessfulOnErrorStream = false)
+          val swissmodelPdbFileLocal = writeToTempFile(swissmodelPdbData)
 
-              val dsspFeatures = stdout
-                .dropWhile(line => !line.startsWith("  #"))
-                .drop(1)
-                .filterNot(_.contains("!"))
-                .map { dataLine =>
-                  val residueNumber1Based = dataLine.substring(5, 10).trim.toInt
-                  val chain = dataLine.substring(10, 12).trim
-                  val structureCode: Char = dataLine(16)
+          val command = List(dsspExecutable.getAbsolutePath,
+                             "-i",
+                             swissmodelPdbFileLocal.getAbsolutePath)
+          val (stdout, _, _) =
+            execGetStreamsAndCode(command, unsuccessfulOnErrorStream = false)
 
-                  val feature = structureCode match {
-                    case 'H' | 'G' | 'I' => "dssp_helix_" + structureCode
-                    case 'T'             => "dssp_turn_" + structureCode
-                    case 'E' | 'B'       => "dssp_strand" + structureCode
-                    case _               => "dssp_other"
-                  }
-                  (chain, residueNumber1Based, feature)
+          val dsspFeatures = stdout
+            .dropWhile(line => !line.startsWith("  #"))
+            .drop(1)
+            .filterNot(_.contains("!"))
+            .map { dataLine =>
+              val residueNumber1Based = dataLine.substring(5, 10).trim.toInt
+              val chain = dataLine.substring(10, 12).trim
+              val structureCode: Char = dataLine(16)
 
-                }
-                .groupBy { case (chain, _, _) => chain }
-                .map {
-                  case (chain, residues) =>
-                    val linearFeatures =
-                      residues.foldLeft(List[(Int, Int, String)]()) {
-                        case (Nil, (_, residueNumber1Based, feature)) =>
-                          List(
-                            (residueNumber1Based - 1,
-                             residueNumber1Based,
-                             feature))
-                        case (
-                            (currentStart0, currentEnd0Open, currentFeature) :: previousFeatures,
-                            (_, residueNumber1Based, feature)) =>
-                          if (residueNumber1Based - 1 == currentEnd0Open && currentFeature == feature) {
-                            (currentStart0, residueNumber1Based, currentFeature) :: previousFeatures
-                          } else
-                            (residueNumber1Based - 1,
-                             residueNumber1Based,
-                             feature) :: (currentStart0,
-                                          currentEnd0Open,
-                                          currentFeature) :: previousFeatures
-
-                      }
-
-                    (chain, linearFeatures)
-                }
-
-              val features = dsspFeatures.map {
-                case (chain, features) =>
-                  JoinUniprotWithPdb.T2(
-                    UniId(swissmodelPdbId.s.split1('_').head),
-                    swissmodelPdbId,
-                    PdbChain(chain),
-                    features.map {
-                      case (start, end, feature) =>
-                        (UniprotFeatureName(feature),
-                         ((start + 1) to end)
-                           .map(i => PdbResidueNumber(i, None))
-                           .toSet)
-                    }.toSet
-                  )
-
+              val feature = structureCode match {
+                case 'H' | 'G' | 'I' => "dssp_helix_" + structureCode
+                case 'T'             => "dssp_turn_" + structureCode
+                case 'E' | 'B'       => "dssp_strand" + structureCode
+                case _               => "dssp_other"
               }
+              (chain, residueNumber1Based, feature)
 
-              JsDump.fromIterator(
-                features.iterator,
-                "dsspfeatures." + swissmodelPdbId.s + ".js.gz")
             }
-          } yield result
+            .groupBy { case (chain, _, _) => chain }
+            .map {
+              case (chain, residues) =>
+                val linearFeatures =
+                  residues.foldLeft(List[(Int, Int, String)]()) {
+                    case (Nil, (_, residueNumber1Based, feature)) =>
+                      List(
+                        (residueNumber1Based - 1, residueNumber1Based, feature))
+                    case ((currentStart0, currentEnd0Open, currentFeature) :: previousFeatures,
+                          (_, residueNumber1Based, feature)) =>
+                      if (residueNumber1Based - 1 == currentEnd0Open && currentFeature == feature) {
+                        (currentStart0, residueNumber1Based, currentFeature) :: previousFeatures
+                      } else
+                        (residueNumber1Based - 1, residueNumber1Based, feature) :: (currentStart0,
+                                                                                    currentEnd0Open,
+                                                                                    currentFeature) :: previousFeatures
+
+                  }
+
+                (chain, linearFeatures)
+            }
+
+          val features = dsspFeatures.map {
+            case (chain, features) =>
+              JoinUniprotWithPdb.T2(
+                UniId(swissmodelPdbId.s.split1('_').head),
+                swissmodelPdbId,
+                PdbChain(chain),
+                features.map {
+                  case (start, end, feature) =>
+                    (UniprotFeatureName(feature),
+                     ((start + 1) to end)
+                       .map(i => PdbResidueNumber(i, None))
+                       .toSet)
+                }.toSet
+              )
+
+          }
+
+          EColl.fromIterator(features.iterator,
+                             "dsspfeatures." + swissmodelPdbId.s + ".js.gz",
+                             parallelism = resourceAllocated.cpu)
 
     }
 
   val fakeUniprotPdbMappingFromSwissmodel =
-    AsyncTask[SwissModelPdbFiles, JsDump[JoinUniprotWithPdb.T1]](
+    AsyncTask[SwissModelPdbFiles, EColl[JoinUniprotWithPdb.T1]](
       "swissmodel-uniprot-pdb-map-1",
       1) {
       case SwissModelPdbFiles(swissmodelPdbs) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
-          Source(swissmodelPdbs.toList)
-            .mapAsync(resourceAllocated.cpu) {
-              case (swissModelPdbId, pdbFile) =>
+          swissmodelPdbs
+            .source(resourceAllocated.cpu)
+            .map {
+              case SwissModelPdbEntry(swissModelPdbId, pdbFileAsString) =>
                 val uniId = UniId(swissModelPdbId.s.split1('_').head)
-                pdbFile.source.runFold(akka.util.ByteString())(_ ++ _).map {
-                  data =>
-                    val atomlist = PdbHelper
-                      .parsePdbLines(scala.io.Source
-                        .fromString(data.utf8String)
-                        .getLines)
-                      .assembly
-                      .atoms
-                    atomlist
-                      .map {
-                        case AtomWithLabels(_, pdbChain, pdbResidueNumber, _) =>
-                          JoinUniprotWithPdb.T1(
-                            uniId,
-                            swissModelPdbId,
-                            pdbChain,
-                            pdbResidueNumber.toUnresolved,
-                            PdbNumber(-1),
-                            PdbSeq(""),
-                            UniNumber(pdbResidueNumber.num - 1),
-                            UniSeq("?"),
-                            true)
-                      }
-                      .distinct
-                      .map { x =>
-                        log.debug(s"Swissmodel uni-pdb mapping: $x")
-                        x
-                      }
-                }
+
+                val atomlist = PdbHelper
+                  .parsePdbLines(
+                    scala.io.Source
+                      .fromString(pdbFileAsString)
+                      .getLines)
+                  .assembly
+                  .atoms
+
+                val mapping = atomlist
+                  .map {
+                    case AtomWithLabels(_, pdbChain, pdbResidueNumber, _) =>
+                      JoinUniprotWithPdb.T1(uniId,
+                                            swissModelPdbId,
+                                            pdbChain,
+                                            pdbResidueNumber.toUnresolved,
+                                            PdbNumber(-1),
+                                            PdbSeq(""),
+                                            UniNumber(pdbResidueNumber.num - 1),
+                                            UniSeq("?"),
+                                            true)
+                  }
+                log.debug(s"Swissmodel uni-pdb mapping: $mapping")
+                mapping
+
             }
             .mapConcat(identity)
-            .runWith(JsDump.sink(
-              swissmodelPdbs.hashCode + ".swissmodeluniprotmap.js.gz"))
+            .runWith(EColl.sink(
+              swissmodelPdbs.hashCode + ".swissmodeluniprotmap.js.gz",
+              parallelism = resourceAllocated.cpu))
     }
 
   val filterMetaData =
@@ -190,7 +190,7 @@ object Swissmodel {
               log.info(s"Will download ${urls.size} files from swissmodel.")
 
               Source(urls)
-                .mapAsync(resourceAllocated.cpu) {
+                .map {
                   case (filename, url) =>
                     log.debug(s"try $filename $url")
                     Try(
@@ -203,21 +203,21 @@ object Swissmodel {
                           .body)) match {
                       case Success(pdbData) =>
                         log.debug(s"OK $filename $url")
-                        SharedFile(
-                          writeToTempFile(new String(pdbData, "UTF-8")),
-                          filename)
-                          .map(s => Some(PdbId(filename) -> s))
+                        Some(SwissModelPdbEntry(PdbId(filename),
+                                                new String(pdbData, "UTF-8")))
                       case Failure(e) =>
                         log.error(e, "Failed fetch swissmodel data from " + url)
-                        Future.successful(None)
+                        (None)
                     }
 
                 }
                 .filter(_.isDefined)
                 .map(_.get)
-                .runWith(Sink.seq)
+                .runWith(EColl.sink(
+                  "filterswissmodel." + metadata.name + "." + uniprot.name + ".js.gz",
+                  parallelism = resourceAllocated.cpu))
                 .map { downloadedFiles =>
-                  SwissModelPdbFiles(downloadedFiles.toMap)
+                  SwissModelPdbFiles(downloadedFiles)
                 }
             }
           } yield result

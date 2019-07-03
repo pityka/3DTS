@@ -3,6 +3,7 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
+import tasks.ecoll._
 
 import tasks.queue.NodeLocalCache
 import tasks.jsonitersupport._
@@ -13,7 +14,7 @@ case class UniProtPdbInput(
     uniprotKb: SharedFile,
     uniProtId: List[UniId],
     batchName: String,
-    genomeUniJoinFile: JsDump[sd.JoinGencodeToUniprot.MapResult])
+    genomeUniJoinFile: EColl[sd.JoinGencodeToUniprot.MapResult])
 
 object UniProtPdbInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
@@ -24,7 +25,7 @@ object UniProtPdbInput {
 
 case class UniProtPdbFullInput(
     uniprotKb: SharedFile,
-    genomeUniJoinFile: JsDump[sd.JoinGencodeToUniprot.MapResult])
+    genomeUniJoinFile: EColl[sd.JoinGencodeToUniprot.MapResult])
 object UniProtPdbFullInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
@@ -34,9 +35,9 @@ object UniProtPdbFullInput {
 
 case class UniProtPdbFullOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
-                  JsDump[JoinUniprotWithPdb.T1],
-                  JsDump[JoinUniprotWithPdb.T2],
-                  JsDump[AlignmentDetails])],
+                  EColl[JoinUniprotWithPdb.T1],
+                  EColl[JoinUniprotWithPdb.T2],
+                  EColl[AlignmentDetails])],
     qc: SharedFile)
 
 object UniProtPdbFullOutput {
@@ -48,9 +49,9 @@ object UniProtPdbFullOutput {
 
 case class UniProtPdbOutput(
     tables: List[(List[(UniId, PdbId, PdbChain, Int, Int)],
-                  JsDump[JoinUniprotWithPdb.T1],
-                  JsDump[JoinUniprotWithPdb.T2],
-                  JsDump[AlignmentDetails])])
+                  EColl[JoinUniprotWithPdb.T1],
+                  EColl[JoinUniprotWithPdb.T2],
+                  EColl[AlignmentDetails])])
 
 object UniProtPdbOutput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
@@ -90,14 +91,12 @@ object JoinUniprotWithPdb {
       JsonCodecMaker.make[T2](CodecMakerConfig())
   }
 
-  def downloadUniprot2(uniprotkbSF: SharedFile, genomeUniJoin: JsDump[UniId])(
+  def downloadUniprot2(uniprotkbSF: SharedFile, genomeUniJoin: EColl[UniId])(
       implicit ts: tasks.queue.ComputationEnvironment) = {
     log.info(
-      "Downloading uniprot + genome file.." + uniprotkbSF.name + " " + genomeUniJoin.sf.name)
+      "Downloading uniprot + genome file.." + uniprotkbSF.name + " " + genomeUniJoin.basename)
     uniprotkbSF.file.flatMap { localFile =>
-      genomeUniJoin.sf.file.map { genomeJoinFile =>
-        val uniIdFilter: Set[UniId] =
-          genomeUniJoin.iterator(genomeJoinFile)(it => it.toSet)
+      genomeUniJoin.toSeq(1).map(_.toSet).map { uniIdFilter =>
         log.debug(uniIdFilter.take(10).toString)
         log.info("Read uniprot file.. filter for: " + uniIdFilter.size)
         val uniprotkblist =
@@ -119,30 +118,30 @@ object JoinUniprotWithPdb {
   }
 
   def downloadUniprot(uniprotkbSF: SharedFile,
-                      genomeUniJoin: JsDump[sd.JoinGencodeToUniprot.MapResult])(
+                      genomeUniJoin: EColl[sd.JoinGencodeToUniprot.MapResult])(
       implicit ts: tasks.queue.ComputationEnvironment) = {
+    implicit val mat = ts.components.actorMaterializer
     log.info(
-      "Downloading uniprot + genome file.." + uniprotkbSF.name + " " + genomeUniJoin.sf.name)
+      "Downloading uniprot + genome file.." + uniprotkbSF.name + " " + genomeUniJoin.basename)
     uniprotkbSF.file.flatMap { localFile =>
-      genomeUniJoin.sf.file.map { genomeJoinFile =>
-        val uniIdFilter = genomeUniJoin.iterator(genomeJoinFile)(it =>
-          sd.JoinGencodeToUniprot.readUniProtIds(it))
-        log.debug(uniIdFilter.take(10).toString)
-        log.info("Read uniprot file.. filter for: " + uniIdFilter.size)
-        val uniprotkblist =
-          openSource(localFile) { s =>
-            val l = IOHelpers.readUniProtFile(s).toList
-            log.info("Uniprot entries before pdb isempty filter: " + l.size)
-            l.filterNot(_.pdbs.isEmpty)
-          }
-        log.info(
-          "Uniprot after dropping entries without pdb: " + uniprotkblist.size)
-        val r = uniprotkblist
-          .flatMap(x => x.accessions.map(y => y -> x))
-          .filter(x => uniIdFilter.contains(x._1))
-          .toMap
-        log.info("UniprotId -> UniprotEntry size: " + r.size)
-        r
+      sd.JoinGencodeToUniprot.readUniProtIds(genomeUniJoin.source(1)).run.map {
+        uniIdFilter =>
+          log.debug(uniIdFilter.take(10).toString)
+          log.info("Read uniprot file.. filter for: " + uniIdFilter.size)
+          val uniprotkblist =
+            openSource(localFile) { s =>
+              val l = IOHelpers.readUniProtFile(s).toList
+              log.info("Uniprot entries before pdb isempty filter: " + l.size)
+              l.filterNot(_.pdbs.isEmpty)
+            }
+          log.info(
+            "Uniprot after dropping entries without pdb: " + uniprotkblist.size)
+          val r = uniprotkblist
+            .flatMap(x => x.accessions.map(y => y -> x))
+            .filter(x => uniIdFilter.contains(x._1))
+            .toMap
+          log.info("UniprotId -> UniprotEntry size: " + r.size)
+          r
       }
     }
   }
@@ -152,7 +151,7 @@ object JoinUniprotWithPdb {
       "uniprot2pdb-extract-features",
       1) { uniProtPdbFullOutput => implicit ctx =>
       val source = Source(uniProtPdbFullOutput.tables.toList)
-        .flatMapConcat(_._3.source)
+        .flatMapConcat(_._3.source(1))
         .mapConcat {
           case T2(uni, pdb, chain, featureSet) =>
             featureSet.toList.map {
@@ -305,7 +304,7 @@ object JoinUniprotWithPdb {
                   }
               }
               val mapping =
-                JsDump.fromIterator(iter, name = batchName + ".json.gz")
+                EColl.fromIterator(iter, name = batchName + ".json.gz")
 
               val featureMappingIter = result.iterator.map {
                 case (uniId, pdbId, pdbChain, _, _, _, _, _, features) =>
@@ -313,10 +312,10 @@ object JoinUniprotWithPdb {
               }
 
               val featureMapping =
-                JsDump.fromIterator(featureMappingIter,
-                                    name = batchName + ".features.json.gz")
+                EColl.fromIterator(featureMappingIter,
+                                   name = batchName + ".features.json.gz")
 
-              val alignmentData = JsDump.fromIterator(
+              val alignmentData = EColl.fromIterator(
                 result.iterator.map {
                   case (uniId,
                         pdbId,
