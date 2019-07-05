@@ -74,14 +74,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
 
     val swissModelLinearFeatures = swissModelStructures.flatMap {
       swissModelStructures =>
-        Future
-          .sequence(swissModelStructures.pdbFiles.map {
-            case (pdbId, pdbFile) =>
-              Swissmodel
-                .defineSecondaryFeaturesWithDSSP((pdbId, pdbFile))(
-                  ResourceRequest(1, 5000))
-          })
-          .map(_.toSet)
+        Swissmodel
+          .rundssp(swissModelStructures)(ResourceRequest(1, 5000))
     }
 
     val convertedGnomadGenome = {
@@ -211,9 +205,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     }
 
     val variationsJoinedEColl = variationsJoined
-      .flatMap { f =>
-        JoinVariations.toEColl(f)(ResourceRequest(12, 60000))
-      }
       .andThen {
         case scala.util.Success(variationsJoined) =>
           logger.info(s"Total coding loci: ${variationsJoined.length}")
@@ -272,8 +263,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val cppdb = uniprotgencodemap.flatMap { uniprotgencodemap =>
       uniprotpdbmap.flatMap { uniprotpdbmap =>
         JoinCPWithPdb.task(
-          JoinCPWithPdbInput(uniprotgencodemap,
-                             uniprotpdbmap.tables.map(_._2).sortBy(_.sf.name)))(
+          JoinCPWithPdbInput(
+            uniprotgencodemap,
+            uniprotpdbmap.tables.map(_._2).sortBy(_.basename)))(
           ResourceRequest((1, 3), 100000))
       }
     }
@@ -315,9 +307,8 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val scores = {
       val radius = contextRadius
 
-      def joinFeatureWithCp(
-          features: Future[JsDump[steps.StructuralContext.T1]],
-          cppdb: Future[JsDump[PdbUniGencodeRow]]) = {
+      def joinFeatureWithCp(features: Future[EColl[steps.StructuralContext.T1]],
+                            cppdb: Future[EColl[PdbUniGencodeRow]]) = {
         val feature2cp = cppdb.flatMap { cppdb =>
           features.flatMap { features =>
             JoinFeatureWithCp.task(
@@ -326,11 +317,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           }
         }
 
-        val feature2cpEcoll = feature2cp.flatMap { f =>
-          JoinFeatureWithCp.toEColl(f)(ResourceRequest(12, 5000))
-        }
-
-        (features, feature2cpEcoll)
+        (features, feature2cp)
       }
 
       def makeSwissModelFeatures = {
@@ -544,22 +531,24 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         }
       }
 
-      val archive = concatenatedFeatures.flatMap { structuralFeatures =>
-        repartitionedScores.flatMap { scores =>
-          concatenatedCpPdbJoin.flatMap { cppdb =>
-            supplementaryFeature2Cp.flatMap { supplementaryFeature2Cp =>
-              TarArchive.archiveSharedFiles(TarArchiveInput(
-                Map(
-                  "scores.js.gz" -> scores.partitions.head,
-                  "structuralFeatures.js.gz" -> structuralFeatures.sf,
-                  "gencodeUniprotPdb.js.gz" -> cppdb.sf,
-                  "structuralFeatures.loci.js.gz" -> supplementaryFeature2Cp.partitions.head
-                ),
-                "archive.tar"
-              ))(ResourceRequest(1, 5000))
+      val archive = concatenatedFeatures.flatMap {
+        concatenatedStructuralFeatures =>
+          repartitionedScores.flatMap { scores =>
+            concatenatedCpPdbJoin.flatMap { cppdb =>
+              supplementaryFeature2Cp.flatMap { supplementaryFeature2Cp =>
+                TarArchive.archiveSharedFiles(TarArchiveInput(
+                  Map(
+                    "scores.js.gz" -> scores.partitions.head,
+                    "structuralFeatures.js.gz" -> concatenatedStructuralFeatures.partitions.head,
+                    "gencodeUniprotPdb.js.gz" -> cppdb.partitions.head,
+                    "structuralFeatures.loci.js.gz" -> supplementaryFeature2Cp.partitions.head
+                  ),
+                  None,
+                  "archive.tar"
+                ))(ResourceRequest(1, 5000))
+              }
             }
           }
-        }
       }
 
       val archiveForWebServer =
@@ -571,8 +560,9 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           assemblies <- assemblies
           swissModelPdbs <- swissModelStructures
           tar <- {
+
             val pdbPaths =
-              (swissModelPdbs.pdbFiles ++ assemblies.pdbFiles)
+              assemblies.pdbFiles
                 .map {
                   case (PdbId(pdbId), sf) =>
                     s"pdbassembly/$pdbId.assembly.pdb" -> sf
@@ -587,6 +577,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
             TarArchive.archiveSharedFiles(
               TarArchiveInput(
                 pdbPaths ++ cdfPath ++ indexPaths,
+                Some(swissModelPdbs.pdbFiles),
                 "indexarchive.tar"
               ))(ResourceRequest(1, 5000))
           }

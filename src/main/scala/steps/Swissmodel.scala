@@ -41,6 +41,22 @@ object Swissmodel {
 
   val dsspExecutable = TempFile.getExecutableFromJar("/mkdssp")
 
+  val rundssp =
+    AsyncTask[SwissModelPdbFiles, EColl[JoinUniprotWithPdb.T2]](
+      "swissmodel-dssp-1",
+      1) {
+      case SwissModelPdbFiles(swissmodelPdbs) =>
+        implicit ctx =>
+          implicit val mat = ctx.components.actorMaterializer
+          swissmodelPdbs
+            .source(resourceAllocated.cpu)
+            .mapAsync(10) { entry =>
+              defineSecondaryFeaturesWithDSSP(entry)(ResourceRequest(1, 1000))
+            }
+            .runWith(Sink.seq)
+            .map(_.reduce(_ ++ _))
+    }
+
   val defineSecondaryFeaturesWithDSSP =
     AsyncTask[SwissModelPdbEntry, EColl[JoinUniprotWithPdb.T2]]("dssp-1", 3) {
       case SwissModelPdbEntry(swissmodelPdbId, swissmodelPdbData) =>

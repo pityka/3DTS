@@ -1,6 +1,8 @@
 package sd.steps
 
 import tasks._
+import tasks.ecoll._
+import sd.PdbId
 import tasks.jsonitersupport._
 import akka.stream.scaladsl._
 import fileutils._
@@ -8,7 +10,9 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.utils.IOUtils
 
-case class TarArchiveInput(files: Map[String, SharedFile], name: String)
+case class TarArchiveInput(files: Map[String, SharedFile],
+                           swissmodelPdbs: Option[EColl[SwissModelPdbEntry]],
+                           name: String)
 
 object TarArchiveInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
@@ -20,7 +24,7 @@ object TarArchiveInput {
 object TarArchive {
   val archiveSharedFiles =
     AsyncTask[TarArchiveInput, SharedFile]("tarfiles-1", 1) {
-      case TarArchiveInput(files, tarFileName) =>
+      case TarArchiveInput(files, swissmodell, tarFileName) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
 
@@ -39,6 +43,24 @@ object TarArchive {
                   sf.source.runWith(StreamConverters.asInputStream())
                 IOUtils.copy(inputStream, outputStream)
                 outputStream.closeArchiveEntry
+            }
+
+            swissmodell.foreach { swissmodell =>
+              scala.concurrent.Await.result(
+                swissmodell.source(1).runForeach {
+                  case SwissModelPdbEntry(PdbId(pdbId), data) =>
+                    val bytes = data.getBytes("UTF-8")
+                    val is = new java.io.ByteArrayInputStream(bytes)
+                    val name = s"pdbassembly/$pdbId.assembly.pdb"
+                    val entry = new TarArchiveEntry(name)
+                    entry.setSize(bytes.size)
+                    outputStream.putArchiveEntry(entry)
+                    IOUtils.copy(is, outputStream)
+                    outputStream.closeArchiveEntry
+
+                },
+                scala.concurrent.duration.Duration.Inf
+              )
             }
 
             outputStream.finish()

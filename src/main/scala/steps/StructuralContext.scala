@@ -22,8 +22,8 @@ object StructuralContextFromFeaturesInput {
 }
 
 case class StructuralContextFromFeaturesAndPdbsInput(
-    pdbs: Map[PdbId, SharedFile],
-    mappedUniprotFeatures: Set[EColl[JoinUniprotWithPdb.T2]],
+    pdbs: EColl[SwissModelPdbEntry],
+    mappedUniprotFeatures: EColl[JoinUniprotWithPdb.T2],
     radius: Double,
     bothSides: Boolean)
 
@@ -90,23 +90,30 @@ object StructuralContext {
           implicit val mat = ctx.components.actorMaterializer
 
           val source: Source[JoinUniprotWithPdb.T2, _] =
-            Source(mappedFeatures).flatMapConcat { s =>
-              log.debug(s.toString)
-              s.source(resourceAllocated.cpu)
-            }
+            mappedFeatures.source(resourceAllocated.cpu)
 
-          val s2: Source[StructuralContextFeature, _] = source
-            .mapAsync(resourceAllocated.cpu) {
-              case JoinUniprotWithPdb.T2(uniid, pdbId, pdbchain, features) =>
-                log.debug(s"$uniid $pdbId pdb:${pdbs.contains(pdbId)}")
-                val pdbString: Future[Option[String]] = pdbs
-                  .get(pdbId)
-                  .map(
-                    _.source
-                      .runFold(ByteString())(_ ++ _)
-                      .map(x => Some(x.utf8String)))
-                  .getOrElse(Future.successful(None))
-                pdbString.map { pdbString =>
+          val pdbsInMemory = pdbs
+            .source(resourceAllocated.cpu)
+            .statefulMapConcat { () =>
+              {
+                val map = scala.collection.mutable.HashMap[PdbId, String]()
+                (pdbEntry: SwissModelPdbEntry) =>
+                  {
+                    map.update(pdbEntry.id, pdbEntry.data)
+                    List(map)
+
+                  }
+              }
+            }
+            .runWith(Sink.last)
+
+          pdbsInMemory.flatMap { pdbs =>
+            val s2: Source[StructuralContextFeature, _] = source
+              .map {
+                case JoinUniprotWithPdb.T2(uniid, pdbId, pdbchain, features) =>
+                  log.debug(s"$uniid $pdbId pdb:${pdbs.contains(pdbId)}")
+                  val pdbString: Option[String] = pdbs
+                    .get(pdbId)
                   pdbString
                     .map { pdbString =>
                       val cifContents = PdbHelper
@@ -136,12 +143,12 @@ object StructuralContext {
                     }
                     .toList
                     .flatten
-                }
-            }
-            .mapConcat(identity)
+              }
+              .mapConcat(identity)
 
-          s2.runWith(EColl.sink(
-            radius + "." + bothSides + "." + mappedFeatures.hashCode + ".frompdb.json.gz"))
+            s2.runWith(EColl.sink(
+              radius + "." + bothSides + "." + mappedFeatures.hashCode + ".frompdb.json.gz"))
+          }
     }
 
   val taskfromFeatures =
