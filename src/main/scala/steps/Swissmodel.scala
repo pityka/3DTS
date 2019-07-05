@@ -196,6 +196,8 @@ object Swissmodel {
                   log.debug(s"Uniprot displayed isoforms $a $b")
               }
 
+              log.info("Swissmodel metadata file at " + metadataLocal)
+
               val urls = IOHelpers
                 .readSwissmodelMetadata(metadataLocal, isoforms)
                 .map {

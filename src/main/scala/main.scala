@@ -63,13 +63,13 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         config.getString("swissModelMetaData"))
       Swissmodel.filterMetaData(
         SwissModelMetaDataInput(swissModelMetaData, uniprotKbOriginal))(
-        ResourceRequest(12, 5000))
+        ResourceRequest(1, 5000))
     }
 
     val swissModelUniPdbMap = swissModelStructures.flatMap {
       swissModelStructures =>
         Swissmodel.fakeUniprotPdbMappingFromSwissmodel(swissModelStructures)(
-          ResourceRequest(12, 5000))
+          ResourceRequest(1, 5000))
     }
 
     val swissModelLinearFeatures = swissModelStructures.flatMap {
@@ -108,11 +108,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val gnomadWGSConvertedCoverage =
       ConvertGenomeCoverage
         .gnomadToEColl(GnomadCoverageFiles(gnomadWGSCoverage, 15496))(
-          ResourceRequest(12, 5000))
+          ResourceRequest((1, 12), 5000))
 
     val gnomadWGSConvertedVCF =
       ConvertGnomadToHLI
-        .gnomadToEColl(GnomadDataList(gnomadWGSVCF))(ResourceRequest(12, 5000))
+        .gnomadToEColl(GnomadDataList(gnomadWGSVCF))(
+          ResourceRequest((1, 12), 5000))
 
     val chromosomes = None :: ((1 to 22 map (i => "chr" + i)).toList)
       .map(Some(_))
