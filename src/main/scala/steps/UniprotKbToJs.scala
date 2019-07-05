@@ -8,7 +8,7 @@ import tasks.ecoll._
 import tasks.util.TempFile
 import fileutils._
 import index2._
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, Compression}
 import akka.stream.scaladsl.StreamConverters
 
 object UniprotKbToJs {
@@ -18,7 +18,9 @@ object UniprotKbToJs {
         log.info("start converting uniprot kb to js " + uniprotkb)
         implicit val mat = ctx.components.actorMaterializer
         val scalaSource = scala.io.Source.fromInputStream(
-          uniprotkb.source.runWith(StreamConverters.asInputStream()))
+          uniprotkb.source
+            .via(Compression.gunzip())
+            .runWith(StreamConverters.asInputStream()))
         val parsed =
           Source.fromIterator(() => IOHelpers.readUniProtFile(scalaSource))
 
