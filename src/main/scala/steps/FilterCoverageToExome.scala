@@ -20,8 +20,7 @@ object FilterCoverageInput {
 object FilterCoverageToExome {
 
   val task =
-    AsyncTask[FilterCoverageInput, EColl[GenomeCoverage]]("filtercoverage-1",
-                                                           1) {
+    AsyncTask[FilterCoverageInput, EColl[GenomeCoverage]]("filtercoverage-1", 1) {
 
       case FilterCoverageInput(coverage, gencode) =>
         implicit ctx =>
@@ -38,7 +37,8 @@ object FilterCoverageToExome {
             result <- {
               log.info("Interval trees done")
 
-              coverage.source(resourceAllocated.cpu)
+              coverage
+                .source(resourceAllocated.cpu)
                 .filter(
                   coverage =>
                     !JoinVariationsCore

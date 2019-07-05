@@ -4,6 +4,7 @@ import intervaltree._
 import com.typesafe.scalalogging.StrictLogging
 import akka.stream.scaladsl.{Source, Sink}
 import scala.concurrent.ExecutionContext
+import tasks.jsonitersupport._
 
 case class TranscriptSupportLevel(v: Int) extends AnyVal
 case class EnsE(from: Int,
@@ -25,6 +26,7 @@ object JoinGencodeToUniprot extends StrictLogging {
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[MapResult] =
       JsonCodecMaker.make[MapResult](CodecMakerConfig())
+    implicit val serde = tasks.makeSerDe[MapResult]
   }
 
   def readUniProtIds(s: Source[MapResult, _])(implicit ec: ExecutionContext) =

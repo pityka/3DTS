@@ -11,16 +11,16 @@ object MappableUniprot {
     AsyncTask[EColl[sd.JoinGencodeToUniprot.MapResult], EColl[UniId]](
       "mappableUniprot",
       1) { mapresult => implicit ctx =>
-        implicit val mat = ctx.components.actorMaterializer
+      implicit val mat = ctx.components.actorMaterializer
       log.info("Start extracting uniprot ids from " + mapresult.basename)
-          sd.JoinGencodeToUniprot.readUniProtIds(mapresult.source(1)).run.flatMap{ uni =>
+      sd.JoinGencodeToUniprot.readUniProtIds(mapresult.source(1)).run.flatMap {
+        uni =>
+          uni.foreach { uni =>
+            log.debug(s"$uni mappable.")
+          }
 
-        uni.foreach { uni =>
-          log.debug(s"$uni mappable.")
-        }
-
-        EColl.fromIterator(uni.iterator,
-                            name = mapresult.basename + ".uniids.json.gz")
+          EColl.fromIterator(uni.iterator,
+                             name = mapresult.basename + ".uniids.json.gz")
       }
 
     }

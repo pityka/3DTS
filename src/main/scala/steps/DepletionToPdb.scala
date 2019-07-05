@@ -49,7 +49,8 @@ object DepletionToPdb {
 
       val writer = tableManager.writer(ScoresByPdbIdTable)
 
-      scoresOnPdb.source(resourceAllocated.cpu)
+      scoresOnPdb
+        .source(resourceAllocated.cpu)
         .runForeach { scoreByResidue =>
           val pdbId = scoreByResidue.pdbId
           val js = writeToString(scoreByResidue)
@@ -77,33 +78,34 @@ object DepletionToPdb {
           ) =>
         implicit ctx =>
           implicit val am = ctx.components.actorMaterializer
-          val (contextIter,contextIterClose) = contextJs.source(1).runWith(JoinVariations.iteratorSink)
+          val (contextIter, contextIterClose) =
+            contextJs.source(1).runWith(JoinVariations.iteratorSink)
           for {
-            
+
             scoreMap <- scoresJs
               .source(resourceAllocated.cpu)
               .runWith(akka.stream.scaladsl.Sink.seq)
               .map(_.groupBy(_.featureKey))
             result <- {
 
-                val iter = contextIter.flatMap {
-                  case StructuralContextFeature(fkey, pdbResidues, _) =>
-                    val scores = scoreMap.get(fkey).getOrElse(Vector())
-                    log.debug(s"Scores found for $fkey: ${scores.size}")
-                    pdbResidues.iterator.flatMap {
-                      case (pdbChain, pdbResidue) =>
-                        scores.iterator.map { longLine =>
-                          DepletionScoresByResidue(fkey.pdbId.s,
-                                                   pdbChain.s,
-                                                   pdbResidue.s,
-                                                   longLine)
-                        }
+              val iter = contextIter.flatMap {
+                case StructuralContextFeature(fkey, pdbResidues, _) =>
+                  val scores = scoreMap.get(fkey).getOrElse(Vector())
+                  log.debug(s"Scores found for $fkey: ${scores.size}")
+                  pdbResidues.iterator.flatMap {
+                    case (pdbChain, pdbResidue) =>
+                      scores.iterator.map { longLine =>
+                        DepletionScoresByResidue(fkey.pdbId.s,
+                                                 pdbChain.s,
+                                                 pdbResidue.s,
+                                                 longLine)
+                      }
 
-                    }
-                }
-                EColl.fromIterator(iter,
-                                    name = scoresJs.partitions.headOption.fold(
-                                      "scores")(_.name) + ".back2pdb.json.gz")
+                  }
+              }
+              EColl.fromIterator(iter,
+                                 name = scoresJs.partitions.headOption.fold(
+                                   "scores")(_.name) + ".back2pdb.json.gz")
 
             }
             _ = {

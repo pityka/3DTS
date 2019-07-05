@@ -38,14 +38,14 @@ object JoinCPWithPdb {
                          compressedDocuments = true)
 
   val concatenate =
-    AsyncTask[(EColl[PdbUniGencodeRow], JsECollDump[PdbUniGencodeRow]),
+    AsyncTask[(EColl[PdbUniGencodeRow], EColl[PdbUniGencodeRow]),
               EColl[PdbUniGencodeRow]]("concatenatedCpPdb", 1) {
       case (js1, js2) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
           (js1.source(resourceAllocated.cpu) ++ js2.source(
             resourceAllocated.cpu))
-            .runWith(EColl.sink(js1.sf.name + ".concat." + js2.sf.name))
+            .runWith(EColl.sink(js1.basename + ".concat." + js2.basename))
 
     }
 
@@ -92,123 +92,169 @@ object JoinCPWithPdb {
               .map(x => CpPdbIndex(x.toSet))
           }
     }
-  import com.github.plokhotnyuk.jsoniter_scala.core._
+
+  val joinCpWithPdb = EColl.join2InnerTx(
+    "joincpwithpdb-join",
+    1,
+    None,
+    1024 * 1024 * 50
+  )(
+    preTransformA = spore[sd.JoinGencodeToUniprot.MapResult,
+                          List[MappedTranscriptToUniprot]]({
+      case succ: sd.JoinGencodeToUniprot.Success =>
+        succ.v.filter(_.uniNumber.isDefined).toList
+      case _ => Nil
+    }),
+    preTransformB =
+      spore[JoinUniprotWithPdb.T1, List[JoinUniprotWithPdb.T1]](x => List(x)),
+    keyA = spore[MappedTranscriptToUniprot, String](s =>
+      s.uniId.s + "_" + s.uniNumber.get.i),
+    keyB = spore[JoinUniprotWithPdb.T1, String](s =>
+      s.uniId.s + "_" + s.uniNumber.i),
+    postTransform =
+      spore[Seq[(MappedTranscriptToUniprot, JoinUniprotWithPdb.T1)],
+            List[PdbUniGencodeRow]] { list =>
+        list.map {
+          case (left, right) =>
+            PdbUniGencodeRow(
+              right.pdbId,
+              right.pdbChain,
+              right.pdbResidueNumber,
+              right.pdbSeq,
+              right.uniId,
+              right.uniNumber,
+              right.uniSeq,
+              left.ensT,
+              left.cp,
+              left.indexInCodon,
+              left.indexInTranscript,
+              left.missenseConsequences,
+              left.uniprotSequence,
+              left.referenceNucleotide,
+              left.indexInCds,
+              left.perfectMatch
+            )
+
+        }.toList
+      }
+  )
   val task =
     AsyncTask[JoinCPWithPdbInput, EColl[PdbUniGencodeRow]]("cppdb-2", 1) {
-
       case JoinCPWithPdbInput(
           gencodeUniprot,
           pdbMaps
           ) =>
         implicit ctx =>
-          val uniprot2Genome
-            : Future[scala.collection.mutable.Map[String, List[String]]] =
-            gencodeUniprot.sf.file.map { localFile =>
-              log.info(
-                "Reading UniProt -> genome map .." + gencodeUniprot.sf.name)
+          joinCpWithPdb((gencodeUniprot, pdbMaps.reduce(_ ++ _)))(
+            ResourceRequest((1, 3), 10000))
+      // val uniprot2Genome
+      //   : Future[scala.collection.mutable.Map[String, List[String]]] =
+      //   gencodeUniprot.sf.file.map { localFile =>
+      //     log.info(
+      //       "Reading UniProt -> genome map .." + gencodeUniprot.sf.name)
 
-              val mmap =
-                scala.collection.mutable.AnyRefMap[String, List[String]]()
+      //     val mmap =
+      //       scala.collection.mutable.AnyRefMap[String, List[String]]()
 
-              gencodeUniprot.iterator(localFile)(
-                i =>
-                  i.filter(_.isInstanceOf[sd.JoinGencodeToUniprot.Success])
-                    .map(_.asInstanceOf[sd.JoinGencodeToUniprot.Success])
-                    .flatMap(_.v)
-                    .map { line =>
-                      log.debug(s"Add $line to index")
-                      val uni: UniId = line.uniId
-                      val uninum: Option[UniNumber] = line.uniNumber
-                      (uni, uninum) -> writeToString(line)
-                    }
-                    .filter(_._1._2.isDefined)
-                    .map(x => (x._1._1.s + "_" + x._1._2.get.i) -> x._2)
-                    .foreach {
-                      case (k, line) =>
-                        mmap.get(k) match {
-                          case None    => mmap.update(k, List(line))
-                          case Some(l) => mmap.update(k, line :: l)
-                        }
-                  })
+      //     gencodeUniprot.iterator(localFile)(
+      //       i =>
+      //         i.filter(_.isInstanceOf[sd.JoinGencodeToUniprot.Success])
+      //           .map(_.asInstanceOf[sd.JoinGencodeToUniprot.Success])
+      //           .flatMap(_.v)
+      //           .map { line =>
+      //             log.debug(s"Add $line to index")
+      //             val uni: UniId = line.uniId
+      //             val uninum: Option[UniNumber] = line.uniNumber
+      //             (uni, uninum) -> writeToString(line)
+      //           }
+      //           .filter(_._1._2.isDefined)
+      //           .map(x => (x._1._1.s + "_" + x._1._2.get.i) -> x._2)
+      //           .foreach {
+      //             case (k, line) =>
+      //               mmap.get(k) match {
+      //                 case None    => mmap.update(k, List(line))
+      //                 case Some(l) => mmap.update(k, line :: l)
+      //               }
+      //         })
 
-              log.info(
-                "grouping done " + mmap.size + " " + mmap.foldLeft(0)(
-                  _ + _._2.size))
-              mmap
+      //     log.info(
+      //       "grouping done " + mmap.size + " " + mmap.foldLeft(0)(
+      //         _ + _._2.size))
+      //     mmap
 
-            }
+      //   }
 
-          uniprot2Genome.flatMap { uniprot2Genome =>
-            Future
-              .sequence(pdbMaps.map {
-                case jsondump =>
-                  jsondump.sf.file.map(f => jsondump -> f)
-              })
-              .flatMap { files =>
-                val iters = files.map(x => x._1.createIterator(x._2))
-                val iter: Iterator[PdbUniGencodeRow] =
-                  iters.map(_._1).iterator.flatMap { iter =>
-                    iter
-                      .map {
-                        case unipdbline =>
-                          val uni: UniId = unipdbline.uniId
-                          val uninum: UniNumber = unipdbline.uniNumber
-                          val genomeLines =
-                            uniprot2Genome.get(uni.s + "_" + uninum.i)
-                          log.debug(s"$unipdbline JOIN $genomeLines")
-                          (genomeLines, unipdbline)
-                      }
-                      .filter(_._1.isDefined)
-                      .map(x => (x._1.get -> x._2))
-                      .flatMap {
-                        case (genomeLines,
-                              JoinUniprotWithPdb.T1(uniid,
-                                                    pdbid,
-                                                    pdbch,
-                                                    pdbres,
-                                                    _,
-                                                    pdbaa,
-                                                    unin,
-                                                    uniaa,
-                                                    _)) =>
-                          genomeLines.iterator.map {
-                            case genomeLine =>
-                              val t1: MappedTranscriptToUniprot =
-                                readFromString[MappedTranscriptToUniprot](
-                                  genomeLine)
-                              PdbUniGencodeRow(
-                                pdbid,
-                                pdbch,
-                                pdbres,
-                                pdbaa,
-                                uniid,
-                                unin,
-                                uniaa,
-                                t1.ensT,
-                                t1.cp,
-                                t1.indexInCodon,
-                                t1.indexInTranscript,
-                                t1.missenseConsequences,
-                                t1.uniprotSequence,
-                                t1.referenceNucleotide,
-                                t1.indexInCds,
-                                t1.perfectMatch
-                              )
-                          }
+      // uniprot2Genome.flatMap { uniprot2Genome =>
+      //   Future
+      //     .sequence(pdbMaps.map {
+      //       case jsondump =>
+      //         jsondump.sf.file.map(f => jsondump -> f)
+      //     })
+      //     .flatMap { files =>
+      //       val iters = files.map(x => x._1.createIterator(x._2))
+      //       val iter: Iterator[PdbUniGencodeRow] =
+      //         iters.map(_._1).iterator.flatMap { iter =>
+      //           iter
+      //             .map {
+      //               case unipdbline =>
+      //                 val uni: UniId = unipdbline.uniId
+      //                 val uninum: UniNumber = unipdbline.uniNumber
+      //                 val genomeLines =
+      //                   uniprot2Genome.get(uni.s + "_" + uninum.i)
+      //                 log.debug(s"$unipdbline JOIN $genomeLines")
+      //                 (genomeLines, unipdbline)
+      //             }
+      //             .filter(_._1.isDefined)
+      //             .map(x => (x._1.get -> x._2))
+      //             .flatMap {
+      //               case (genomeLines,
+      //                     JoinUniprotWithPdb.T1(uniid,
+      //                                           pdbid,
+      //                                           pdbch,
+      //                                           pdbres,
+      //                                           _,
+      //                                           pdbaa,
+      //                                           unin,
+      //                                           uniaa,
+      //                                           _)) =>
+      //                 genomeLines.iterator.map {
+      //                   case genomeLine =>
+      //                     val t1: MappedTranscriptToUniprot =
+      //                       readFromString[MappedTranscriptToUniprot](
+      //                         genomeLine)
+      //                     PdbUniGencodeRow(
+      //                       pdbid,
+      //                       pdbch,
+      //                       pdbres,
+      //                       pdbaa,
+      //                       uniid,
+      //                       unin,
+      //                       uniaa,
+      //                       t1.ensT,
+      //                       t1.cp,
+      //                       t1.indexInCodon,
+      //                       t1.indexInTranscript,
+      //                       t1.missenseConsequences,
+      //                       t1.uniprotSequence,
+      //                       t1.referenceNucleotide,
+      //                       t1.indexInCds,
+      //                       t1.perfectMatch
+      //                     )
+      //                 }
 
-                      }
+      //             }
 
-                  }
+      //         }
 
-                EColl
-                  .fromIterator[PdbUniGencodeRow](
-                    iter,
-                    gencodeUniprot.sf.name + "." + pdbMaps.hashCode)
-                  .andThen { case _ => iters.foreach(_._2.close) }
+      //       EColl
+      //         .fromIterator[PdbUniGencodeRow](
+      //           iter,
+      //           gencodeUniprot.sf.name + "." + pdbMaps.hashCode)
+      //         .andThen { case _ => iters.foreach(_._2.close) }
 
-              }
+      //     }
 
-          }
+      // }
     }
 
 }

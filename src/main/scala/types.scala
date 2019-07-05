@@ -327,6 +327,7 @@ case class MappedTranscriptToUniprot(ensT: EnsT,
 object MappedTranscriptToUniprot {
   implicit val codec: JsonValueCodec[MappedTranscriptToUniprot] =
     JsonCodecMaker.make[MappedTranscriptToUniprot](CodecMakerConfig())
+  implicit val serde = tasks.makeSerDe[MappedTranscriptToUniprot]
 }
 
 case class PdbMethod(s: String) extends AnyVal

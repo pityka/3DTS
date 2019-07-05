@@ -48,7 +48,8 @@ object FilterVariantsToExome {
             result <- {
               log.info("Interval trees done")
 
-              val transformedSource = genome.source(resourceAllocated.cpu)
+              val transformedSource = genome
+                .source(resourceAllocated.cpu)
                 .filter(
                   gnomadLine =>
                     !JoinVariationsCore

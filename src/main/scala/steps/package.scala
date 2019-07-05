@@ -48,6 +48,16 @@ package object steps {
     : JsonValueCodec[Seq[HeptamerOccurences]] =
     JsonCodecMaker.make[Seq[HeptamerOccurences]](CodecMakerConfig())
 
+  implicit val joincpwithpdbCodec
+    : JsonValueCodec[(Option[sd.MappedTranscriptToUniprot],
+                      Option[sd.steps.JoinUniprotWithPdb.T1])] =
+    JsonCodecMaker
+      .make[(Option[sd.MappedTranscriptToUniprot],
+             Option[sd.steps.JoinUniprotWithPdb.T1])](CodecMakerConfig())
+  implicit val joincpwithpdbserde =
+    tasks.makeSerDe[(Option[sd.MappedTranscriptToUniprot],
+                     Option[sd.steps.JoinUniprotWithPdb.T1])]
+
   implicit val joincpwithlocusCodec
     : JsonValueCodec[(sd.ChrPos, sd.LocusVariationCountAndNumNs)] =
     JsonCodecMaker

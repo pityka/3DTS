@@ -77,6 +77,8 @@ object JoinUniprotWithPdb {
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[T1] =
       JsonCodecMaker.make[T1](CodecMakerConfig())
+
+    implicit val serde = tasks.makeSerDe[T1]
   }
 
   case class T2(uniId: UniId,
