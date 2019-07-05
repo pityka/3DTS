@@ -68,7 +68,7 @@ libraryDependencies ++= Seq(
   "com.github.tototoshi" %% "scala-csv" % "1.3.5",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-  "com.typesafe.akka" %% "akka-slf4j" % "2.5.11",
+  "com.typesafe.akka" %% "akka-slf4j" % "2.5.18",
   "com.lihaoyi" %% "upickle" % "0.4.4"
 ).map(
   x =>
