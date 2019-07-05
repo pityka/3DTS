@@ -328,7 +328,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 pdbs = pdbs.pdbFiles,
                 mappedUniprotFeatures = features,
                 radius = radius,
-                bothSides = true))(ResourceRequest((1, 12), 1000))
+                bothSides = true))(ResourceRequest((1, 12), 10000))
           }
         }
 
