@@ -427,19 +427,19 @@ object IOHelpers {
       .dropWhile(_.startsWith("#"))
       .drop(1)
       .map { _.split1('\t') }
-      .filter(spl => spl(4).trim == "SWISSMODEL")
-      .filter(spl => spl.size >= 11)
+      .filter(spl => spl(5).trim == "SWISSMODEL")
+      .filter(spl => spl.size >= 13)
       .flatMap { spl =>
-        val rawUniID = spl(0)
+        val rawUniID = spl(1)
         val uniID =
           if (!rawUniID.contains("-")) Some(rawUniID)
           else isoforms.get(rawUniID).map(_.s)
-        val hash = spl(3)
-        val from = spl(5).toInt
-        val to = spl(6).toInt
-        val template = spl(7)
-        val qmean = spl(8).toDouble
-        val url = spl(10)
+        val hash = spl(4)
+        val from = spl(6).toInt
+        val to = spl(7).toInt
+        val template = spl(8)
+        val qmean = spl(9).toDouble
+        val url = spl(12)
 
         uniID.map { uniID =>
           val filename = uniID + "_" + from + "_" + to + "_" + template + "_" + hash
