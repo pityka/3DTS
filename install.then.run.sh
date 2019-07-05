@@ -119,9 +119,9 @@ wget -O input/uniprot.gz  'http://www.uniprot.org/uniprot/?sort=&desc=&compress=
 
 # The following three gencode files may need to be downloaded manually and transferred to the instance
 # If they are downloaded manually, put them in the same directory as the install.then.run.sh
-wget -O input/gencode.v26lift37.annotation.gtf.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.annotation.gtf.gz
-wget -O input/gencode.v26lift37.pc_transcripts.fa.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.pc_transcripts.fa.gz
-wget -O input/gencode.v26lift37.metadata.SwissProt.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.metadata.SwissProt.gz
+wget -O input/gencode.v26lift37.annotation.gtf.gz ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.annotation.gtf.gz
+wget -O input/gencode.v26lift37.pc_transcripts.fa.gz ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.pc_transcripts.fa.gz
+wget -O input/gencode.v26lift37.metadata.SwissProt.gz ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.metadata.SwissProt.gz
 
 
 wget -O input/genome.coverage.all.tar https://data.broadinstitute.org/gnomAD/release-170228/genomes/coverage/genome.coverage.all.tar
