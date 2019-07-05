@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# COMPILE 
+
 echo "needs yum"
 curl https://bintray.com/sbt/rpm/rpm | sudo tee /etc/yum.repos.d/bintray-sbt-rpm.repo
 sudo yum -y install sbt git java-1.8.0
@@ -7,6 +9,7 @@ echo -e "2" | sudo /usr/sbin/alternatives --config java # configure to run on ne
 
 git clone https://github.com/pityka/3DTS.git
 cd 3DTS
+git checkout wip
 dep=$(ls dependencies/)
 for i in $dep; do cd dependencies/$i && sbt -batch publishLocal && cd ../../ ; done
 mkdir lib
@@ -18,6 +21,8 @@ cp pv/bio-pv.min.js ../src/main/resources/public/
 cd ..
 
 sbt -batch stage
+
+# DOWNLOAD DATA AND WRITE CONFIG
 
 mkdir input
 mkdir data
@@ -117,17 +122,24 @@ wget -O input/uniprot.gz  'http://www.uniprot.org/uniprot/?sort=&desc=&compress=
 wget -O input/gencode.v26lift37.annotation.gtf.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.annotation.gtf.gz
 wget -O input/gencode.v26lift37.pc_transcripts.fa.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.pc_transcripts.fa.gz
 wget -O input/gencode.v26lift37.metadata.SwissProt.gz ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.metadata.SwissProt.gz
-mv ../gencode.v26lift37.annotation.gtf.gz input/gencode.v26lift37.annotation.gtf.gz
-mv ../gencode.v26lift37.pc_transcripts.fa.gz input/gencode.v26lift37.pc_transcripts.fa.gz
-mv ../gencode.v26lift37.metadata.SwissProt.gz input/gencode.v26lift37.metadata.SwissProt.gz
 
 
 wget -O input/genome.coverage.all.tar https://data.broadinstitute.org/gnomAD/release-170228/genomes/coverage/genome.coverage.all.tar
 wget -O input/exome.coverage.all.tar  https://data.broadinstitute.org/gnomAD/release-170228/exomes/coverage/exome.coverage.all.tar
 
+wget -O input/human_g1k_v37.fasta.gz ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz
+wget -O input/human_g1k_v37.fasta.fai ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.fai
+
+gunzip input/human_g1k_v37.fasta.gz
+
 mkdir tmp
 
-for i in $(tar tf input/genome.coverage.all.tar | grep -v tbi ) ; do tar xOf input/genome.coverage.all.tar $i | gunzip -c | grep -v "#" >> input/genome.coverage.concat.txt; done
+for i in $(tar tf input/genome.coverage.all.tar | grep -v tbi ) ; do tar xOf input/genome.coverage.all.tar $i | gunzip -c | grep -v "#" >> input/genome.coverage.concat.txt done
 for i in $(tar tf input/exome.coverage.all.tar | grep -v tbi ) ; do tar xOf input/exome.coverage.all.tar $i | gunzip -c | grep -v "#" >> input/exome.coverage.concat.txt; done
+
+rm input/genome.coverage.all.tar
+rm input/exome.coverage.all.tar
+
+# RUN
 
 target/universal/stage/bin/saturation -Dconfig.file=input/conf -J-Xmx115G -Djava.io.tmpdir=tmp/ -Dfile.encoding=UTF-8
