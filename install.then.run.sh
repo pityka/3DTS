@@ -58,6 +58,7 @@ fasta = input/human_g1k_v37.fasta
 fai = input/human_g1k_v37.fasta.fai
 
 tasks.skipContentHashVerificationAfterCache = true
+tasks.fileservice.folderFileStorageCompleteFileCheck = false
 
 gnomadWGSCoverage = [
 	"https://storage.googleapis.com/gnomad-public/release/2.0.2/coverage/genomes/gnomad.genomes.r2.0.2.chr1.coverage.txt.gz"
