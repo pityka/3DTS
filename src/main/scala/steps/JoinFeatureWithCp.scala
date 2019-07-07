@@ -11,7 +11,7 @@ object Feature2CPInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[Feature2CPInput] =
-    JsonCodecMaker.make[Feature2CPInput](CodecMakerConfig())
+    JsonCodecMaker.make[Feature2CPInput](sd.JsonIterConfig.config)
 }
 
 object JoinFeatureWithCp {
@@ -28,7 +28,7 @@ object JoinFeatureWithCp {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[FeatureJoinedWithCp] =
-      JsonCodecMaker.make[FeatureJoinedWithCp](CodecMakerConfig())
+      JsonCodecMaker.make[FeatureJoinedWithCp](sd.JsonIterConfig.config)
   }
 
   val mappedMappedFeaturesToSupplementary =
@@ -61,7 +61,7 @@ object JoinFeatureWithCp {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[MappedFeatures] =
-      JsonCodecMaker.make[MappedFeatures](CodecMakerConfig())
+      JsonCodecMaker.make[MappedFeatures](sd.JsonIterConfig.config)
     implicit val serde = tasks.makeSerDe[MappedFeatures]
   }
 
@@ -90,7 +90,7 @@ object JoinFeatureWithCp {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[PdbMapping] =
-      JsonCodecMaker.make[PdbMapping](CodecMakerConfig())
+      JsonCodecMaker.make[PdbMapping](sd.JsonIterConfig.config)
     implicit val serde = tasks.makeSerDe[PdbMapping]
   }
 
@@ -105,7 +105,7 @@ object JoinFeatureWithCp {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[StructureDefinition] =
-      JsonCodecMaker.make[StructureDefinition](CodecMakerConfig())
+      JsonCodecMaker.make[StructureDefinition](sd.JsonIterConfig.config)
     implicit val serde = tasks.makeSerDe[StructureDefinition]
   }
 

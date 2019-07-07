@@ -16,7 +16,7 @@ object SwissModelMetaDataInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[SwissModelMetaDataInput] =
-    JsonCodecMaker.make[SwissModelMetaDataInput](CodecMakerConfig())
+    JsonCodecMaker.make[SwissModelMetaDataInput](sd.JsonIterConfig.config)
 }
 
 case class SwissModelPdbEntry(id: PdbId, data: String)
@@ -24,7 +24,7 @@ object SwissModelPdbEntry {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[SwissModelPdbEntry] =
-    JsonCodecMaker.make[SwissModelPdbEntry](CodecMakerConfig())
+    JsonCodecMaker.make[SwissModelPdbEntry](sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[SwissModelPdbEntry]
 }
 
@@ -34,7 +34,7 @@ object SwissModelPdbFiles {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[SwissModelPdbFiles] =
-    JsonCodecMaker.make[SwissModelPdbFiles](CodecMakerConfig())
+    JsonCodecMaker.make[SwissModelPdbFiles](sd.JsonIterConfig.config)
 }
 
 object Swissmodel {

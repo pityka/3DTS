@@ -16,7 +16,7 @@ object GencodeUniprotInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[GencodeUniprotInput] =
-    JsonCodecMaker.make[GencodeUniprotInput](CodecMakerConfig())
+    JsonCodecMaker.make[GencodeUniprotInput](sd.JsonIterConfig.config)
 }
 
 object JoinGencodeToUniprot {

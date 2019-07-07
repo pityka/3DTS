@@ -118,11 +118,11 @@ object GnomadData {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[GnomadData] =
-    JsonCodecMaker.make[GnomadData](CodecMakerConfig())
+    JsonCodecMaker.make[GnomadData](sd.JsonIterConfig.config)
 }
 object GnomadDataList {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[GnomadDataList] =
-    JsonCodecMaker.make[GnomadDataList](CodecMakerConfig())
+    JsonCodecMaker.make[GnomadDataList](sd.JsonIterConfig.config)
 }

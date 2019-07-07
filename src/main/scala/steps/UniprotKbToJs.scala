@@ -40,7 +40,7 @@ object UniprotIndexedByGene {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[UniprotIndexedByGene] =
-    JsonCodecMaker.make[UniprotIndexedByGene](CodecMakerConfig())
+    JsonCodecMaker.make[UniprotIndexedByGene](sd.JsonIterConfig.config)
 }
 
 object IndexUniByGeneName {

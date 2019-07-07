@@ -25,7 +25,7 @@ object JoinGencodeToUniprot extends StrictLogging {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[MapResult] =
-      JsonCodecMaker.make[MapResult](CodecMakerConfig())
+      JsonCodecMaker.make[MapResult](sd.JsonIterConfig.config)
     implicit val serde = tasks.makeSerDe[MapResult]
   }
 

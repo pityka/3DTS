@@ -110,11 +110,18 @@ val shared =
         "org.scala-js" %%% "scalajs-java-time" % "0.2.0")
     )
 
+lazy val jsoniterconfig = project
+  .in(file("jsoniterconfig"))
+  .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.3" % Provided
+  )
+
 lazy val root =
   project
     .in(file("."))
     .settings(commonSettings: _*)
-    .dependsOn(sharedJVM)
+    .dependsOn(sharedJVM, jsoniterconfig)
     .settings(name := "saturation")
 
 lazy val sharedJVM = shared.jvm

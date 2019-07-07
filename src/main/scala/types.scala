@@ -7,13 +7,13 @@ import tasks.jsonitersupport._
 case class Posterior(mean: Double, cdf: List[Double])
 object Posterior {
   implicit val codec: JsonValueCodec[Posterior] =
-    JsonCodecMaker.make[Posterior](CodecMakerConfig())
+    JsonCodecMaker.make[Posterior](sd.JsonIterConfig.config)
 }
 
 case class ChrPos(s: String) extends AnyVal // first 3 columns of the bed file
 object ChrPos {
   implicit val codec: JsonValueCodec[ChrPos] =
-    JsonCodecMaker.make[ChrPos](CodecMakerConfig())
+    JsonCodecMaker.make[ChrPos](sd.JsonIterConfig.config)
 
   implicit val serde = tasks.makeSerDe[ChrPos]
 
@@ -21,38 +21,38 @@ object ChrPos {
 case class FeatureName(s: String) extends AnyVal
 object FeatureName {
   implicit val codec: JsonValueCodec[FeatureName] =
-    JsonCodecMaker.make[FeatureName](CodecMakerConfig())
+    JsonCodecMaker.make[FeatureName](sd.JsonIterConfig.config)
 }
 
 case class UniprotFeatureName(s: String) extends AnyVal
 object UniprotFeatureName {
   implicit val codec: JsonValueCodec[UniprotFeatureName] =
-    JsonCodecMaker.make[UniprotFeatureName](CodecMakerConfig())
+    JsonCodecMaker.make[UniprotFeatureName](sd.JsonIterConfig.config)
 }
 case class UniId(s: String) extends AnyVal
 object UniId {
   implicit val codec: JsonValueCodec[UniId] =
-    JsonCodecMaker.make[UniId](CodecMakerConfig())
+    JsonCodecMaker.make[UniId](sd.JsonIterConfig.config)
 }
 case class UniNumber(i: Int) extends AnyVal
 object UniNumber {
   implicit val codec: JsonValueCodec[UniNumber] =
-    JsonCodecMaker.make[UniNumber](CodecMakerConfig())
+    JsonCodecMaker.make[UniNumber](sd.JsonIterConfig.config)
 }
 case class PdbId(s: String) extends AnyVal
 object PdbId {
   implicit val codec: JsonValueCodec[PdbId] =
-    JsonCodecMaker.make[PdbId](CodecMakerConfig())
+    JsonCodecMaker.make[PdbId](sd.JsonIterConfig.config)
 }
 case class PdbChain(s: String) extends AnyVal
 object PdbChain {
   implicit val codec: JsonValueCodec[PdbChain] =
-    JsonCodecMaker.make[PdbChain](CodecMakerConfig())
+    JsonCodecMaker.make[PdbChain](sd.JsonIterConfig.config)
 }
 case class PdbNumber(i: Int) extends AnyVal
 object PdbNumber {
   implicit val codec: JsonValueCodec[PdbNumber] =
-    JsonCodecMaker.make[PdbNumber](CodecMakerConfig())
+    JsonCodecMaker.make[PdbNumber](sd.JsonIterConfig.config)
 }
 case class PdbResidueNumber(num: Int, insertionCode: Option[String]) {
   def toUnresolved =
@@ -66,39 +66,39 @@ object PdbResidueNumber {
 case class PdbResidueNumberUnresolved(s: String) extends AnyVal
 object PdbResidueNumberUnresolved {
   implicit val codec: JsonValueCodec[PdbResidueNumberUnresolved] =
-    JsonCodecMaker.make[PdbResidueNumberUnresolved](CodecMakerConfig())
+    JsonCodecMaker.make[PdbResidueNumberUnresolved](sd.JsonIterConfig.config)
 }
 
 case class UniSeq(s: String) extends AnyVal
 object UniSeq {
   implicit val codec: JsonValueCodec[UniSeq] =
-    JsonCodecMaker.make[UniSeq](CodecMakerConfig())
+    JsonCodecMaker.make[UniSeq](sd.JsonIterConfig.config)
 }
 case class PdbSeq(s: String) extends AnyVal
 object PdbSeq {
   implicit val codec: JsonValueCodec[PdbSeq] =
-    JsonCodecMaker.make[PdbSeq](CodecMakerConfig())
+    JsonCodecMaker.make[PdbSeq](sd.JsonIterConfig.config)
 }
 
 case class EnsT(s: String) extends AnyVal
 object EnsT {
   implicit val codec: JsonValueCodec[EnsT] =
-    JsonCodecMaker.make[EnsT](CodecMakerConfig())
+    JsonCodecMaker.make[EnsT](sd.JsonIterConfig.config)
 }
 case class IndexInCodon(i: Int) extends AnyVal
 object IndexInCodon {
   implicit val codec: JsonValueCodec[IndexInCodon] =
-    JsonCodecMaker.make[IndexInCodon](CodecMakerConfig())
+    JsonCodecMaker.make[IndexInCodon](sd.JsonIterConfig.config)
 }
 case class IndexInTranscript(i: Int) extends AnyVal
 object IndexInTranscript {
   implicit val codec: JsonValueCodec[IndexInTranscript] =
-    JsonCodecMaker.make[IndexInTranscript](CodecMakerConfig())
+    JsonCodecMaker.make[IndexInTranscript](sd.JsonIterConfig.config)
 }
 case class IndexInCds(i: Int) extends AnyVal
 object IndexInCds {
   implicit val codec: JsonValueCodec[IndexInCds] =
-    JsonCodecMaker.make[IndexInCds](CodecMakerConfig())
+    JsonCodecMaker.make[IndexInCds](sd.JsonIterConfig.config)
 }
 case class MissenseConsequences(map: Map[Char, Consequence])
 case class Transcript(cdsOffset0: Int, cds: String)
@@ -111,7 +111,7 @@ case object StopLoss extends Consequence
 case object StartLoss extends Consequence
 object Consequence {
   implicit val codec: JsonValueCodec[Consequence] =
-    JsonCodecMaker.make[Consequence](CodecMakerConfig())
+    JsonCodecMaker.make[Consequence](sd.JsonIterConfig.config)
 
 }
 case class RefNuc(c: Char)
@@ -123,35 +123,36 @@ case class DepletionScoresByResidue(pdbId: String,
 
 object DepletionScoresByResidue {
   implicit val codec: JsonValueCodec[DepletionScoresByResidue] =
-    JsonCodecMaker.make[DepletionScoresByResidue](CodecMakerConfig())
+    JsonCodecMaker.make[DepletionScoresByResidue](sd.JsonIterConfig.config)
 }
 
 case class ObsNs(v: Double) extends AnyVal
 object ObsNs {
   implicit val codec: JsonValueCodec[ObsNs] =
-    JsonCodecMaker.make[ObsNs](CodecMakerConfig())
+    JsonCodecMaker.make[ObsNs](sd.JsonIterConfig.config)
 }
 case class ExpNs(v: Double) extends AnyVal
 object ExpNs {
   implicit val codec: JsonValueCodec[ExpNs] =
-    JsonCodecMaker.make[ExpNs](CodecMakerConfig())
+    JsonCodecMaker.make[ExpNs](sd.JsonIterConfig.config)
 }
 case class NumLoci(v: Double) extends AnyVal
 object NumLoci {
   implicit val codec: JsonValueCodec[NumLoci] =
-    JsonCodecMaker.make[NumLoci](CodecMakerConfig())
+    JsonCodecMaker.make[NumLoci](sd.JsonIterConfig.config)
 }
 
 case class HeptamerIndependentIntergenicRate(v: Double) extends AnyVal
 object HeptamerIndependentIntergenicRate {
   implicit val codec: JsonValueCodec[HeptamerIndependentIntergenicRate] =
-    JsonCodecMaker.make[HeptamerIndependentIntergenicRate](CodecMakerConfig())
+    JsonCodecMaker.make[HeptamerIndependentIntergenicRate](
+      sd.JsonIterConfig.config)
 }
 
 case class NsPostGlobalSynonymousRate(post: Posterior) extends AnyVal
 object NsPostGlobalSynonymousRate {
   implicit val codec: JsonValueCodec[NsPostGlobalSynonymousRate] =
-    JsonCodecMaker.make[NsPostGlobalSynonymousRate](CodecMakerConfig())
+    JsonCodecMaker.make[NsPostGlobalSynonymousRate](sd.JsonIterConfig.config)
 }
 case class NsPostHeptamerIndependentIntergenicRate(post: Posterior)
     extends AnyVal
@@ -189,24 +190,24 @@ object NsPostHeptamerSpecificChromosomeSpecificIntergenicRate {
 case class MappedPdbResidueCount(v: Int) extends AnyVal
 object MappedPdbResidueCount {
   implicit val codec: JsonValueCodec[MappedPdbResidueCount] =
-    JsonCodecMaker.make[MappedPdbResidueCount](CodecMakerConfig())
+    JsonCodecMaker.make[MappedPdbResidueCount](sd.JsonIterConfig.config)
 }
 
 case class TotalPdbResidueCount(v: Int) extends AnyVal
 object TotalPdbResidueCount {
   implicit val codec: JsonValueCodec[TotalPdbResidueCount] =
-    JsonCodecMaker.make[TotalPdbResidueCount](CodecMakerConfig())
+    JsonCodecMaker.make[TotalPdbResidueCount](sd.JsonIterConfig.config)
 }
 case class MyColor(r: Int, g: Int, b: Int)
 case class ExpS(v: Double) extends AnyVal
 object ExpS {
   implicit val codec: JsonValueCodec[ExpS] =
-    JsonCodecMaker.make[ExpS](CodecMakerConfig())
+    JsonCodecMaker.make[ExpS](sd.JsonIterConfig.config)
 }
 case class ObsS(v: Double) extends AnyVal
 object ObsS {
   implicit val codec: JsonValueCodec[ObsS] =
-    JsonCodecMaker.make[ObsS](CodecMakerConfig())
+    JsonCodecMaker.make[ObsS](sd.JsonIterConfig.config)
 }
 
 case class FeatureKey(pdbId: PdbId,
@@ -220,7 +221,7 @@ case class FeatureKey(pdbId: PdbId,
 
 object FeatureKey {
   implicit val codec: JsonValueCodec[FeatureKey] =
-    JsonCodecMaker.make[FeatureKey](CodecMakerConfig())
+    JsonCodecMaker.make[FeatureKey](sd.JsonIterConfig.config)
 }
 
 case class DepletionScoreCDFs(
@@ -235,7 +236,7 @@ case class DepletionScoreCDFs(
 
 object DepletionScoreCDFs {
   implicit val codec: JsonValueCodec[DepletionScoreCDFs] =
-    JsonCodecMaker.make[DepletionScoreCDFs](CodecMakerConfig())
+    JsonCodecMaker.make[DepletionScoreCDFs](sd.JsonIterConfig.config)
 
   implicit val serde = tasks.makeSerDe[DepletionScoreCDFs]
 }
@@ -256,7 +257,7 @@ case class DepletionRow(
 
 object DepletionRow {
   implicit val codec: JsonValueCodec[DepletionRow] =
-    JsonCodecMaker.make[DepletionRow](CodecMakerConfig())
+    JsonCodecMaker.make[DepletionRow](sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[DepletionRow]
 }
 
@@ -269,7 +270,7 @@ case class AlignmentDetails(uniId: UniId,
                             alignedPdbSeq: PdbSeq)
 object AlignmentDetails {
   implicit val codec: JsonValueCodec[AlignmentDetails] =
-    JsonCodecMaker.make[AlignmentDetails](CodecMakerConfig())
+    JsonCodecMaker.make[AlignmentDetails](sd.JsonIterConfig.config)
 }
 
 case class MappedUniprotFeature(
@@ -281,7 +282,7 @@ case class MappedUniprotFeature(
 )
 object MappedUniprotFeature {
   implicit val codec: JsonValueCodec[MappedUniprotFeature] =
-    JsonCodecMaker.make[MappedUniprotFeature](CodecMakerConfig())
+    JsonCodecMaker.make[MappedUniprotFeature](sd.JsonIterConfig.config)
 }
 
 case class PdbUniGencodeRow(
@@ -304,7 +305,7 @@ case class PdbUniGencodeRow(
 
 object PdbUniGencodeRow {
   implicit val codec: JsonValueCodec[PdbUniGencodeRow] =
-    JsonCodecMaker.make[PdbUniGencodeRow](CodecMakerConfig())
+    JsonCodecMaker.make[PdbUniGencodeRow](sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[PdbUniGencodeRow]
 }
 
@@ -326,7 +327,7 @@ case class MappedTranscriptToUniprot(ensT: EnsT,
 
 object MappedTranscriptToUniprot {
   implicit val codec: JsonValueCodec[MappedTranscriptToUniprot] =
-    JsonCodecMaker.make[MappedTranscriptToUniprot](CodecMakerConfig())
+    JsonCodecMaker.make[MappedTranscriptToUniprot](sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[MappedTranscriptToUniprot]
 }
 
@@ -335,13 +336,13 @@ object PdbMethod {
   val XRay = PdbMethod("x-ray")
   val NMR = PdbMethod("nmr")
   implicit val codec: JsonValueCodec[PdbMethod] =
-    JsonCodecMaker.make[PdbMethod](CodecMakerConfig())
+    JsonCodecMaker.make[PdbMethod](sd.JsonIterConfig.config)
 }
 
 case class GeneSymbol(s: String) extends AnyVal
 object GeneSymbol {
   implicit val codec: JsonValueCodec[GeneSymbol] =
-    JsonCodecMaker.make[GeneSymbol](CodecMakerConfig())
+    JsonCodecMaker.make[GeneSymbol](sd.JsonIterConfig.config)
 }
 
 case class HeptamerOccurences(heptamer: String,
@@ -352,7 +353,7 @@ object HeptamerOccurences {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[HeptamerOccurences] =
-    JsonCodecMaker.make[HeptamerOccurences](CodecMakerConfig())
+    JsonCodecMaker.make[HeptamerOccurences](sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[HeptamerOccurences]
 }
 
@@ -365,7 +366,8 @@ object HeptamerNeutralRateAndVariableCount {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[HeptamerNeutralRateAndVariableCount] =
-    JsonCodecMaker.make[HeptamerNeutralRateAndVariableCount](CodecMakerConfig())
+    JsonCodecMaker.make[HeptamerNeutralRateAndVariableCount](
+      sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[HeptamerNeutralRateAndVariableCount]
 }
 
@@ -383,5 +385,5 @@ object UniProtEntry {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[UniProtEntry] =
-    JsonCodecMaker.make[UniProtEntry](CodecMakerConfig())
+    JsonCodecMaker.make[UniProtEntry](sd.JsonIterConfig.config)
 }

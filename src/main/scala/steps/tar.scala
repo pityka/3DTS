@@ -18,7 +18,7 @@ object TarArchiveInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[TarArchiveInput] =
-    JsonCodecMaker.make[TarArchiveInput](CodecMakerConfig())
+    JsonCodecMaker.make[TarArchiveInput](sd.JsonIterConfig.config)
 }
 
 object TarArchive {

@@ -17,7 +17,7 @@ object HeptamerRates {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[HeptamerRates] =
-    JsonCodecMaker.make[HeptamerRates](CodecMakerConfig())
+    JsonCodecMaker.make[HeptamerRates](sd.JsonIterConfig.config)
 }
 
 object CountHeptamers {

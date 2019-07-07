@@ -20,7 +20,7 @@ object UniProtPdbInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[UniProtPdbInput] =
-    JsonCodecMaker.make[UniProtPdbInput](CodecMakerConfig())
+    JsonCodecMaker.make[UniProtPdbInput](sd.JsonIterConfig.config)
 }
 
 case class UniProtPdbFullInput(
@@ -30,7 +30,7 @@ object UniProtPdbFullInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[UniProtPdbFullInput] =
-    JsonCodecMaker.make[UniProtPdbFullInput](CodecMakerConfig())
+    JsonCodecMaker.make[UniProtPdbFullInput](sd.JsonIterConfig.config)
 }
 
 case class UniProtPdbFullOutput(
@@ -44,7 +44,7 @@ object UniProtPdbFullOutput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[UniProtPdbFullOutput] =
-    JsonCodecMaker.make[UniProtPdbFullOutput](CodecMakerConfig())
+    JsonCodecMaker.make[UniProtPdbFullOutput](sd.JsonIterConfig.config)
 }
 
 case class UniProtPdbOutput(
@@ -57,7 +57,7 @@ object UniProtPdbOutput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[UniProtPdbOutput] =
-    JsonCodecMaker.make[UniProtPdbOutput](CodecMakerConfig())
+    JsonCodecMaker.make[UniProtPdbOutput](sd.JsonIterConfig.config)
 }
 
 object JoinUniprotWithPdb {
@@ -76,7 +76,7 @@ object JoinUniprotWithPdb {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[T1] =
-      JsonCodecMaker.make[T1](CodecMakerConfig())
+      JsonCodecMaker.make[T1](sd.JsonIterConfig.config)
 
     implicit val serde = tasks.makeSerDe[T1]
   }
@@ -90,7 +90,7 @@ object JoinUniprotWithPdb {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[T2] =
-      JsonCodecMaker.make[T2](CodecMakerConfig())
+      JsonCodecMaker.make[T2](sd.JsonIterConfig.config)
   }
 
   def downloadUniprot2(uniprotkbSF: SharedFile, genomeUniJoin: EColl[UniId])(

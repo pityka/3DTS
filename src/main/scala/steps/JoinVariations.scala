@@ -19,7 +19,7 @@ object JoinVariationsInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[JoinVariationsInput] =
-    JsonCodecMaker.make[JoinVariationsInput](CodecMakerConfig())
+    JsonCodecMaker.make[JoinVariationsInput](sd.JsonIterConfig.config)
 }
 
 object JoinVariations {

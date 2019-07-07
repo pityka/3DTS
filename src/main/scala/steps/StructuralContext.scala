@@ -18,7 +18,8 @@ object StructuralContextFromFeaturesInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[StructuralContextFromFeaturesInput] =
-    JsonCodecMaker.make[StructuralContextFromFeaturesInput](CodecMakerConfig())
+    JsonCodecMaker.make[StructuralContextFromFeaturesInput](
+      sd.JsonIterConfig.config)
 }
 
 case class StructuralContextFromFeaturesAndPdbsInput(
@@ -45,7 +46,7 @@ object StructuralContextFeature {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[StructuralContextFeature] =
-    JsonCodecMaker.make[StructuralContextFeature](CodecMakerConfig())
+    JsonCodecMaker.make[StructuralContextFeature](sd.JsonIterConfig.config)
   implicit val serde = tasks.makeSerDe[StructuralContextFeature]
 }
 

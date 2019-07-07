@@ -19,14 +19,14 @@ object FilterGnomadOutput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[FilterGnomadOutput] =
-    JsonCodecMaker.make[FilterGnomadOutput](CodecMakerConfig())
+    JsonCodecMaker.make[FilterGnomadOutput](sd.JsonIterConfig.config)
 }
 
 object FilterVariantsInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[FilterVariantsInput] =
-    JsonCodecMaker.make[FilterVariantsInput](CodecMakerConfig())
+    JsonCodecMaker.make[FilterVariantsInput](sd.JsonIterConfig.config)
 }
 
 object FilterVariantsToExome {

@@ -37,7 +37,7 @@ case class Atom(coord: Array[Double],
 
 object Atom {
   implicit val codec: JsonValueCodec[Atom] =
-    JsonCodecMaker.make[Atom](CodecMakerConfig())
+    JsonCodecMaker.make[Atom](sd.JsonIterConfig.config)
 }
 
 /* Not augmented */
@@ -73,7 +73,7 @@ case class Structure(atoms: Vector[AtomWithLabels],
 
 object Structure {
   implicit val codec: JsonValueCodec[Structure] =
-    JsonCodecMaker.make[Structure](CodecMakerConfig())
+    JsonCodecMaker.make[Structure](sd.JsonIterConfig.config)
 }
 
 case class PdbHelix(serial: String,
@@ -91,7 +91,7 @@ case class PdbHelix(serial: String,
                     helixLength: Option[Int])
 object PdbHelix {
   implicit val codec: JsonValueCodec[PdbHelix] =
-    JsonCodecMaker.make[PdbHelix](CodecMakerConfig())
+    JsonCodecMaker.make[PdbHelix](sd.JsonIterConfig.config)
 }
 
 case class PdbSheet(strand: Int,
@@ -119,7 +119,7 @@ case class PdbSheet(strand: Int,
 
 object PdbSheet {
   implicit val codec: JsonValueCodec[PdbSheet] =
-    JsonCodecMaker.make[PdbSheet](CodecMakerConfig())
+    JsonCodecMaker.make[PdbSheet](sd.JsonIterConfig.config)
 }
 
 case class CIFContents(
@@ -303,7 +303,7 @@ case class CIFContents(
 object CIFContents extends StrictLogging {
 
   implicit val codec: JsonValueCodec[CIFContents] =
-    JsonCodecMaker.make[CIFContents](CodecMakerConfig())
+    JsonCodecMaker.make[CIFContents](sd.JsonIterConfig.config)
 
   val newline = "\n"
 

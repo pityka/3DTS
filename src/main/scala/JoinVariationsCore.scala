@@ -16,7 +16,7 @@ object GenomeCoverage {
     def key(g: GenomeCoverage) = g.cp
   }
   implicit val codec: JsonValueCodec[GenomeCoverage] =
-    JsonCodecMaker.make[GenomeCoverage](CodecMakerConfig())
+    JsonCodecMaker.make[GenomeCoverage](sd.JsonIterConfig.config)
 
   implicit val serde = tasks.makeSerDe[GenomeCoverage]
 }
@@ -78,7 +78,7 @@ object JoinVariationsCore {
       def key(g: GnomadLine) = g.cp
     }
     implicit val codec: JsonValueCodec[GnomadLine] =
-      JsonCodecMaker.make[GnomadLine](CodecMakerConfig())
+      JsonCodecMaker.make[GnomadLine](sd.JsonIterConfig.config)
 
     implicit val serde = tasks.makeSerDe[GnomadLine]
   }
@@ -88,7 +88,7 @@ object JoinVariationsCore {
     implicit val ordering: Ordering[Bean] = Ordering.by(_.chrpos)
 
     implicit val codec: JsonValueCodec[Bean] =
-      JsonCodecMaker.make[Bean](CodecMakerConfig())
+      JsonCodecMaker.make[Bean](sd.JsonIterConfig.config)
 
     case class Data(gl: GnomadLine, source: String, chrpos: String) extends Bean
 

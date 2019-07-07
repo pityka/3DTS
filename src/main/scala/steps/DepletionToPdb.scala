@@ -18,7 +18,7 @@ object Depletion2PdbInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[Depletion2PdbInput] =
-    JsonCodecMaker.make[Depletion2PdbInput](CodecMakerConfig())
+    JsonCodecMaker.make[Depletion2PdbInput](sd.JsonIterConfig.config)
 }
 
 case class ScoresIndexedByPdbId(fs: Set[SharedFile])
@@ -27,7 +27,7 @@ object ScoresIndexedByPdbId {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[ScoresIndexedByPdbId] =
-    JsonCodecMaker.make[ScoresIndexedByPdbId](CodecMakerConfig())
+    JsonCodecMaker.make[ScoresIndexedByPdbId](sd.JsonIterConfig.config)
 }
 
 object DepletionToPdb {

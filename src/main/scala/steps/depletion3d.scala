@@ -439,7 +439,7 @@ object depletion3d extends StrictLogging {
     import com.github.plokhotnyuk.jsoniter_scala.core._
     import com.github.plokhotnyuk.jsoniter_scala.macros._
     implicit val codec: JsonValueCodec[Depletion3dInput] =
-      JsonCodecMaker.make[Depletion3dInput](CodecMakerConfig())
+      JsonCodecMaker.make[Depletion3dInput](sd.JsonIterConfig.config)
 
     implicit val serde = tasks.makeSerDe[Depletion3dInput]
   }

@@ -16,7 +16,7 @@ object GnomadCoverageFile {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[GnomadCoverageFile] =
-    JsonCodecMaker.make[GnomadCoverageFile](CodecMakerConfig())
+    JsonCodecMaker.make[GnomadCoverageFile](sd.JsonIterConfig.config)
 }
 
 case class GnomadCoverageFiles(files: Seq[SharedFile], totalSize: Int)
@@ -25,7 +25,7 @@ object GnomadCoverageFiles {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[GnomadCoverageFiles] =
-    JsonCodecMaker.make[GnomadCoverageFiles](CodecMakerConfig())
+    JsonCodecMaker.make[GnomadCoverageFiles](sd.JsonIterConfig.config)
 }
 
 object ConvertGenomeCoverage {

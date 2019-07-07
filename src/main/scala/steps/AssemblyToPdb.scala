@@ -131,18 +131,18 @@ object Assembly2PdbInput {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[Assembly2PdbInput] =
-    JsonCodecMaker.make[Assembly2PdbInput](CodecMakerConfig())
+    JsonCodecMaker.make[Assembly2PdbInput](sd.JsonIterConfig.config)
 }
 
 object FetchCifOutput {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[FetchCifOutput] =
-    JsonCodecMaker.make[FetchCifOutput](CodecMakerConfig())
+    JsonCodecMaker.make[FetchCifOutput](sd.JsonIterConfig.config)
 }
 object Assembly2PdbOutput {
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   import com.github.plokhotnyuk.jsoniter_scala.core._
   implicit val codec: JsonValueCodec[Assembly2PdbOutput] =
-    JsonCodecMaker.make[Assembly2PdbOutput](CodecMakerConfig())
+    JsonCodecMaker.make[Assembly2PdbOutput](sd.JsonIterConfig.config)
 }

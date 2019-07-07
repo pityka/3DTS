@@ -19,7 +19,7 @@ object JoinCPWithPdbInput {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[JoinCPWithPdbInput] =
-    JsonCodecMaker.make[JoinCPWithPdbInput](CodecMakerConfig())
+    JsonCodecMaker.make[JoinCPWithPdbInput](sd.JsonIterConfig.config)
 }
 
 case class CpPdbIndex(fs: Set[SharedFile])
@@ -28,7 +28,7 @@ object CpPdbIndex {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[CpPdbIndex] =
-    JsonCodecMaker.make[CpPdbIndex](CodecMakerConfig())
+    JsonCodecMaker.make[CpPdbIndex](sd.JsonIterConfig.config)
 }
 
 object JoinCPWithPdb {

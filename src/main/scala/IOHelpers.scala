@@ -48,7 +48,7 @@ object LocusVariationCountAndNumNs {
   import com.github.plokhotnyuk.jsoniter_scala.core._
   import com.github.plokhotnyuk.jsoniter_scala.macros._
   implicit val codec: JsonValueCodec[LocusVariationCountAndNumNs] =
-    JsonCodecMaker.make[LocusVariationCountAndNumNs](CodecMakerConfig())
+    JsonCodecMaker.make[LocusVariationCountAndNumNs](sd.JsonIterConfig.config)
 
   implicit val serde = tasks.makeSerDe[LocusVariationCountAndNumNs]
 }
