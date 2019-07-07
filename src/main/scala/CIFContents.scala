@@ -305,6 +305,8 @@ object CIFContents extends StrictLogging {
   implicit val codec: JsonValueCodec[CIFContents] =
     JsonCodecMaker.make[CIFContents](CodecMakerConfig())
 
+  val newline = "\n"
+
   /** Extract necessary information from the protein structure file
     *
     * Reads the Atom table of the CIF file.
@@ -385,7 +387,7 @@ object CIFContents extends StrictLogging {
         val mIdx = idx.map(_._2).max
 
         multiLineRegexp
-          .findAllMatchIn(table.mkString("\n"))
+          .findAllMatchIn(table.mkString(newline))
           .map(_.matched)
           .grouped(header.size)
           .filter(_.size >= mIdx)
