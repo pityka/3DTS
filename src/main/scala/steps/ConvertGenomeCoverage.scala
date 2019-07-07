@@ -8,6 +8,7 @@ import stringsplit._
 import akka.stream.scaladsl._
 import akka.util._
 import scala.collection.mutable.ArrayBuffer
+import tasks.util.AkkaStreamComponents
 
 case class GnomadCoverageFile(files: SharedFile, totalSize: Int)
 
@@ -75,8 +76,8 @@ object ConvertGenomeCoverage {
           val buffer = scala.collection.mutable.ArrayBuffer[String]()
           val source = Source(coverageFiles.toList).flatMapConcat { file =>
             file.source
-              .via(Compression.gunzip())
-              .via(tasks.util.AkkaStreamComponents
+              .via(AkkaStreamComponents.gunzip())
+              .via(AkkaStreamComponents
                 .delimiter('\n', maximumFrameLength = Int.MaxValue))
               .drop(1)
               .map(convertLine(_, totalSize, buffer))

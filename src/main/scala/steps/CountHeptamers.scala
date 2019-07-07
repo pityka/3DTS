@@ -4,6 +4,7 @@ import sd._
 import java.io.File
 import scala.concurrent._
 import tasks._
+import tasks.util.AkkaStreamComponents
 import tasks.queue.NodeLocalCache
 import tasks.jsonitersupport._
 import tasks.ecoll._
@@ -235,9 +236,7 @@ object CountHeptamers {
       implicit ec: ExecutionContext): Sink[ByteString, Future[File]] = {
     val f = tasks.util.TempFile.createTempFile("tmp")
     Flow[ByteString]
-      .via(tasks.util.AkkaStreamComponents
-        .strictBatchWeighted[ByteString](1024 * 512, _.size.toLong)(_ ++ _))
-      .via(Compression.gzip)
+      .via(AkkaStreamComponents.gzip(1, 1024 * 512))
       .toMat(FileIO.toPath(f.toPath))(Keep.right)
       .mapMaterializedValue(_.map(_ => f))
   }

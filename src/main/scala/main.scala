@@ -75,7 +75,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val swissModelLinearFeatures = swissModelStructures.flatMap {
       swissModelStructures =>
         Swissmodel
-          .rundssp(swissModelStructures)(ResourceRequest(1, 5000))
+          .rundssp(swissModelStructures)(ResourceRequest(1000, 5000)) // disable this step
     }
 
     val convertedGnomadGenome = {
@@ -108,12 +108,11 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val gnomadWGSConvertedCoverage =
       ConvertGenomeCoverage
         .gnomadToEColl(GnomadCoverageFiles(gnomadWGSCoverage, 15496))(
-          ResourceRequest((1, 12), 5000))
+          ResourceRequest(1, 5000))
 
     val gnomadWGSConvertedVCF =
       ConvertGnomadToHLI
-        .gnomadToEColl(GnomadDataList(gnomadWGSVCF))(
-          ResourceRequest((1, 12), 5000))
+        .gnomadToEColl(GnomadDataList(gnomadWGSVCF))(ResourceRequest(1, 5000))
 
     val chromosomes = None :: ((1 to 22 map (i => "chr" + i)).toList)
       .map(Some(_))

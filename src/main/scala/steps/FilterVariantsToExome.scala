@@ -6,7 +6,7 @@ import tasks.ecoll._
 import tasks.queue.NodeLocalCache
 import tasks.jsonitersupport._
 import fileutils._
-import akka.stream.scaladsl._
+import tasks.util.AkkaStreamComponents
 import akka.util._
 
 case class FilterVariantsInput(gnomad: EColl[JoinVariationsCore.GnomadLine],
@@ -58,7 +58,7 @@ object FilterVariantsToExome {
                 .map { gl =>
                   ByteString(writeToString(gl) + "\n")
                 }
-                .via(Compression.gzip)
+                .via(AkkaStreamComponents.gzip(1, 1024 * 512))
 
               SharedFile(transformedSource,
                          genome.basename + ".filter." + gencode.name).map(x =>

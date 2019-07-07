@@ -48,6 +48,7 @@ object Swissmodel {
       case SwissModelPdbFiles(swissmodelPdbs) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
+          releaseResources
           swissmodelPdbs
             .source(resourceAllocated.cpu)
             .mapAsync(10) { entry =>

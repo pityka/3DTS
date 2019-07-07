@@ -108,16 +108,18 @@ object JoinGencodeToUniprot {
 
               log.info("uniprot kb read. size: " + uniprotKb.size)
 
-              openSource(fastaL) { fastaSource =>
-                val s: Iterator[sd.JoinGencodeToUniprot.MapResult] =
-                  sd.JoinGencodeToUniprot.mapTranscripts(
-                    gencode,
-                    ensembleXRefUniProt,
-                    IOHelpers.readGencodeProteinCodingTranscripts(fastaSource),
-                    uniprotKb)
-                EColl.fromIterator(s, gencodeGtf.name + ".genome.json.gz")
-
-              }
+              val fastaSource = createSource(fastaL)
+              val s: Iterator[sd.JoinGencodeToUniprot.MapResult] =
+                sd.JoinGencodeToUniprot.mapTranscripts(
+                  gencode,
+                  ensembleXRefUniProt,
+                  IOHelpers.readGencodeProteinCodingTranscripts(fastaSource),
+                  uniprotKb)
+              EColl
+                .fromIterator(s, gencodeGtf.name + ".genome.json.gz")
+                .andThen {
+                  case _ => fastaSource.close
+                }
 
             }
           } yield ret

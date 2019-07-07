@@ -8,6 +8,7 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 import JoinVariationsCore.{GnomadLine, GnomadGenders, GnomadPop}
 import stringsplit._
+import tasks.util.AkkaStreamComponents
 
 case class GnomadData(sf: SharedFile)
 
@@ -73,7 +74,7 @@ object ConvertGnomadToHLI {
           implicit val mat = ctx.components.actorMaterializer
 
           sf.source
-            .via(Compression.gunzip())
+            .via(AkkaStreamComponents.gunzip())
             .via(Framing.delimiter(ByteString("\n"), Int.MaxValue, true))
             .map(_.utf8String)
             .mapConcat(line => vcf2json(line))
@@ -97,7 +98,7 @@ object ConvertGnomadToHLI {
 
           val source = Source(files.toList.map(_.sf)).flatMapConcat { sf =>
             sf.source
-              .via(Compression.gunzip())
+              .via(AkkaStreamComponents.gunzip())
               .via(tasks.util.AkkaStreamComponents
                 .delimiter('\n', maximumFrameLength = Int.MaxValue))
               .map(_.utf8String)

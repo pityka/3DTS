@@ -3,12 +3,13 @@ package sd.steps
 import sd._
 import scala.concurrent._
 import tasks._
+import tasks.util.AkkaStreamComponents
 import tasks.jsonitersupport._
 import tasks.ecoll._
 import tasks.util.TempFile
 import fileutils._
 import index2._
-import akka.stream.scaladsl.{Source, Compression}
+import akka.stream.scaladsl.{Source}
 import akka.stream.scaladsl.StreamConverters
 
 object UniprotKbToJs {
@@ -19,7 +20,7 @@ object UniprotKbToJs {
         implicit val mat = ctx.components.actorMaterializer
         val scalaSource = scala.io.Source.fromInputStream(
           uniprotkb.source
-            .via(Compression.gunzip())
+            .via(AkkaStreamComponents.gunzip())
             .runWith(StreamConverters.asInputStream()))
         val parsed =
           Source.fromIterator(() => IOHelpers.readUniProtFile(scalaSource))
