@@ -109,7 +109,7 @@ object AssemblyToPdb {
                           Future.successful(None)
                         } else {
 
-                          SharedFile(writeToTempFile(pdbString),
+                          SharedFile(Source.single(ByteString(pdbString)),
                                      pdbId.s + ".assembly.pdb").map(s =>
                             Some(pdbId -> s))
 
