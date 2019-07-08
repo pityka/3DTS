@@ -57,6 +57,7 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "tasks-core" % tasksVersion,
   "io.github.pityka" %% "tasks-jsoniter" % tasksVersion,
   "io.github.pityka" %% "tasks-ecoll" % tasksVersion,
+  "io.github.pityka" %% "tasks-ui-backend" % tasksVersion,
   "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.3" % Provided,
   "indexlib" %% "indexlib" % "1.3.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
