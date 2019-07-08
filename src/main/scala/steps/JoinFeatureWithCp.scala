@@ -171,7 +171,7 @@ object JoinFeatureWithCp {
           ) =>
         implicit ctx =>
           log.info("Start JoinFeatureWithCp")
-
+          releaseResources
           joinFeaturesWithPdbGencodeMapping((cppdb, featureContext))(
             ResourceRequest(1, 10000))
 

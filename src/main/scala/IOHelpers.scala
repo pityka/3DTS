@@ -430,10 +430,8 @@ object IOHelpers {
       .filter(spl => spl(5).trim == "SWISSMODEL")
       .filter(spl => spl.size >= 13)
       .flatMap { spl =>
-        val rawUniID = spl(1)
-        val uniID =
-          if (!rawUniID.contains("-")) Some(rawUniID)
-          else isoforms.get(rawUniID).map(_.s)
+        // val rawUniID = spl(1)
+        val uniID = spl(0)
         val hash = spl(4)
         val from = spl(6).toInt
         val to = spl(7).toInt

@@ -75,7 +75,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val swissModelLinearFeatures = swissModelStructures.flatMap {
       swissModelStructures =>
         Swissmodel
-          .rundssp(swissModelStructures)(ResourceRequest(1000, 5000)) // disable this step
+          .rundssp(swissModelStructures)(ResourceRequest(1, 5000)) // disable this step
     }
 
     val convertedGnomadGenome = {
@@ -197,7 +197,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                                     uniprotgencodemap,
                                     exomeCov,
                                     genomeCov,
-                                    gencodeGtf))(ResourceRequest(1, 60000))
+                                    gencodeGtf))(ResourceRequest(1, 30000))
             }
           }
         }
@@ -240,7 +240,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val siteFrequencySpectrum = variationsJoinedEColl.flatMap {
       variationsJoinedEColl =>
         JoinVariations.siteFrequencySpectrum(variationsJoinedEColl)(
-          ResourceRequest(12, 5000))
+          ResourceRequest(1, 5000))
     }
 
     val uniprotpdbmap = uniprotgencodemap.flatMap { uniprotgencodemap =>
@@ -251,7 +251,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
 
     val extractedFeatures = uniprotpdbmap.flatMap { uniprotpdbmap =>
       sd.steps.JoinUniprotWithPdb
-        .extractMapppedFeatures(uniprotpdbmap)(ResourceRequest((1, 12), 5000))
+        .extractMapppedFeatures(uniprotpdbmap)(ResourceRequest(1, 5000))
     }
 
     extractedFeatures.andThen {
@@ -266,7 +266,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           JoinCPWithPdbInput(
             uniprotgencodemap,
             uniprotpdbmap.tables.map(_._2).sortBy(_.basename)))(
-          ResourceRequest((1, 3), 100000))
+          ResourceRequest(1, 30000))
       }
     }
 
@@ -275,7 +275,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         swissModelUniPdbMap.flatMap { swissModelUniPdbMap =>
           JoinCPWithPdb.task(
             JoinCPWithPdbInput(uniprotgencodemap, List(swissModelUniPdbMap)))(
-            ResourceRequest((1, 3), 100000))
+            ResourceRequest(1, 30000))
         }
       }
 
@@ -287,7 +287,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     }
 
     val cppdbindex = concatenatedCpPdbJoin.flatMap { cppdb =>
-      JoinCPWithPdb.indexCpPdb(cppdb)(ResourceRequest(1, 60000))
+      JoinCPWithPdb.indexCpPdb(cppdb)(ResourceRequest(1, 3000))
     }
 
     val mappableUniprotIds = uniprotgencodemap.flatMap { uniprotgencodemap =>
@@ -297,7 +297,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
     val cifs = mappableUniprotIds.flatMap { mappedUniprotIds =>
       AssemblyToPdb.fetchCif(
         Assembly2PdbInput(uniprotKbOriginal, mappedUniprotIds))(
-        ResourceRequest((1, 8), 3000))
+        ResourceRequest(1, 3000))
     }
 
     val assemblies = cifs.flatMap { cifs =>
@@ -313,7 +313,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           features.flatMap { features =>
             JoinFeatureWithCp.task(
               Feature2CPInput(featureContext = features, cppdb = cppdb))(
-              ResourceRequest(1, 120000))
+              ResourceRequest(1, 30000))
           }
         }
 
@@ -328,7 +328,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 pdbs = pdbs.pdbFiles,
                 mappedUniprotFeatures = features,
                 radius = radius,
-                bothSides = true))(ResourceRequest((1, 12), 10000))
+                bothSides = true))(ResourceRequest(1, 30000))
           }
         }
 
@@ -343,8 +343,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                 cifs = cifs.cifFiles,
                 mappedUniprotFeatures = uniprotpdbmap.tables.map(_._3).toSet,
                 radius = radius,
-                bothSides = includeBothSidesOfPlane))(
-              ResourceRequest((1, 12), 1000))
+                bothSides = includeBothSidesOfPlane))(ResourceRequest(1, 1000))
           }
         }
 
@@ -458,14 +457,14 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         missense <- missenseVariations
         synonymous <- synonymousVariations
         _ <- JoinFeatureWithCp
-          .joinCpWithLocus((cps, missense))(ResourceRequest(1, 100000))
+          .joinCpWithLocus((cps, missense))(ResourceRequest(1, 30000))
           .andThen {
             case scala.util.Success(joinedMissense) =>
               logger.info(
                 "Total number of mapped missense: " + joinedMissense.length)
           }
         _ <- JoinFeatureWithCp
-          .joinCpWithLocus((cps, synonymous))(ResourceRequest(1, 100000))
+          .joinCpWithLocus((cps, synonymous))(ResourceRequest(1, 30000))
           .andThen {
             case scala.util.Success(joinedSyn) =>
               logger.info(
@@ -514,11 +513,11 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       }
 
       val repartitionedScores = concatenatedDepletionScores.flatMap { ds =>
-        depletion3d.repartition(ds)(ResourceRequest((1, 12), 5000))
+        depletion3d.repartition(ds)(ResourceRequest(1, 5000))
       }
 
       val indexedScores = scores2pdb.flatMap { scores =>
-        DepletionToPdb.indexByPdbId(scores)(ResourceRequest(1, 20000))
+        DepletionToPdb.indexByPdbId(scores)(ResourceRequest(1, 30000))
       }
 
       val server = indexedScores.flatMap { index =>

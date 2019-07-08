@@ -145,6 +145,7 @@ object JoinCPWithPdb {
           pdbMaps
           ) =>
         implicit ctx =>
+          releaseResources
           joinCpWithPdb((gencodeUniprot, pdbMaps.reduce(_ ++ _)))(
             ResourceRequest((1, 3), 10000))
       // val uniprot2Genome

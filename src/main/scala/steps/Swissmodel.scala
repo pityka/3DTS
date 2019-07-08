@@ -179,7 +179,7 @@ object Swissmodel {
 
   val filterMetaData =
     AsyncTask[SwissModelMetaDataInput, SwissModelPdbFiles]("filterswissmodel-2",
-                                                           3) {
+                                                           4) {
       case SwissModelMetaDataInput(metadata, uniprot) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
