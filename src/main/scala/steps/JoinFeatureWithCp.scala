@@ -109,7 +109,7 @@ object JoinFeatureWithCp {
     implicit val serde = tasks.makeSerDe[StructureDefinition]
   }
 
-  val joinFeaturesWithPdbGencodeMapping = EColl.join2LeftOuterTx(
+  val joinFeaturesWithPdbGencodeMapping = EColl.group2(
     "feature2cp-join",
     1,
     None,
@@ -127,39 +127,41 @@ object JoinFeatureWithCp {
       }),
     keyA = spore[PdbMapping, String]((a: PdbMapping) => a.key),
     keyB = spore[StructureDefinition, String]((a: StructureDefinition) => a.key),
-    postTransform = spore[Seq[(Option[PdbMapping], StructureDefinition)],
-                          List[MappedFeatures]](
-      { (list: Seq[(Option[PdbMapping], StructureDefinition)]) =>
-        val strs = list.map(_._2)
-        val cps =
-          list.flatMap(_._1.toSeq).map(cp => cp.pdbRes -> cp.cp).groupBy(_._1)
+    postTransform =
+      spore[Seq[(Option[PdbMapping], Option[StructureDefinition])],
+            List[MappedFeatures]](
+        { (list: Seq[(Option[PdbMapping], Option[StructureDefinition])]) =>
+          val strs = list.flatMap(_._2.toSeq)
+          val cps =
+            list.flatMap(_._1.toSeq).map(cp => cp.pdbRes -> cp.cp).groupBy(_._1)
 
-        assert(strs.map(_.feature).distinct == 1)
-        assert(strs.map(_.pdbChain).distinct == 1)
-        assert(strs.map(_.uniIds).distinct == 1)
-        val StructureDefinition(featureKey, pdbChain, _, uniIds) = strs.head
-        val total = strs.size
-        val joined = strs.map {
-          case StructureDefinition(_, _, pdbResidue, _) =>
-            cps.get(pdbResidue)
+          val features = strs.groupBy(_.feature).toSeq
+          val result = features.flatMap {
+            case (featureKey, group) =>
+              val joined = group.map {
+                case StructureDefinition(_, pdbChain, pdbResidue, uniId) =>
+                  (cps.get(pdbResidue), pdbChain, uniId)
+              }
+              val success = joined.count(_._1.isDefined)
+              val total = joined.size
+              joined.flatMap {
+                case (Some(cps), pdbChain, uniIds) =>
+                  cps.map {
+                    case (pdbResidue, cp) =>
+                      MappedFeatures(featureKey,
+                                     cp,
+                                     pdbChain,
+                                     pdbResidue,
+                                     uniIds,
+                                     MappedPdbResidueCount(success),
+                                     TotalPdbResidueCount(total))
+                  }
+                case _ => Nil
+              }.toList
+          }.toList
+          result
         }
-        val success = joined.count(_.isDefined)
-        joined.flatMap {
-          case Some(cps) =>
-            cps.map {
-              case (pdbResidue, cp) =>
-                MappedFeatures(featureKey,
-                               cp,
-                               pdbChain,
-                               pdbResidue,
-                               uniIds,
-                               MappedPdbResidueCount(success),
-                               TotalPdbResidueCount(total))
-            }
-          case None => Nil
-        }.toList
-      }
-    )
+      )
   )
 
   val task =
