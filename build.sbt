@@ -58,7 +58,7 @@ libraryDependencies ++= Seq(
   "io.github.pityka" %% "tasks-jsoniter" % tasksVersion,
   "io.github.pityka" %% "tasks-ecoll" % tasksVersion,
   "io.github.pityka" %% "tasks-ui-backend" % tasksVersion,
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.3" % Provided,
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.4" % Provided,
   "indexlib" %% "indexlib" % "1.3.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.apache.commons" % "commons-compress" % "1.16.1",
@@ -116,7 +116,7 @@ lazy val jsoniterconfig = project
   .in(file("jsoniterconfig"))
   .settings(commonSettings: _*)
   .settings(
-    libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.3" % Provided
+    libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.4" % Provided
   )
 
 lazy val root =
