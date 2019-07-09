@@ -94,19 +94,19 @@ object CountHeptamers {
     : Future[(HeptamerRates, HeptamerIndependentIntergenicRate)] = {
     for {
       intergenicCoverage <- filterTask((coverage, gencode))(
-        ResourceRequest(12, 5000))
+        ResourceRequest(1, 5000))
       coverageOnChromosome <- if (chromosomeFilter.isEmpty)
-        filterToAutosome(intergenicCoverage)(ResourceRequest(12, 5000))
+        filterToAutosome(intergenicCoverage)(ResourceRequest(1, 5000))
       else
         filterToChromosome((intergenicCoverage, chromosomeFilter))(
-          ResourceRequest(12, 5000))
+          ResourceRequest(1, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (coverageOnChromosome, calls))(ResourceRequest((1, 12), 5000))
+        (coverageOnChromosome, calls))(ResourceRequest(1, 5000))
       mapped <- mapTask((joined, (fasta, fai)))(ResourceRequest(1, 5000))
-      grouped <- groupByTask(mapped)(ResourceRequest((1, 12), 5000))
+      grouped <- groupByTask(mapped)(ResourceRequest(1, 5000))
       summed <- sum(grouped)(ResourceRequest(1, 5000))
       concatenated <- concatenate((summed, (Vector.empty, 0)))(
-        ResourceRequest((1, 12), 30000)).flatMap(_.head)
+        ResourceRequest(1, 30000)).flatMap(_.head)
       globalRate <- heptamerIndependentNeutralRate(concatenated.get)(
         ResourceRequest(1, 30000))
       _ <- heptamerCounts(summed)(ResourceRequest(1, 5000))

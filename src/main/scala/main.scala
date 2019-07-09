@@ -314,7 +314,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           features.flatMap { features =>
             JoinFeatureWithCp.task(
               Feature2CPInput(featureContext = features, cppdb = cppdb))(
-              ResourceRequest(1, 30000))
+              ResourceRequest(1, 10000))
           }
         }
 
