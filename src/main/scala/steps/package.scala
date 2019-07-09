@@ -115,13 +115,13 @@ package object steps {
   implicit def codec[T: JsonValueCodec]: JsonValueCodec[EColl[T]] =
     JsonCodecMaker.make[EColl[T]](sd.JsonIterConfig.config)
 
-  implicit def tup2[A: JsonValueCodec, B: JsonValueCodec]
-    : JsonValueCodec[(A, B)] =
-    JsonCodecMaker.make[(A, B)](sd.JsonIterConfig.config)
+  // implicit def tup2[A: JsonValueCodec, B: JsonValueCodec]
+  //   : JsonValueCodec[(A, B)] =
+  //   JsonCodecMaker.make[(A, B)](sd.JsonIterConfig.config)
 
-  implicit def tup3[A: JsonValueCodec, B: JsonValueCodec, C: JsonValueCodec]
-    : JsonValueCodec[(A, B, C)] =
-    JsonCodecMaker.make[(A, B, C)](sd.JsonIterConfig.config)
+  // implicit def tup3[A: JsonValueCodec, B: JsonValueCodec, C: JsonValueCodec]
+  //   : JsonValueCodec[(A, B, C)] =
+  //   JsonCodecMaker.make[(A, B, C)](sd.JsonIterConfig.config)
 
   implicit val codec2
     : JsonValueCodec[(Int, EColl[GenomeCoverage], Option[String])] =

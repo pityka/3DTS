@@ -1,8 +1,6 @@
 package sd.steps
 
 import tasks._
-import tasks.ecoll._
-import sd.PdbId
 import tasks.jsonitersupport._
 import akka.stream.scaladsl._
 import fileutils._
@@ -11,7 +9,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.utils.IOUtils
 
 case class TarArchiveInput(files: Map[String, SharedFile],
-                           swissmodelPdbs: Option[EColl[SwissModelPdbEntry]],
+                           //  swissmodelPdbs: Option[EColl[SwissModelPdbEntry]],
                            name: String)
 
 object TarArchiveInput {
@@ -24,7 +22,7 @@ object TarArchiveInput {
 object TarArchive {
   val archiveSharedFiles =
     AsyncTask[TarArchiveInput, SharedFile]("tarfiles-1", 1) {
-      case TarArchiveInput(files, swissmodell, tarFileName) =>
+      case TarArchiveInput(files, tarFileName) =>
         implicit ctx =>
           implicit val mat = ctx.components.actorMaterializer
 
@@ -45,23 +43,23 @@ object TarArchive {
                 outputStream.closeArchiveEntry
             }
 
-            swissmodell.foreach { swissmodell =>
-              scala.concurrent.Await.result(
-                swissmodell.source(1).runForeach {
-                  case SwissModelPdbEntry(PdbId(pdbId), data) =>
-                    val bytes = data.getBytes("UTF-8")
-                    val is = new java.io.ByteArrayInputStream(bytes)
-                    val name = s"pdbassembly/$pdbId.assembly.pdb"
-                    val entry = new TarArchiveEntry(name)
-                    entry.setSize(bytes.size)
-                    outputStream.putArchiveEntry(entry)
-                    IOUtils.copy(is, outputStream)
-                    outputStream.closeArchiveEntry
+            // swissmodell.foreach { swissmodell =>
+            //   scala.concurrent.Await.result(
+            //     swissmodell.source(1).runForeach {
+            //       case SwissModelPdbEntry(PdbId(pdbId), data) =>
+            //         val bytes = data.getBytes("UTF-8")
+            //         val is = new java.io.ByteArrayInputStream(bytes)
+            //         val name = s"pdbassembly/$pdbId.assembly.pdb"
+            //         val entry = new TarArchiveEntry(name)
+            //         entry.setSize(bytes.size)
+            //         outputStream.putArchiveEntry(entry)
+            //         IOUtils.copy(is, outputStream)
+            //         outputStream.closeArchiveEntry
 
-                },
-                scala.concurrent.duration.Duration.Inf
-              )
-            }
+            //     },
+            //     scala.concurrent.duration.Duration.Inf
+            //   )
+            // }
 
             outputStream.finish()
           }._1

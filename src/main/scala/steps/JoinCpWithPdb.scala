@@ -37,17 +37,17 @@ object JoinCPWithPdb {
                          uniqueDocuments = true,
                          compressedDocuments = true)
 
-  val concatenate =
-    AsyncTask[(EColl[PdbUniGencodeRow], EColl[PdbUniGencodeRow]),
-              EColl[PdbUniGencodeRow]]("concatenatedCpPdb", 1) {
-      case (js1, js2) =>
-        implicit ctx =>
-          implicit val mat = ctx.components.actorMaterializer
-          (js1.source(resourceAllocated.cpu) ++ js2.source(
-            resourceAllocated.cpu))
-            .runWith(EColl.sink(js1.basename + ".concat." + js2.basename))
+  // val concatenate =
+  //   AsyncTask[(EColl[PdbUniGencodeRow], EColl[PdbUniGencodeRow]),
+  //             EColl[PdbUniGencodeRow]]("concatenatedCpPdb", 1) {
+  //     case (js1, js2) =>
+  //       implicit ctx =>
+  //         implicit val mat = ctx.components.actorMaterializer
+  //         (js1.source(resourceAllocated.cpu) ++ js2.source(
+  //           resourceAllocated.cpu))
+  //           .runWith(EColl.sink(js1.basename + ".concat." + js2.basename))
 
-    }
+  //   }
 
   val indexCpPdb =
     AsyncTask[EColl[PdbUniGencodeRow], CpPdbIndex]("indexcppdb", 2) {

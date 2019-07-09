@@ -58,25 +58,25 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         .map(s => importFile(s))
         .map(GnomadData(_))
 
-    val swissModelStructures = {
-      val swissModelMetaData = importFile(
-        config.getString("swissModelMetaData"))
-      Swissmodel.filterMetaData(
-        SwissModelMetaDataInput(swissModelMetaData, uniprotKbOriginal))(
-        ResourceRequest(1, 5000))
-    }
+    // val swissModelStructures = {
+    //   val swissModelMetaData = importFile(
+    //     config.getString("swissModelMetaData"))
+    //   Swissmodel.filterMetaData(
+    //     SwissModelMetaDataInput(swissModelMetaData, uniprotKbOriginal))(
+    //     ResourceRequest(1, 5000))
+    // }
 
-    val swissModelUniPdbMap = swissModelStructures.flatMap {
-      swissModelStructures =>
-        Swissmodel.fakeUniprotPdbMappingFromSwissmodel(swissModelStructures)(
-          ResourceRequest(1, 5000))
-    }
+    // val swissModelUniPdbMap = swissModelStructures.flatMap {
+    //   swissModelStructures =>
+    //     Swissmodel.fakeUniprotPdbMappingFromSwissmodel(swissModelStructures)(
+    //       ResourceRequest(1, 5000))
+    // }
 
-    val swissModelLinearFeatures = swissModelStructures.flatMap {
-      swissModelStructures =>
-        Swissmodel
-          .rundssp(swissModelStructures)(ResourceRequest(1, 5000)) // disable this step
-    }
+    // val swissModelLinearFeatures = swissModelStructures.flatMap {
+    //   swissModelStructures =>
+    //     Swissmodel
+    //       .rundssp(swissModelStructures)(ResourceRequest(1, 5000)) // disable this step
+    // }
 
     val convertedGnomadGenome = {
       val gnomadGenome = importFile(config.getString("gnomadGenome"))
@@ -270,21 +270,22 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       }
     }
 
-    val swissModelCpPdb =
-      uniprotgencodemap.flatMap { uniprotgencodemap =>
-        swissModelUniPdbMap.flatMap { swissModelUniPdbMap =>
-          JoinCPWithPdb.task(
-            JoinCPWithPdbInput(uniprotgencodemap, List(swissModelUniPdbMap)))(
-            ResourceRequest(1, 30000))
-        }
-      }
+    // val swissModelCpPdb =
+    //   uniprotgencodemap.flatMap { uniprotgencodemap =>
+    //     swissModelUniPdbMap.flatMap { swissModelUniPdbMap =>
+    //       JoinCPWithPdb.task(
+    //         JoinCPWithPdbInput(uniprotgencodemap, List(swissModelUniPdbMap)))(
+    //         ResourceRequest(1, 30000))
+    //     }
+    //   }
 
-    val concatenatedCpPdbJoin = swissModelCpPdb.flatMap { swissModelCpPdb =>
-      cppdb.flatMap { cppdb =>
-        JoinCPWithPdb.concatenate((swissModelCpPdb, cppdb))(
-          ResourceRequest(1, 5000))
-      }
-    }
+    val concatenatedCpPdbJoin = cppdb
+    // swissModelCpPdb.flatMap { swissModelCpPdb =>
+    //   cppdb.flatMap { cppdb =>
+    //     JoinCPWithPdb.concatenate((swissModelCpPdb, cppdb))(
+    //       ResourceRequest(1, 5000))
+    //   }
+    // }
 
     val cppdbindex = concatenatedCpPdbJoin.flatMap { cppdb =>
       JoinCPWithPdb.indexCpPdb(cppdb)(ResourceRequest(1, 3000))
@@ -320,20 +321,20 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         (features, feature2cp)
       }
 
-      def makeSwissModelFeatures = {
-        val features = swissModelStructures.flatMap { pdbs =>
-          swissModelLinearFeatures.flatMap { features =>
-            StructuralContext.fromFeaturesAndPdbStructures(
-              StructuralContextFromFeaturesAndPdbsInput(
-                pdbs = pdbs.pdbFiles,
-                mappedUniprotFeatures = features,
-                radius = radius,
-                bothSides = true))(ResourceRequest(1, 30000))
-          }
-        }
+      // def makeSwissModelFeatures = {
+      //   val features = swissModelStructures.flatMap { pdbs =>
+      //     swissModelLinearFeatures.flatMap { features =>
+      //       StructuralContext.fromFeaturesAndPdbStructures(
+      //         StructuralContextFromFeaturesAndPdbsInput(
+      //           pdbs = pdbs.pdbFiles,
+      //           mappedUniprotFeatures = features,
+      //           radius = radius,
+      //           bothSides = true))(ResourceRequest(1, 30000))
+      //     }
+      //   }
 
-        joinFeatureWithCp(features, swissModelCpPdb)
-      }
+      //   joinFeatureWithCp(features, swissModelCpPdb)
+      // }
 
       def makeStructuralFeatures(includeBothSidesOfPlane: Boolean) = {
         val features = uniprotpdbmap.flatMap { uniprotpdbmap =>
@@ -417,32 +418,37 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
       val (cifFeatures, cifFeature2cpEcoll) = makeStructuralFeatures(
         includeBothSidesOfPlane = true)
 
-      val (swissModelFeatures, swissModelFeature2cpEcoll) =
-        makeSwissModelFeatures
+      // val (swissModelFeatures, swissModelFeature2cpEcoll) =
+      //   makeSwissModelFeatures
 
       val cifDepletionScores = makeDepletionScores(cifFeature2cpEcoll)
 
       val cifAggregates = extractAggregates("PDB", cifDepletionScores)
 
+      // val supplementaryFeature2Cp =
+      //   cifFeature2cpEcoll.flatMap { cifFeature2cpEcoll =>
+      //     swissModelFeature2cpEcoll.flatMap { swissModelFeature2cpEcoll =>
+      //       JoinFeatureWithCp.mappedMappedFeaturesToSupplementary(
+      //         cifFeature2cpEcoll ++ swissModelFeature2cpEcoll)(
+      //         ResourceRequest(1, 5000))
+      //     }
+      //   }
       val supplementaryFeature2Cp =
         cifFeature2cpEcoll.flatMap { cifFeature2cpEcoll =>
-          swissModelFeature2cpEcoll.flatMap { swissModelFeature2cpEcoll =>
-            JoinFeatureWithCp.mappedMappedFeaturesToSupplementary(
-              cifFeature2cpEcoll ++ swissModelFeature2cpEcoll)(
-              ResourceRequest(1, 5000))
-          }
+          JoinFeatureWithCp.mappedMappedFeaturesToSupplementary(
+            cifFeature2cpEcoll)(ResourceRequest(1, 5000))
         }
 
-      val swissModelDepletionScores = makeDepletionScores(
-        swissModelFeature2cpEcoll)
+      // val swissModelDepletionScores = makeDepletionScores(
+      //   swissModelFeature2cpEcoll)
 
-      val swissModelAggregates =
-        extractAggregates("swissmodel", swissModelDepletionScores)
+      // val swissModelAggregates =
+      //   extractAggregates("swissmodel", swissModelDepletionScores)
 
       val uniqueMappedCps = (for {
-        swissModelFeature2cp <- swissModelFeature2cpEcoll
+        // swissModelFeature2cp <- swissModelFeature2cpEcoll
         cifFeature2cp <- cifFeature2cpEcoll
-        concat = swissModelFeature2cp ++ cifFeature2cp
+        concat = cifFeature2cp
         cps <- JoinFeatureWithCp.mappedCps(concat)(ResourceRequest(1, 5000))
         sorted <- JoinFeatureWithCp.sortedCps(cps)(ResourceRequest(1, 5000))
         unique <- JoinFeatureWithCp.uniqueCps(sorted)(ResourceRequest(1, 5000))
@@ -472,10 +478,11 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           }
       } yield ()
 
-      val concatenatedDepletionScores = for {
-        c1 <- cifDepletionScores
-        c2 <- swissModelDepletionScores
-      } yield c1 ++ c2
+      val concatenatedDepletionScores = cifDepletionScores
+      //for {
+      //   c1 <- cifDepletionScores
+      //   // c2 <- swissModelDepletionScores
+      // } yield c1 ++ c2
 
       val cdfs = concatenatedDepletionScores
         .flatMap { s =>
@@ -485,11 +492,12 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           depletion3d.cdfs2file(cdf)(ResourceRequest(1, 5000))
         }
 
-      val concatenatedFeatures = for {
-        c1 <- swissModelFeatures
-        c2 <- cifFeatures
-        r <- StructuralContext.concatenate((c1, c2))(ResourceRequest(1, 5000))
-      } yield r
+      val concatenatedFeatures = cifFeatures
+      // for {
+      //   c1 <- swissModelFeatures
+      //   c2 <- cifFeatures
+      //   r <- StructuralContext.concatenate((c1, c2))(ResourceRequest(1, 5000))
+      // } yield r
 
       val featureCount = concatenatedFeatures.flatMap { feat =>
         StructuralContext.count(feat)(ResourceRequest(1, 5000))
@@ -542,7 +550,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
                     "gencodeUniprotPdb.js.gz" -> cppdb.partitions.head,
                     "structuralFeatures.loci.js.gz" -> supplementaryFeature2Cp.partitions.head
                   ),
-                  None,
                   "archive.tar"
                 ))(ResourceRequest(1, 5000))
               }
@@ -557,7 +564,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
           uniprotByGene <- uniprotByGene
           cdfs <- cdfs
           assemblies <- assemblies
-          swissModelPdbs <- swissModelStructures
+          // swissModelPdbs <- swissModelStructures
           tar <- {
 
             val pdbPaths =
@@ -576,7 +583,6 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
             TarArchive.archiveSharedFiles(
               TarArchiveInput(
                 pdbPaths ++ cdfPath ++ indexPaths,
-                Some(swissModelPdbs.pdbFiles),
                 "indexarchive.tar"
               ))(ResourceRequest(1, 5000))
           }
@@ -595,7 +601,7 @@ class TaskRunner(implicit ts: TaskSystemComponents) extends StrictLogging {
         server,
         repartitionedScores,
         cifAggregates,
-        swissModelAggregates,
+        // swissModelAggregates,
         concatenatedCpPdbJoin,
         archive,
         archiveForWebServer
