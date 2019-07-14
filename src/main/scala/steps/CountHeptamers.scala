@@ -77,10 +77,11 @@ object CountHeptamers {
     })
 
   val joinGnomadGenomeCoverageWithGnomadDataTask =
-    EColl.join2Outer(
+    EColl.join2RightOuter(
       "joinGnomadCoverageWithData",
       1,
       Some(1),
+      numberOfShards = Some(256),
       1024 * 1024 * 50)((_: GenomeCoverage).cp, (_: GnomadLine).cp)
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
@@ -101,7 +102,7 @@ object CountHeptamers {
         filterToChromosome((intergenicCoverage, chromosomeFilter))(
           ResourceRequest(1, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
-        (coverageOnChromosome, calls))(ResourceRequest(1, 5000))
+        (coverageOnChromosome, calls))(ResourceRequest(1, 30000))
       mapped <- mapTask((joined, (fasta, fai)))(ResourceRequest(1, 5000))
       grouped <- groupByTask(mapped)(ResourceRequest(1, 5000))
       summed <- sum(grouped)(ResourceRequest(1, 5000))
@@ -139,7 +140,7 @@ object CountHeptamers {
 
   val mapTask =
     EColl
-      .mapWith[(Option[GenomeCoverage], Option[GnomadLine]),
+      .mapWith[(GenomeCoverage, Option[GnomadLine]),
                (SharedFile, SharedFile),
                HeptamerOccurences]("mapHeptamer", 2, false)(spore {
         case (variants, (fasta, fai), ctx, _, _) =>
@@ -158,9 +159,6 @@ object CountHeptamers {
                     .AnyRefMap[String, (List[Int], List[Int], Int)]()
 
                 variants
-                  .collect {
-                    case (Some(cov), calls) => (cov, calls)
-                  }
                   .runFold(mutable) {
                     case (mutable,
                           (coverage: GenomeCoverage, maybeVariantCall)) =>

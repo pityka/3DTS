@@ -97,6 +97,7 @@ object JoinCPWithPdb {
     "joincpwithpdb-join",
     1,
     None,
+    None,
     1024 * 1024 * 50
   )(
     preTransformA = spore[sd.JoinGencodeToUniprot.MapResult,

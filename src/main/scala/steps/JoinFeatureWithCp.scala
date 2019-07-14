@@ -69,6 +69,7 @@ object JoinFeatureWithCp {
     "innerjoin-cp-locus-1",
     1,
     Some(1),
+    None,
     1024 * 1024 * 50)((_: ChrPos).s, (_: LocusVariationCountAndNumNs).locus.s)
 
   val mappedCps = EColl.map("mappedcps-1", 1)((_: MappedFeatures).chrPos)
@@ -112,6 +113,7 @@ object JoinFeatureWithCp {
   val joinFeaturesWithPdbGencodeMapping = EColl.group2(
     "feature2cp-join",
     1,
+    None,
     None,
     1024 * 1024 * 50
   )(

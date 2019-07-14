@@ -45,6 +45,15 @@ package object steps {
   implicit val genomeCoverageAndGnomadLineSerDe = tasks
     .makeSerDe[(Option[GenomeCoverage], Option[JoinVariationsCore.GnomadLine])]
 
+  implicit val genomeCoverageAndGnomadLineSerDe2 = tasks
+    .makeSerDe[(GenomeCoverage, Option[JoinVariationsCore.GnomadLine])]
+
+  implicit val genomeCoverageAndGnomadLineCodec2
+    : JsonValueCodec[(GenomeCoverage, Option[JoinVariationsCore.GnomadLine])] =
+    JsonCodecMaker
+      .make[(GenomeCoverage, Option[JoinVariationsCore.GnomadLine])](
+        sd.JsonIterConfig.config)
+
   implicit val seqHeptamerOccurencesCodec
     : JsonValueCodec[Seq[HeptamerOccurences]] =
     JsonCodecMaker.make[Seq[HeptamerOccurences]](sd.JsonIterConfig.config)
