@@ -81,7 +81,7 @@ object CountHeptamers {
       "joinGnomadCoverageWithData",
       1,
       Some(1),
-      numberOfShards = Some(256),
+      numberOfShards = Some(512),
       1024 * 1024 * 50)((_: GenomeCoverage).cp, (_: GnomadLine).cp)
 
   def calculateHeptamer(coverage: EColl[GenomeCoverage],
