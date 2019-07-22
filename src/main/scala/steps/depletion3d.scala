@@ -159,7 +159,7 @@ object depletion3d extends StrictLogging {
       implicit tc: tasks.TaskSystemComponents,
       ec: ExecutionContext) =
     for {
-      grouped <- groupByPdbId(features)(ResourceRequest(12, 5000))
+      grouped <- groupByPdbId(features)(ResourceRequest(1, 5000))
       mapped <- computeScores(
         (grouped,
          Depletion3dInput(locusData,
