@@ -103,7 +103,7 @@ object CountHeptamers {
           ResourceRequest(1, 5000))
       joined <- joinGnomadGenomeCoverageWithGnomadDataTask(
         (coverageOnChromosome, calls))(ResourceRequest(1, 30000))
-      mapped <- mapTask((joined, (fasta, fai)))(ResourceRequest(1, 5000))
+      mapped <- mapTask((joined, (fasta, fai)))(ResourceRequest(1, 30000))
       grouped <- groupByTask(mapped)(ResourceRequest(1, 5000))
       summed <- sum(grouped)(ResourceRequest(1, 5000))
       concatenated <- concatenate((summed, (Vector.empty, 0)))(
@@ -145,89 +145,63 @@ object CountHeptamers {
                HeptamerOccurences]("mapHeptamer", 2, false)(spore {
         case (variants, (fasta, fai), ctx, _, _) =>
           implicit val ce = ctx
-          implicit val mat = ctx.components.actorMaterializer
-
-          val countTable: Future[List[HeptamerOccurences]] =
+          val countSource: Future[Source[HeptamerOccurences, akka.NotUsed]] =
             for {
               fasta <- fasta.file
               fai <- fai.file
               reference = HeptamerHelpers.openFasta(fasta, fai)
-              counts <- {
-
-                val mutable =
-                  scala.collection.mutable
-                    .AnyRefMap[String, (List[Int], List[Int], Int)]()
-
-                variants
-                  .runFold(mutable) {
-                    case (mutable,
-                          (coverage: GenomeCoverage, maybeVariantCall)) =>
-                      val passSNP = maybeVariantCall
-                        .filter { x =>
-                          x.ref.size == 1 && x.alt.size == 1 && x.filter == "PASS"
-                        }
-                      val sampleSize =
-                        passSNP
-                          .map(gl =>
-                            gl.genders.male.totalChromosomeCount + gl.genders.female.totalChromosomeCount)
-                          .map(_ / 2)
-                          .getOrElse(coverage.numberOfWellSequencedIndividuals)
-
-                      val variantAlleleCount = passSNP
-                        .map(gl =>
-                          gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount)
-                        .getOrElse(0)
-
-                      val mayHeptamer =
-                        HeptamerHelpers.heptamerAt(coverage.chromosome,
-                                                   coverage.position,
-                                                   reference)
-
-                      mayHeptamer.failed.foreach { e =>
-                        log.warning(s"Heptamer retrieval failed $coverage $e")
-                      }
-                      mayHeptamer.foreach {
-                        heptamer =>
-                          if (!heptamer.contains('N')) {
-
-                            passSNP.foreach { passSNP =>
-                              assert(passSNP.ref == heptamer(3).toString)
-                            }
-                            mutable.get(heptamer) match {
-                              case None =>
-                                mutable.update(heptamer,
-                                               (List(sampleSize),
-                                                List(variantAlleleCount),
-                                                1))
-                              case Some(
-                                  (sampleSizes,
-                                   variantAlleleCounts,
-                                   heptamerCount)) =>
-                                mutable.update(
-                                  heptamer,
-                                  (sampleSize :: sampleSizes,
-                                   variantAlleleCount :: variantAlleleCounts,
-                                   heptamerCount + 1))
-                            }
-                          }
-                      }
-                      mutable
-                  }
-                  .map(_.toList)
-              }
             } yield
-              counts.map {
-                case (heptamer,
-                      (sampleSizes, variantAlleleCounts, heptamerCount)) =>
-                  HeptamerOccurences(heptamer,
-                                     sampleSizes.toVector,
-                                     variantAlleleCounts.toVector,
-                                     heptamerCount)
-              }
+              variants
+                .map {
+                  case (coverage: GenomeCoverage, maybeVariantCall) =>
+                    val passSNP = maybeVariantCall
+                      .filter { x =>
+                        x.ref.size == 1 && x.alt.size == 1 && x.filter == "PASS"
+                      }
+                    val sampleSize =
+                      passSNP
+                        .map(gl =>
+                          gl.genders.male.totalChromosomeCount + gl.genders.female.totalChromosomeCount)
+                        .map(_ / 2)
+                        .getOrElse(coverage.numberOfWellSequencedIndividuals)
 
-          Source.fromFuture(countTable).flatMapConcat(list => Source(list))
+                    val variantAlleleCount = passSNP
+                      .map(gl =>
+                        gl.genders.male.totalVariantAlleleCount + gl.genders.female.totalVariantAlleleCount)
+                      .getOrElse(0)
+
+                    val mayHeptamer =
+                      HeptamerHelpers.heptamerAt(coverage.chromosome,
+                                                 coverage.position,
+                                                 reference)
+
+                    mayHeptamer.failed.foreach { e =>
+                      log.warning(s"Heptamer retrieval failed $coverage $e")
+                    }
+                    mayHeptamer.toOption.flatMap { heptamer =>
+                      if (!heptamer.contains('N')) {
+
+                        passSNP.foreach { passSNP =>
+                          assert(passSNP.ref == heptamer(3).toString)
+                        }
+
+                        Some(
+                          HeptamerOccurences(heptamer,
+                                             Vector(sampleSize),
+                                             Vector(variantAlleleCount),
+                                             1))
+
+                      } else None
+                    }
+                }
+                .collect { case Some(x) => x }
+
+          Source
+            .fromFutureSource(countSource)
+            .mapMaterializedValue(_ => akka.NotUsed)
 
       })
+
   import akka.stream.scaladsl._
   import akka.util.ByteString
   def zippedTemporaryFileSink(

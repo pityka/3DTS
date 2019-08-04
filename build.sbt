@@ -44,21 +44,21 @@ val commonSettings = Seq(
   scalaVersion := "2.12.8"
 )
 
-val tasksVersion = "0.0.62-SNAPSHOT"
+val tasksVersion = "0.1.2"
 
 libraryDependencies ++= Seq(
   "io.github.pityka" %% "fileutils" % "1.2.2",
   "io.github.pityka" %% "stringsplit" % "1.1.0",
   "io.github.pityka" %% "saddle-linalg" % "0.0.23",
   "io.github.pityka" %% "poibin" % "0.0.1",
-  "io.github.pityka" %% "intervaltree" % "1.0.0",
+  "io.github.pityka" %% "intervaltree" % "1.1.1",
   "io.github.pityka" %% "sampling" % "0.0.1",
   "io.github.pityka" %% "saddle-core-fork" % "1.3.4-fork1",
   "io.github.pityka" %% "tasks-core" % tasksVersion,
   "io.github.pityka" %% "tasks-jsoniter" % tasksVersion,
   "io.github.pityka" %% "tasks-ecoll" % tasksVersion,
   "io.github.pityka" %% "tasks-ui-backend" % tasksVersion,
-  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.4" % Provided,
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.54.0" % Provided,
   "indexlib" %% "indexlib" % "1.3.0",
   "org.apache.commons" % "commons-math3" % "3.6.1",
   "org.apache.commons" % "commons-compress" % "1.16.1",
@@ -116,7 +116,7 @@ lazy val jsoniterconfig = project
   .in(file("jsoniterconfig"))
   .settings(commonSettings: _*)
   .settings(
-    libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.51.4" % Provided
+    libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.54.0" % Provided
   )
 
 lazy val root =
